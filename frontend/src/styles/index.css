@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  .luxury-gradient {
+    @apply bg-gradient-to-br from-luxury-gold/20 via-luxury-platinum/10 to-luxury-champagne/30;
+  }
+  
+  .luxury-glass {
+    @apply bg-white/10 backdrop-blur-luxury border border-white/20;
+  }
+  
+  .luxury-button {
+    @apply px-8 py-3 bg-luxury-gold text-luxury-midnight-black font-medium rounded-lg 
+           hover:bg-luxury-gold/90 transition-all duration-300 
+           shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+  
+  .luxury-button-outline {
+    @apply px-8 py-3 border-2 border-luxury-gold text-luxury-gold font-medium rounded-lg
+           hover:bg-luxury-gold hover:text-luxury-midnight-black transition-all duration-300
+           shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+}
