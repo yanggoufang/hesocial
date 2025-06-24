@@ -208,7 +208,7 @@ const EventsPage = () => {
               transition={{ duration: 0.8, delay: index * 0.2 }}
               className="luxury-glass rounded-2xl overflow-hidden hover:bg-luxury-gold/5 transition-all duration-300 group"
             >
-              <div className="relative">
+              <div className="relative rounded-t-2xl overflow-hidden">
                 <img
                   src={event.images[0]}
                   alt={event.name}
