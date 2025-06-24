@@ -3,7 +3,16 @@
     "allow": [
       "Bash(mkdir:*)",
       "Bash(npm init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run setup:*)",
+      "Bash(ls:*)",
+      "Bash(npm run dev:*)",
+      "Bash(pkill:*)",
+      "Bash(docker:*)",
+      "Bash(sudo service:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
