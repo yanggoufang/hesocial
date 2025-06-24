@@ -6,104 +6,180 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a high-end social event platform targeting affluent individuals aged 45-65 with high net worth (NT$5M+ annual income or NT$30M+ net assets). The platform facilitates luxury social events like private dinners, yacht parties, and art appreciation gatherings.
 
-## Planned Technology Stack
+## Current Technology Stack
 
-### Frontend
-- **Framework**: React with TypeScript (CDN loaded)
-- **Styling**: Tailwind CSS with luxury color palette:
-  - Gold: #D4AF37
-  - Deep Blue: #1B2951  
-  - Platinum: #E5E4E2
-  - Champagne: #F7E7CE
-  - Midnight Black: #0C0C0C
-- **Key Libraries**: React Router, Axios, React Player, Three.js (for AR previews)
+### Frontend (React + Vite)
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite with SWC plugin for fast builds
+- **Styling**: Tailwind CSS with luxury color palette
+- **Key Libraries**: 
+  - React Router DOM for navigation
+  - Axios for HTTP requests
+  - React Player for media
+  - Three.js for 3D/AR features
+  - Framer Motion for animations
+  - React Hook Form + Zod for form handling
+  - Lucide React for icons
 
-### Backend
-- **Primary**: Node.js + Express + TypeScript
-- **Secondary**: Python + Django (for AI recommendation system)
-- **API**: GraphQL for complex queries
-- **Authentication**: OAuth 2.0 (LinkedIn, Google) + JWT
+### Backend (Node.js + Express)
+- **Runtime**: Node.js with Express framework
+- **Language**: TypeScript with ESM modules
+- **Database**: Dual support for PostgreSQL and DuckDB
+- **Authentication**: JWT with Passport.js (Google OAuth, LinkedIn OAuth)
+- **Security**: Helmet, CORS, rate limiting, compression
+- **Logging**: Winston with Morgan middleware
+- **File Processing**: Multer with Sharp for image processing
+- **Payments**: Stripe integration
 
-### Database
-- **Type**: PostgreSQL (AWS RDS Aurora)
-- **Key Tables**: Users (with membership tiers), Financial Verification, Events, Registrations
-
-### Infrastructure
-- **Cloud**: AWS (ECS Fargate, RDS Aurora, ElastiCache Redis, CloudFront CDN)
-- **CI/CD**: GitHub Actions
-- **SSL**: AWS Certificate Manager
+### Database Options
+- **Primary**: PostgreSQL with pg driver
+- **Demo/Embedded**: DuckDB for local development
+- **Caching**: Redis support
+- **Key Tables**: Users, Events, Registrations, Financial verification
 
 ## Development Commands
 
-Once the project is initialized, typical commands will be:
-
+### Root Level Commands
 ```bash
-# Frontend development
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run lint         # Run ESLint
-npm run typecheck    # TypeScript type checking
+# Setup project (install all dependencies)
+npm run setup
 
-# Backend development  
-npm run server       # Start Express server
-npm run test         # Run unit tests
-npm run test:watch   # Run tests in watch mode
+# Start both frontend and backend
+npm run dev
+
+# Build entire project
+npm run build
+
+# Run all tests
+npm run test
+
+# Lint all code
+npm run lint
+
+# Type check all code
+npm run typecheck
 
 # Database operations
 npm run migrate      # Run database migrations
 npm run seed         # Seed development data
 ```
 
-## Key Architecture Principles
+### Frontend Commands (cd frontend/)
+```bash
+npm run dev          # Start Vite dev server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # ESLint with auto-fix
+npm run typecheck    # TypeScript type checking
+npm run test         # Run Vitest tests
+npm run test:coverage # Run tests with coverage
+```
 
-### Security & Privacy
-- AES-256 encryption for data at rest
-- TLS 1.3 for data in transit
-- Multi-factor authentication (SMS + authenticator)
-- GDPR/CCPA compliance with data minimization
-- User data soft deletion (30-day retention)
+### Backend Commands (cd backend/)
+```bash
+npm run dev          # Start with PostgreSQL (tsx watch)
+npm run dev:demo     # Start demo server with mock data
+npm run dev:duckdb   # Start with DuckDB embedded database
+npm run build        # Compile TypeScript
+npm run start        # Start production server
+npm run lint         # ESLint with auto-fix
+npm run typecheck    # TypeScript type checking
+npm run test         # Run Vitest tests
+npm run migrate      # Run database migrations
+npm run seed         # Seed database with sample data
+```
 
-### User Management
-- Three-tier membership: Platinum, Diamond, Black Card
-- Financial verification required for registration
-- Privacy levels 1-5 for profile visibility
-- Admin approval process for new users
+## Project Architecture
 
-### Event Structure
-Events follow a premium model with these key fields:
-- Event name, date/time, registration deadline
-- Venue (luxury locations)
-- Pricing (typically NT$6,000-10,000+)
-- Exclusivity level (VIP/VVIP/Invitation Only)
-- Dress code (1-5 star rating system)
-- Privacy guarantees and exclusive services
+### Monorepo Structure
+```
+hesocial/
+├── frontend/          # React + Vite frontend application
+│   ├── src/
+│   │   ├── components/    # Reusable UI components
+│   │   ├── pages/         # Route-based page components
+│   │   ├── types/         # TypeScript type definitions
+│   │   └── styles/        # Global CSS and Tailwind config
+│   ├── package.json
+│   └── vite.config.ts
+├── backend/           # Express + TypeScript backend API
+│   ├── src/
+│   │   ├── controllers/   # Route handlers
+│   │   ├── database/      # DB connections and migrations
+│   │   ├── middleware/    # Express middleware
+│   │   ├── routes/        # API route definitions
+│   │   ├── types/         # Shared TypeScript types
+│   │   └── utils/         # Configuration and logging
+│   ├── server.ts          # Main PostgreSQL server
+│   ├── server-duckdb.ts   # DuckDB embedded server
+│   └── server-demo.ts     # Demo server with mock data
+├── database/          # SQL schemas and seed data
+│   ├── schema.sql         # PostgreSQL schema
+│   ├── duckdb-schema.sql  # DuckDB schema
+│   └── seed files
+└── package.json       # Root workspace configuration
+```
 
-### Payment Integration
-- Stripe Connect for high-value transactions
-- Adyen for international payments
-- BitPay for cryptocurrency
-- Support for installment payments (6-24 months)
+### Backend Server Variants
+The backend supports three different server configurations:
+1. **Production Server** (`server.ts`): Full PostgreSQL + Redis setup
+2. **DuckDB Server** (`server-duckdb.ts`): Embedded database for local development
+3. **Demo Server** (`server-demo.ts`): Mock data for quick prototyping
 
-## Code Style Guidelines
+### Database Architecture
+- **User Management**: Multi-tier membership system (Platinum, Diamond, Black Card)
+- **Event System**: Premium events with pricing, exclusivity levels, and venue management
+- **Registration System**: Event registration with approval workflows
+- **Financial Verification**: Required for platform access
 
-- Use TypeScript throughout
-- Follow luxury UX patterns with elegant animations (0.6s transitions)
-- Implement responsive design for high-end devices (iPhone 15 Pro Max, Samsung Galaxy S24 Ultra)
-- Support 4K/8K resolution and HDR10+ content
-- Maintain strict type safety and error handling
+### Authentication & Security
+- JWT-based authentication with refresh tokens
+- OAuth 2.0 integration (Google, LinkedIn)
+- Rate limiting and request validation
+- Helmet.js for security headers
+- CORS configuration for cross-origin requests
 
-## Testing Strategy
+## Development Workflow
 
-- Unit tests for all business logic
-- Integration tests for payment flows
-- Security penetration testing
-- Load testing for 2000+ concurrent VIP users
-- Performance targets: <800ms page load, <50ms database response
+### Getting Started
+1. **Initial Setup**: `npm run setup` - installs all dependencies
+2. **Development**: `npm run dev` - starts both frontend (port 3000) and backend (port 5000)
+3. **Database Setup**: See SETUP_DATABASES.md for database configuration options
 
-## Deployment Considerations
+### Testing Commands
+- `npm run test` - run all tests (frontend + backend)
+- `npm run test:frontend` - frontend tests only
+- `npm run test:backend` - backend tests only
+- Individual test suites use Vitest
 
-- Multi-region AWS deployment for low latency
-- CDN for global content delivery
-- Automated scaling based on user load
-- Blue-green deployment strategy
-- Comprehensive monitoring and alerting
+### Code Quality
+- `npm run lint` - ESLint for both frontend and backend
+- `npm run typecheck` - TypeScript compilation check
+- Strict TypeScript configuration with no implicit any
+
+### Database Development Modes
+- **Demo Mode**: `npm run dev:demo` - uses mock data, no database required
+- **DuckDB Mode**: `npm run dev:duckdb` - embedded database, good for local development
+- **Full Mode**: `npm run dev` - requires PostgreSQL + Redis setup
+
+## Key Implementation Details
+
+### Frontend Architecture
+- React 18 with functional components and hooks
+- Vite for fast development and building
+- Tailwind CSS for styling with luxury color palette
+- TypeScript for type safety
+- React Router for client-side routing
+
+### Backend Architecture
+- Express.js with TypeScript and ESM modules
+- Modular route structure with controllers
+- Database abstraction layer supporting multiple databases
+- Comprehensive logging with Winston
+- File upload handling with Multer and Sharp
+
+### API Design
+- RESTful API endpoints under `/api` prefix
+- Health check endpoints for monitoring
+- Structured error responses with success/error flags
+- Request/response logging for debugging
