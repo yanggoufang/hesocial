@@ -22,8 +22,9 @@ services:
     healthCheckPath: /api/health
 
   # Frontend Static Site
-  - type: static
+  - type: web
     name: hesocial-frontend
+    runtime: static
     buildCommand: npm run build:frontend
     staticPublishPath: ./frontend/dist
     envVars:
