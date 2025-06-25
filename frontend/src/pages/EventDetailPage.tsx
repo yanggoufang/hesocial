@@ -3,8 +3,8 @@ import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { 
   Calendar, MapPin, Users, Star, Crown, Clock, Shield, 
-  Camera, Play, ChevronLeft, ChevronRight, Heart, Share2,
-  Shirt, CreditCard, Check, AlertCircle
+  ChevronLeft, ChevronRight, Heart, Share2,
+  Shirt, Check, AlertCircle
 } from 'lucide-react'
 
 const EventDetailPage = () => {

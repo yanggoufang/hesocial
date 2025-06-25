@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Crown, Lock, Star, Calendar, Users, Diamond, Shield, Zap } from 'lucide-react'
+import { Crown, Lock, Calendar, Users, Diamond, Shield, Zap } from 'lucide-react'
 
 const VVIPPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all')

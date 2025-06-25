@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
-  User, Mail, Phone, MapPin, Briefcase, DollarSign, 
+  Mail, Briefcase, 
   Crown, Star, Calendar, Edit3, Save, X, Plus,
-  Shield, Award, TrendingUp, Users
+  Award, TrendingUp, Users
 } from 'lucide-react'
 
 const ProfilePage = () => {
