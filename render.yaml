@@ -3,6 +3,7 @@ services:
   - type: web
     name: hesocial-api
     runtime: node
+    plan: free
     buildCommand: npm run build:backend
     startCommand: cd backend && npm start
     envVars:
@@ -21,9 +22,8 @@ services:
     healthCheckPath: /api/health
 
   # Frontend Static Site
-  - type: web
+  - type: static
     name: hesocial-frontend
-    runtime: static
     buildCommand: npm run build:frontend
     staticPublishPath: ./frontend/dist
     envVars:
