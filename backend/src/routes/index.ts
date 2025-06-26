@@ -4,7 +4,7 @@ import {
   getEventById,
   getEventCategories,
   getVenues
-} from '@/controllers/eventController-duckdb.js'
+} from '@/controllers/eventController'
 
 const router = Router()
 

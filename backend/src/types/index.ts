@@ -1,5 +1,3 @@
-import { Request } from 'express'
-
 export interface User {
   id: string
   email: string
@@ -107,6 +105,12 @@ export interface FinancialVerification {
   notes?: string
   createdAt: Date
   updatedAt: Date
+}
+
+import { Request } from 'express'
+
+export interface AuthenticatedRequest extends Request {
+  user?: User;
 }
 
 declare module 'express-serve-static-core' {

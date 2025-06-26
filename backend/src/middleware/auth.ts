@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { pool } from '@/database/connection.js'
+import { duckdb } from '@/database/duckdb-connection'
 import { AuthenticatedRequest, JwtPayload, User } from '@/types/index.js'
 import config from '@/utils/config.js'
 import logger from '@/utils/logger.js'
@@ -36,7 +36,7 @@ export const authenticateToken = async (
       WHERE id = $1 AND deleted_at IS NULL
     `
     
-    const result = await pool.query(userQuery, [decoded.userId])
+    const result = await duckdb.query(userQuery, [decoded.userId])
     
     if (result.rows.length === 0) {
       res.status(401).json({
@@ -136,7 +136,7 @@ export const optionalAuth = async (
       WHERE id = $1 AND deleted_at IS NULL
     `
     
-    const result = await pool.query(userQuery, [decoded.userId])
+    const result = await duckdb.query(userQuery, [decoded.userId])
     
     if (result.rows.length > 0) {
       req.user = result.rows[0] as User
