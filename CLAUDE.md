@@ -24,7 +24,7 @@ This is a high-end social event platform targeting affluent individuals aged 45-
 ### Backend (Node.js + Express)
 - **Runtime**: Node.js with Express framework
 - **Language**: TypeScript with ESM modules
-- **Database**: Dual support for PostgreSQL and DuckDB
+- **Database**: DuckDB as primary database with Cloudflare R2 persistence
 - **Authentication**: JWT with Passport.js (Google OAuth, LinkedIn OAuth)
 - **Security**: Helmet, CORS, rate limiting, compression
 - **Logging**: Winston with Morgan middleware
@@ -32,9 +32,9 @@ This is a high-end social event platform targeting affluent individuals aged 45-
 - **Payments**: Stripe integration
 
 ### Database Options
-- **Primary**: PostgreSQL with pg driver
-- **Demo/Embedded**: DuckDB for local development
-- **Caching**: Redis support
+- **Primary**: DuckDB with schema defined in `database/duckdb-schema.sql`
+- **Production Persistence**: Cloudflare R2 for DuckDB database file storage
+- **Development**: Local DuckDB file for development
 - **Key Tables**: Users, Events, Registrations, Financial verification
 
 ## Development Commands
@@ -77,7 +77,7 @@ npm run test:coverage # Run tests with coverage
 
 ### Backend Commands (cd backend/)
 ```bash
-npm run dev          # Start with PostgreSQL (tsx watch)
+npm run dev          # Start with DuckDB (tsx watch)
 npm run dev:demo     # Start demo server with mock data
 npm run dev:duckdb   # Start with DuckDB embedded database
 npm run build        # Compile TypeScript
@@ -122,8 +122,8 @@ hesocial/
 
 ### Backend Server Variants
 The backend supports three different server configurations:
-1. **Production Server** (`server.ts`): Full PostgreSQL + Redis setup
-2. **DuckDB Server** (`server-duckdb.ts`): Embedded database for local development
+1. **Production Server** (`server.ts`): DuckDB with Cloudflare R2 persistence
+2. **DuckDB Server** (`server-duckdb.ts`): Local DuckDB file for development
 3. **Demo Server** (`server-demo.ts`): Mock data for quick prototyping
 
 ### Database Architecture
@@ -159,8 +159,8 @@ The backend supports three different server configurations:
 
 ### Database Development Modes
 - **Demo Mode**: `npm run dev:demo` - uses mock data, no database required
-- **DuckDB Mode**: `npm run dev:duckdb` - embedded database, good for local development
-- **Full Mode**: `npm run dev` - requires PostgreSQL + Redis setup
+- **DuckDB Mode**: `npm run dev:duckdb` - local DuckDB file for development
+- **Full Mode**: `npm run dev` - DuckDB with Cloudflare R2 for production
 
 ## Key Implementation Details
 

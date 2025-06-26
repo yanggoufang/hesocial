@@ -113,12 +113,6 @@ export interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
-declare module 'express-serve-static-core' {
-  interface Request {
-    user?: User;
-  }
-}
-
 export interface JwtPayload {
   userId: string
   email: string

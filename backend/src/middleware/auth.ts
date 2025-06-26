@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express'
+import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import { duckdb } from '@/database/duckdb-connection'
 import { AuthenticatedRequest, JwtPayload, User } from '@/types/index.js'
@@ -6,12 +6,13 @@ import config from '@/utils/config.js'
 import logger from '@/utils/logger.js'
 
 export const authenticateToken = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization
+    const authReq = req as AuthenticatedRequest
+    const authHeader = authReq.headers.authorization
     const token = authHeader && authHeader.split(' ')[1]
 
     if (!token) {
@@ -46,7 +47,7 @@ export const authenticateToken = async (
       return
     }
 
-    req.user = result.rows[0] as User
+    authReq.user = result.rows[0] as User
     next()
   } catch (error) {
     logger.error('Authentication error:', error)
@@ -67,8 +68,9 @@ export const authenticateToken = async (
 }
 
 export const requireMembership = (requiredTiers: string[]) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const authReq = req as AuthenticatedRequest
+    if (!authReq.user) {
       res.status(401).json({
         success: false,
         error: 'Authentication required'
@@ -76,7 +78,7 @@ export const requireMembership = (requiredTiers: string[]) => {
       return
     }
 
-    if (!requiredTiers.includes(req.user.membershipTier)) {
+    if (!requiredTiers.includes(authReq.user.membershipTier)) {
       res.status(403).json({
         success: false,
         error: `Access denied. Required membership: ${requiredTiers.join(' or ')}`
@@ -88,8 +90,9 @@ export const requireMembership = (requiredTiers: string[]) => {
   }
 }
 
-export const requireVerification = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-  if (!req.user) {
+export const requireVerification = (req: Request, res: Response, next: NextFunction): void => {
+  const authReq = req as AuthenticatedRequest
+  if (!authReq.user) {
     res.status(401).json({
       success: false,
       error: 'Authentication required'
@@ -97,7 +100,7 @@ export const requireVerification = (req: AuthenticatedRequest, res: Response, ne
     return
   }
 
-  if (!req.user.isVerified || req.user.verificationStatus !== 'approved') {
+  if (!authReq.user.isVerified || authReq.user.verificationStatus !== 'approved') {
     res.status(403).json({
       success: false,
       error: 'Account verification required'
@@ -109,12 +112,13 @@ export const requireVerification = (req: AuthenticatedRequest, res: Response, ne
 }
 
 export const optionalAuth = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization
+    const authReq = req as AuthenticatedRequest
+    const authHeader = authReq.headers.authorization
     const token = authHeader && authHeader.split(' ')[1]
 
     if (!token) {
@@ -139,7 +143,7 @@ export const optionalAuth = async (
     const result = await duckdb.query(userQuery, [decoded.userId])
     
     if (result.rows.length > 0) {
-      req.user = result.rows[0] as User
+      authReq.user = result.rows[0] as User
     }
 
     next()

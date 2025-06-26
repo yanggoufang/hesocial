@@ -313,7 +313,7 @@ export const getVenues = async (req: Request, res: Response): Promise<void> => {
 }
 
 // Placeholder for create event - requires authentication setup
-export const createEvent = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+export const createEvent = async (req: Request, res: Response): Promise<void> => {
   res.status(501).json({
     success: false,
     error: 'Event creation not yet implemented with DuckDB',
