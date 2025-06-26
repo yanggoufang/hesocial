@@ -88,76 +88,12 @@ app.get('/api', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/api/health',
-      events: '/api/events (demo)',
-      auth: '/api/auth (demo)',
       note: 'Database required for full functionality'
     },
     documentation: 'https://api.hesocial.com/docs'
   })
 })
 
-// Mock events endpoint
-app.get('/api/events', (req, res) => {
-  const mockEvents = [
-    {
-      id: '1',
-      name: '星空下的法式晚宴',
-      description: '與米其林三星主廚共享精緻法式料理，在台北101頂樓欣賞城市夜景',
-      dateTime: '2024-12-27T19:00:00',
-      venue: {
-        name: '台北文華東方酒店',
-        address: '台北市松山區敦化北路166號'
-      },
-      pricing: {
-        vvip: 15000,
-        vip: 10000,
-        currency: 'TWD'
-      },
-      exclusivityLevel: 'VVIP',
-      capacity: 20,
-      currentAttendees: 12
-    },
-    {
-      id: '2',
-      name: '私人遊艇品酒之夜',
-      description: '在豪華遊艇上品嚐世界頂級香檳，與成功企業家建立深度連結',
-      dateTime: '2024-12-15T18:30:00',
-      venue: {
-        name: '基隆港VIP碼頭',
-        address: '基隆市中正區中正路1號'
-      },
-      pricing: {
-        vip: 8000,
-        currency: 'TWD'
-      },
-      exclusivityLevel: 'VIP',
-      capacity: 16,
-      currentAttendees: 8
-    }
-  ]
-
-  res.json({
-    success: true,
-    data: mockEvents,
-    message: 'Demo data - Connect database for full functionality'
-  })
-})
-
-// Mock categories endpoint
-app.get('/api/events/categories', (req, res) => {
-  const mockCategories = [
-    { id: '1', name: '私人晚宴', description: '高級米其林餐廳的獨家用餐體驗', icon: 'utensils' },
-    { id: '2', name: '遊艇派對', description: '豪華遊艇上的社交聚會', icon: 'anchor' },
-    { id: '3', name: '藝術沙龍', description: '當代藝術展覽與收藏品鑑賞', icon: 'palette' },
-    { id: '4', name: '商務社交', description: '高端商務人士的networking活動', icon: 'briefcase' }
-  ]
-
-  res.json({
-    success: true,
-    data: mockCategories,
-    message: 'Demo data - Connect database for full functionality'
-  })
-})
 
 // Catch all for API routes
 app.use('/api/*', (req, res) => {
@@ -199,9 +135,8 @@ const startDemoServer = (): void => {
     console.log(`🚀 HeSocial API server running on port ${port} (Demo Mode)`)
     console.log(`📱 Environment: development-demo`)
     console.log(`🔒 CORS Origins: http://localhost:3000`)
-    console.log(`⚠️  Database: Not connected - Running with mock data`)
+    console.log(`⚠️  Database: Not connected - Demo mode only`)
     console.log(`📝 Health Check: http://localhost:${port}/api/health`)
-    console.log(`🎯 Mock Events: http://localhost:${port}/api/events`)
   })
 
   const gracefulShutdown = (signal: string): void => {

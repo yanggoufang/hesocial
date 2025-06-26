@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { Calendar, MapPin, Users, Star, Filter, Search } from 'lucide-react'
+import { Calendar, MapPin, Users, Star, Search } from 'lucide-react'
 
 const EventsPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -112,16 +112,6 @@ const EventsPage = () => {
     })
   }
 
-  const getDressCodeText = (level: number) => {
-    const codes = {
-      1: '休閒',
-      2: '商務休閒',
-      3: '正式',
-      4: '晚宴正裝',
-      5: '黑領結/長禮服'
-    }
-    return codes[level as keyof typeof codes] || '未指定'
-  }
 
   const getExclusivityColor = (level: string) => {
     switch (level) {

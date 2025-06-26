@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Crown, Lock, Star, Calendar, Users, Diamond, Shield, Zap } from 'lucide-react'
+import { Crown, Lock, Calendar, Users, Diamond, Shield, Zap } from 'lucide-react'
 
 const VVIPPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -288,40 +288,46 @@ const VVIPPage = () => {
                 </div>
 
                 <div className="p-6">
-                  <h3 className="text-xl font-luxury font-semibold text-luxury-gold mb-2 group-hover:text-luxury-gold/90 transition-colors">
+                  {/* Event Title */}
+                  <h3 className="text-xl font-luxury font-semibold text-luxury-gold mb-3 group-hover:text-luxury-gold/90 transition-colors">
                     {event.name}
                   </h3>
-                  <p className="text-luxury-platinum/80 text-sm mb-4 line-clamp-2">
+                  
+                  {/* Event Description */}
+                  <p className="text-luxury-platinum/80 text-sm mb-4 line-clamp-2 leading-relaxed">
                     {event.description}
                   </p>
 
-                  <div className="space-y-3 mb-6">
+                  {/* Event Details */}
+                  <div className="space-y-2 mb-4">
                     <div className="flex items-center text-luxury-platinum/70 text-sm">
-                      <Calendar className="h-4 w-4 mr-2 text-luxury-gold" />
+                      <Calendar className="h-4 w-4 mr-2 text-luxury-gold flex-shrink-0" />
                       <span>{formatDate(event.dateTime)} {formatTime(event.dateTime)}</span>
                     </div>
                     <div className="flex items-center text-luxury-platinum/70 text-sm">
-                      <Users className="h-4 w-4 mr-2 text-luxury-gold" />
+                      <Users className="h-4 w-4 mr-2 text-luxury-gold flex-shrink-0" />
                       <span>{event.currentAttendees}/{event.capacity} 人</span>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {event.tags.slice(0, 3).map((tag, tagIndex) => (
+                  {/* Event Tags */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {event.tags.slice(0, 4).map((tag, tagIndex) => (
                       <span
                         key={tagIndex}
-                        className="px-2 py-1 bg-luxury-gold/20 text-luxury-gold text-xs rounded-full"
+                        className="px-3 py-1 bg-luxury-gold/20 text-luxury-gold text-xs rounded-full font-medium"
                       >
                         {tag}
                       </span>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="text-luxury-gold font-semibold">
+                  {/* Price and Action */}
+                  <div className="flex items-center justify-between pt-4 border-t border-luxury-gold/20">
+                    <div className="text-2xl font-bold text-luxury-gold">
                       NT$ {event.price.toLocaleString()}
                     </div>
-                    <button className="px-4 py-2 bg-luxury-gold/20 text-luxury-gold rounded-lg hover:bg-luxury-gold hover:text-luxury-midnight-black transition-all duration-300 text-sm font-medium">
+                    <button className="px-6 py-2 bg-luxury-gold text-luxury-midnight-black rounded-lg hover:bg-luxury-gold/90 transition-all duration-300 text-sm font-semibold shadow-lg hover:shadow-luxury-gold/25">
                       查看詳情
                     </button>
                   </div>

@@ -1,6 +1,17 @@
 -- HeSocial Platform Database Schema for DuckDB
 -- High-end social event platform for affluent individuals
 
+-- Server state tracking table
+CREATE TABLE IF NOT EXISTS server_state (
+    id INTEGER PRIMARY KEY,
+    start_count INTEGER NOT NULL DEFAULT 0,
+    first_start_time TIMESTAMP,
+    last_start_time TIMESTAMP,
+    last_stop_time TIMESTAMP,
+    last_session_duration INTEGER DEFAULT 0, -- in seconds
+    total_lifetime INTEGER DEFAULT 0 -- in seconds
+);
+
 -- Users table with luxury membership tiers
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY,
