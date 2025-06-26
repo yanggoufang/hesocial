@@ -109,14 +109,10 @@ export interface FinancialVerification {
   updatedAt: Date
 }
 
-export interface AuthenticatedRequest extends Request {
-  user?: User
-  headers: Request['headers']
-  body: Request['body']
-  query: Request['query']
-  params: Request['params']
-  ip: Request['ip']
-  get(name: string): string | undefined
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: User;
+  }
 }
 
 export interface JwtPayload {

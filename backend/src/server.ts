@@ -4,10 +4,10 @@ import helmet from 'helmet'
 import compression from 'compression'
 import rateLimit from 'express-rate-limit'
 import morgan from 'morgan'
-import { connectDatabases, closeDatabases } from '@/database/connection.js'
+import { connectDatabases, closeDatabases } from '@/database/duckdb-connection.js'
 import config from '@/utils/config.js'
 import logger from '@/utils/logger.js'
-import apiRoutes from '@/routes/index.js'
+import apiRoutes from '@/routes/index-duckdb.js'
 
 const app = express()
 
@@ -64,18 +64,20 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.get('/health', (req, res) => {
   res.json({
     success: true,
-    message: 'HeSocial API is running',
+    message: 'HeSocial API is running (DuckDB)',
     timestamp: new Date().toISOString(),
-    environment: config.nodeEnv
+    environment: config.nodeEnv,
+    database: 'DuckDB - Full functionality enabled'
   })
 })
 
 app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'API health check passed',
+    message: 'API health check passed (DuckDB)',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    database: 'DuckDB'
   })
 })
 
@@ -113,9 +115,12 @@ const startServer = async (): Promise<void> => {
     await connectDatabases()
     
     const server = app.listen(config.port, () => {
-      logger.info(`🚀 HeSocial API server running on port ${config.port}`)
+      logger.info(`🚀 HeSocial API server running on port ${config.port} (DuckDB)`)
       logger.info(`📱 Environment: ${config.nodeEnv}`)
+      logger.info(`🗄️  Database: DuckDB (Full functionality)`)
       logger.info(`🔒 CORS Origins: ${config.corsOrigins.join(', ')}`)
+      logger.info(`📝 Health Check: http://localhost:${config.port}/api/health`)
+      logger.info(`🎯 Events API: http://localhost:${config.port}/api/events`)
     })
 
     const gracefulShutdown = async (signal: string): Promise<void> => {

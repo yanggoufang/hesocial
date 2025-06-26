@@ -8,7 +8,7 @@ HeSocial is a social event platform with a monorepo structure.
 
 - **Backend:** Located in the `backend` directory. It's a Node.js/Express application written in TypeScript.
 - **Frontend:** Located in the `frontend` directory. It's a React application built with Vite and styled with Tailwind CSS.
-- **Database:** The primary database schemas are in the `database` directory. The project uses PostgreSQL, but also has a DuckDB implementation for local development.
+- **Database:** The project uses DuckDB as its primary database. The schema is defined in `database/duckdb-schema.sql`. For production, we plan to use Cloudflare R2 to persist the DuckDB database file.
 
 ## Development Workflow
 

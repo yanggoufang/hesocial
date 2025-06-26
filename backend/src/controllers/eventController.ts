@@ -1,6 +1,5 @@
 import { Request, Response } from 'express'
-import { v4 as uuidv4 } from 'uuid'
-import { pool } from '@/database/connection.js'
+import { pool } from '@/database/duckdb-pool.js'
 import { AuthenticatedRequest } from '@/types/index.js'
 import logger from '@/utils/logger.js'
 
@@ -30,21 +29,22 @@ export const getEvents = async (req: Request, res: Response): Promise<void> => {
     // Add search filter
     if (search) {
       paramCount++
-      whereConditions.push(`(e.name ILIKE $${paramCount} OR e.description ILIKE $${paramCount})`)
-      queryParams.push(`%${search}%`)
+      whereConditions.push(`(e.name LIKE ? OR e.description LIKE ?)`)
+      queryParams.push(`%${search}%`, `%${search}%`)
+      paramCount++ // For second parameter
     }
 
     // Add category filter
     if (category) {
       paramCount++
-      whereConditions.push(`ec.name = $${paramCount}`)
+      whereConditions.push(`ec.name = ?`)
       queryParams.push(category)
     }
 
     // Add exclusivity level filter
     if (exclusivityLevel) {
       paramCount++
-      whereConditions.push(`e.exclusivity_level = $${paramCount}`)
+      whereConditions.push(`e.exclusivity_level = ?`)
       queryParams.push(exclusivityLevel)
     }
 
@@ -67,14 +67,14 @@ export const getEvents = async (req: Request, res: Response): Promise<void> => {
         v.name as "venueName", v.address as "venueAddress", v.city as "venueCity",
         v.rating as "venueRating", v.amenities as "venueAmenities",
         ec.name as "categoryName", ec.icon as "categoryIcon",
-        u.first_name || ' ' || u.last_name as "organizerName"
+        (u.first_name || ' ' || u.last_name) as "organizerName"
       FROM events e
       JOIN venues v ON e.venue_id = v.id
       JOIN event_categories ec ON e.category_id = ec.id
       JOIN users u ON e.organizer_id = u.id
       ${whereClause}
       ORDER BY e.${sortColumn} ${sortOrder}
-      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+      LIMIT ? OFFSET ?
     `
 
     queryParams.push(Number(limit), offset)
@@ -94,8 +94,10 @@ export const getEvents = async (req: Request, res: Response): Promise<void> => {
       pool.query(countQuery, queryParams.slice(0, -2)) // Remove limit and offset for count
     ])
 
-    const events = eventsResult.rows.map(event => ({
+    const events = eventsResult.rows.map((event: any) => ({
       ...event,
+      pricing: typeof event.pricing === 'string' ? JSON.parse(event.pricing) : event.pricing,
+      requirements: typeof event.requirements === 'string' ? JSON.parse(event.requirements) : event.requirements,
       venue: {
         name: event.venueName,
         address: event.venueAddress,
@@ -119,7 +121,7 @@ export const getEvents = async (req: Request, res: Response): Promise<void> => {
       organizerName: undefined
     }))
 
-    const total = parseInt(countResult.rows[0].total)
+    const total = parseInt(countResult.rows[0]?.total || '0')
     const totalPages = Math.ceil(total / Number(limit))
 
     res.json({
@@ -159,12 +161,12 @@ export const getEventById = async (req: Request, res: Response): Promise<void> =
         v.rating as "venueRating", v.amenities as "venueAmenities", v.images as "venueImages",
         ec.id as "categoryId", ec.name as "categoryName", ec.description as "categoryDescription",
         ec.icon as "categoryIcon",
-        u.first_name || ' ' || u.last_name as "organizerName"
+        (u.first_name || ' ' || u.last_name) as "organizerName"
       FROM events e
       JOIN venues v ON e.venue_id = v.id
       JOIN event_categories ec ON e.category_id = ec.id
       JOIN users u ON e.organizer_id = u.id
-      WHERE e.id = $1 AND e.is_active = true
+      WHERE e.id = ? AND e.is_active = true
     `
 
     const result = await pool.query(eventQuery, [id])
@@ -180,6 +182,8 @@ export const getEventById = async (req: Request, res: Response): Promise<void> =
     const event = result.rows[0]
     const formattedEvent = {
       ...event,
+      pricing: typeof event.pricing === 'string' ? JSON.parse(event.pricing) : event.pricing,
+      requirements: typeof event.requirements === 'string' ? JSON.parse(event.requirements) : event.requirements,
       venue: {
         id: event.venueId,
         name: event.venueName,
@@ -230,87 +234,6 @@ export const getEventById = async (req: Request, res: Response): Promise<void> =
   }
 }
 
-export const createEvent = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    if (!req.user) {
-      res.status(401).json({
-        success: false,
-        error: 'Authentication required'
-      })
-      return
-    }
-
-    const {
-      name,
-      description,
-      dateTime,
-      registrationDeadline,
-      venueId,
-      categoryId,
-      pricing,
-      exclusivityLevel,
-      dressCode,
-      capacity,
-      amenities = [],
-      privacyGuarantees = [],
-      requirements = []
-    } = req.body
-
-    const eventId = uuidv4()
-    const eventQuery = `
-      INSERT INTO events (
-        id, name, description, date_time, registration_deadline,
-        venue_id, category_id, organizer_id, pricing,
-        exclusivity_level, dress_code, capacity,
-        amenities, privacy_guarantees, requirements
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      RETURNING 
-        id, name, description, date_time as "dateTime",
-        registration_deadline as "registrationDeadline",
-        pricing, exclusivity_level as "exclusivityLevel",
-        dress_code as "dressCode", capacity, current_attendees as "currentAttendees",
-        amenities, privacy_guarantees as "privacyGuarantees",
-        requirements, created_at as "createdAt"
-    `
-
-    const result = await pool.query(eventQuery, [
-      eventId, name, description, dateTime, registrationDeadline,
-      venueId, categoryId, req.user.id, JSON.stringify(pricing),
-      exclusivityLevel, dressCode, capacity,
-      amenities, privacyGuarantees, JSON.stringify(requirements)
-    ])
-
-    // Log event creation
-    await pool.query(
-      `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, details, ip_address, user_agent)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        req.user.id,
-        'event_created',
-        'event',
-        eventId,
-        JSON.stringify({ eventName: name, exclusivityLevel, capacity }),
-        req.ip,
-        req.get('User-Agent')
-      ]
-    )
-
-    logger.info('Event created:', { eventId, userId: req.user.id, eventName: name })
-
-    res.status(201).json({
-      success: true,
-      message: 'Event created successfully',
-      data: result.rows[0]
-    })
-  } catch (error) {
-    logger.error('Create event error:', error)
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create event'
-    })
-  }
-}
-
 export const getEventCategories = async (req: Request, res: Response): Promise<void> => {
   try {
     const categoriesQuery = `
@@ -343,13 +266,13 @@ export const getVenues = async (req: Request, res: Response): Promise<void> => {
 
     if (city) {
       paramCount++
-      whereConditions.push(`city ILIKE $${paramCount}`)
+      whereConditions.push(`city LIKE ?`)
       queryParams.push(`%${city}%`)
     }
 
     if (rating) {
       paramCount++
-      whereConditions.push(`rating >= $${paramCount}`)
+      whereConditions.push(`rating >= ?`)
       queryParams.push(Number(rating))
     }
 
@@ -366,7 +289,7 @@ export const getVenues = async (req: Request, res: Response): Promise<void> => {
 
     const result = await pool.query(venuesQuery, queryParams)
 
-    const venues = result.rows.map(venue => ({
+    const venues = result.rows.map((venue: any) => ({
       ...venue,
       coordinates: {
         lat: venue.latitude,
@@ -387,4 +310,13 @@ export const getVenues = async (req: Request, res: Response): Promise<void> => {
       error: 'Failed to get venues'
     })
   }
+}
+
+// Placeholder for create event - requires authentication setup
+export const createEvent = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  res.status(501).json({
+    success: false,
+    error: 'Event creation not yet implemented with DuckDB',
+    message: 'This feature requires authentication system setup'
+  })
 }

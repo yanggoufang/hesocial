@@ -165,7 +165,7 @@ app.use('/api/*', (req, res) => {
     success: false,
     error: 'Service temporarily unavailable',
     message: 'This endpoint requires database connection. Currently running in demo mode.',
-    action: 'Please set up PostgreSQL and Redis to enable full API functionality'
+    action: 'Please set up DuckDB for full API functionality'
   })
 })
 

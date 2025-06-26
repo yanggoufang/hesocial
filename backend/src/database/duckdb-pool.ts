@@ -1,5 +1,5 @@
 // DuckDB Pool Adapter
-// This file provides a PostgreSQL-compatible interface for DuckDB
+// This file provides a DuckDB interface
 // so we can use existing controllers with minimal changes
 
 import { duckdb } from './duckdb-connection.js'

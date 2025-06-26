@@ -12,10 +12,6 @@ services:
     build_command: "npm install && npm run build"
     start_command: "npm start"
     env_vars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: hesocial-db
-          property: connectionString
       - key: NODE_VERSION
         value: 20.11.1
 
@@ -34,9 +30,3 @@ services:
     env_vars:
       - key: NODE_VERSION
         value: 20.11.1
-
-databases:
-  - name: hesocial-db
-    plan: free
-    databaseName: hesocial
-    user: hesocial
