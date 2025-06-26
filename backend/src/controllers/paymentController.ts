@@ -6,7 +6,7 @@ import config from '@/utils/config.js'
 import logger from '@/utils/logger.js'
 
 const stripe = new Stripe(config.stripe.secretKey, {
-  apiVersion: '2023-10-16'
+  apiVersion: '2023-08-16'
 })
 
 export const createPaymentIntent = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
