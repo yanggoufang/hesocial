@@ -8,7 +8,7 @@ import {
 
 const router = Router()
 
-// Event routes (public for demo)
+// Event routes
 router.get('/events', getEvents)
 router.get('/events/categories', getEventCategories)
 router.get('/events/venues', getVenues)
