@@ -41,6 +41,8 @@ coverage/
 # Database
 *.sqlite
 *.db
+*.duckdb
+*.duckdb.wal
 
 # Temporary folders
 tmp/
@@ -57,3 +59,6 @@ temp/
 # Security
 private_keys/
 certificates/
+
+# Claude Code local settings
+.claude/settings.local.json
