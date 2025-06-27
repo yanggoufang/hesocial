@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { duckdb } from '@/database/duckdb-connection'
-import { AuthenticatedRequest, JwtPayload, User } from '@/types/index.js'
-import config from '@/utils/config.js'
-import logger from '@/utils/logger.js'
+import { duckdb } from '../database/duckdb-connection.js'
+import { AuthenticatedRequest, JwtPayload, User } from '../types/index.js'
+import config from '../utils/config.js'
+import logger from '../utils/logger.js'
 
 export const authenticateToken = async (
   req: Request,

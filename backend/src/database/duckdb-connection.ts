@@ -2,7 +2,7 @@ import Database from 'duckdb'
 import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import logger from '@/utils/logger.js'
+import logger from '../utils/logger.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)

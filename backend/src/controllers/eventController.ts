@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
-import { pool } from '@/database/duckdb-pool.js'
-import { AuthenticatedRequest } from '@/types/index.js'
-import logger from '@/utils/logger.js'
+import { pool } from '../database/duckdb-pool.js'
+import { AuthenticatedRequest } from '../types/index.js'
+import logger from '../utils/logger.js'
 
 export const getEvents = async (req: Request, res: Response): Promise<void> => {
   try {

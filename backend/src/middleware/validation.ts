@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import Joi from 'joi'
-import logger from '@/utils/logger.js'
+import logger from '../utils/logger.js'
 
 export const validateRequest = (schema: {
   body?: Joi.ObjectSchema

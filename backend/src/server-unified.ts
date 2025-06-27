@@ -4,10 +4,10 @@ import helmet from 'helmet'
 import compression from 'compression'
 import rateLimit from 'express-rate-limit'
 import morgan from 'morgan'
-import { connectDatabases, closeDatabases, getDatabaseInfo } from '@/database/unified-connection.js'
-import config from '@/utils/config.js'
-import logger from '@/utils/logger.js'
-import createUnifiedRoutes from '@/routes/unified-routes.js'
+import { connectDatabases, closeDatabases, getDatabaseInfo } from './database/unified-connection.js'
+import config from './utils/config.js'
+import logger from './utils/logger.js'
+import createUnifiedRoutes from './routes/unified-routes.js'
 
 const app = express()
 

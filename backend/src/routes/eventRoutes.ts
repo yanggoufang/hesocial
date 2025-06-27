@@ -5,9 +5,9 @@ import {
   createEvent,
   getEventCategories,
   getVenues
-} from '@/controllers/eventController.js'
-import { authenticateToken, requireMembership, requireVerification, optionalAuth } from '@/middleware/auth.js'
-import { validateRequest, eventCreationSchema, queryPaginationSchema } from '@/middleware/validation.js'
+} from '../controllers/eventController.js'
+import { authenticateToken, requireMembership, requireVerification, optionalAuth } from '../middleware/auth.js'
+import { validateRequest, eventCreationSchema, queryPaginationSchema } from '../middleware/validation.js'
 
 const router = Router()
 

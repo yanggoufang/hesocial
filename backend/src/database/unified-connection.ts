@@ -1,5 +1,5 @@
 import { connectDatabases as connectDuckDB, closeDatabases as closeDuckDB } from './duckdb-connection.js'
-import logger from '@/utils/logger.js'
+import logger from '../utils/logger.js'
 
 export type DatabaseType = 'duckdb'
 

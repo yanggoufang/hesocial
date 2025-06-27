@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-import { EmailConfig, StripeConfig, OAuthConfig } from '@/types/index.js'
+import { EmailConfig, StripeConfig, OAuthConfig } from '../types/index.js'
 
 dotenv.config()
 

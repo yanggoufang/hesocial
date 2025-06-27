@@ -4,8 +4,8 @@ import helmet from 'helmet'
 import compression from 'compression'
 import rateLimit from 'express-rate-limit'
 import morgan from 'morgan'
-import config from '@/utils/config.js'
-import logger from '@/utils/logger.js'
+import config from './utils/config.js'
+import logger from './utils/logger.js'
 
 const app = express()
 
