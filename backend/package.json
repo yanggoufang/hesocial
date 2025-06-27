@@ -8,6 +8,7 @@
     "dev": "tsx watch src/server-unified.ts",
     "build": "tsc",
     "start": "node dist/server-unified.js",
+    "postinstall": "npm rebuild duckdb",
     "lint": "eslint src --ext .ts --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
