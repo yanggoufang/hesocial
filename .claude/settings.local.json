@@ -12,7 +12,14 @@
       "Bash(docker:*)",
       "Bash(sudo service:*)",
       "Bash(npm install:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git config:*)",
+      "Bash(cat:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npx tsc:*)",
+      "Bash(timeout 10s npm run dev)",
+      "Bash(timeout 10s npm run dev:backend)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

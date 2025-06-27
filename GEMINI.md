@@ -14,3 +14,7 @@ HeSocial is a social event platform with a monorepo structure.
 
 - The backend server can be started with `npm run dev` in the `backend` directory.
 - The frontend development server can be started with `npm run dev` in the `frontend` directory.
+
+## Deployment Considerations
+
+- When checking production deployments, always verify the commit ID to ensure the correct version is deployed.

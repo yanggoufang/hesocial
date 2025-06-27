@@ -134,20 +134,6 @@ export interface ApiResponse<T = any> {
   }
 }
 
-export interface DatabaseConfig {
-  host: string
-  port: number
-  database: string
-  username: string
-  password: string
-  ssl?: boolean
-}
-
-export interface RedisConfig {
-  host: string
-  port: number
-  password?: string
-}
 
 export interface EmailConfig {
   host: string

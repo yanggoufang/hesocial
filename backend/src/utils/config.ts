@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-import { DatabaseConfig, RedisConfig, EmailConfig, StripeConfig, OAuthConfig } from '@/types/index.js'
+import { EmailConfig, StripeConfig, OAuthConfig } from '@/types/index.js'
 
 dotenv.config()
 
@@ -8,8 +8,6 @@ interface Config {
   nodeEnv: string
   jwtSecret: string
   jwtExpiresIn: string
-  database: DatabaseConfig
-  redis: RedisConfig
   email: EmailConfig
   stripe: StripeConfig
   oauth: OAuthConfig
@@ -25,21 +23,6 @@ const config: Config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   jwtSecret: process.env.JWT_SECRET || 'fallback-secret-key-change-in-production',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-
-  database: {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432', 10),
-    database: process.env.DB_NAME || 'hesocial',
-    username: process.env.DB_USER || '',
-    password: process.env.DB_PASSWORD || 'password',
-    ssl: process.env.DB_SSL === 'true'
-  },
-
-  redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379', 10),
-    password: process.env.REDIS_PASSWORD || ''
-  },
 
   email: {
     host: process.env.EMAIL_HOST || 'smtp.ethereal.email',

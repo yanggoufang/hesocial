@@ -18,10 +18,7 @@ class DuckDBConnection {
       logger.info(`Connecting to DuckDB at: ${dbPath}`)
       
       // Force persistent mode by explicitly setting file path
-      this.db = new Database.Database(dbPath, {
-        access_mode: 'READ_WRITE',
-        max_memory: '512MB'
-      })
+      this.db = new Database.Database(dbPath)
       this.connection = this.db.connect()
       
       logger.info('Connected to DuckDB database')
@@ -50,7 +47,6 @@ class DuckDBConnection {
 
   async close(): Promise<void> {
     try {
-      // Close connections properly
       if (this.connection) {
         this.connection.close()
         this.connection = null
@@ -124,12 +120,6 @@ class DuckDBConnection {
         if (statement.trim()) {
           logger.info(`Executing: ${statement.substring(0, 50)}...`)
           await this.query(statement)
-          
-          // Verify server_state table creation specifically
-          if (statement.includes('server_state')) {
-            const checkResult = await this.query("SELECT name FROM sqlite_master WHERE type='table' AND name='server_state'")
-            logger.info(`Server state table check: ${JSON.stringify(checkResult)}`)
-          }
         }
       }
       
@@ -138,7 +128,7 @@ class DuckDBConnection {
       
       // Verify tables were created
       const tables = await this.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'")
-      logger.info(`Tables created: ${tables.rows.map(r => r.table_name).join(', ')}`)
+      logger.info(`Tables created: ${tables.rows.map((r: any) => r.table_name).join(', ')}`)
       
       logger.info('✅ DuckDB schema initialization completed successfully')
     } catch (error) {
