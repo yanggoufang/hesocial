@@ -48,7 +48,6 @@ class DuckDBConnection {
   async close(): Promise<void> {
     try {
       if (this.connection) {
-        this.connection.close()
         this.connection = null
       }
       if (this.db) {

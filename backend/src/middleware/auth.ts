@@ -12,7 +12,7 @@ export const authenticateToken = async (
 ): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest
-    const authHeader = authReq.headers.authorization
+    const authHeader = req.headers.authorization
     const token = authHeader && authHeader.split(' ')[1]
 
     if (!token) {
@@ -118,7 +118,7 @@ export const optionalAuth = async (
 ): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest
-    const authHeader = authReq.headers.authorization
+    const authHeader = req.headers.authorization
     const token = authHeader && authHeader.split(' ')[1]
 
     if (!token) {
