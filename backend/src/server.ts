@@ -4,10 +4,10 @@ import helmet from 'helmet'
 import compression from 'compression'
 import rateLimit from 'express-rate-limit'
 import morgan from 'morgan'
-import { connectDatabases, closeDatabases } from './database/duckdb-connection.js'
+import { connectDatabases, closeDatabases, getDatabaseInfo } from './database/connection.js'
 import config from './utils/config.js'
 import logger from './utils/logger.js'
-import apiRoutes from './routes/index.js'
+import createRoutes from './routes/main.js'
 
 const app = express()
 
@@ -61,28 +61,28 @@ app.use(morgan('combined', {
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
+// Health check endpoints
 app.get('/health', (req, res) => {
+  const dbInfo = getDatabaseInfo()
   res.json({
     success: true,
-    message: 'HeSocial API is running (DuckDB)',
+    message: `HeSocial API is running (${dbInfo.type.toUpperCase()})`,
     timestamp: new Date().toISOString(),
     environment: config.nodeEnv,
-    database: 'DuckDB - Full functionality enabled'
+    database: dbInfo.description
   })
 })
 
 app.get('/api/health', (req, res) => {
+  const dbInfo = getDatabaseInfo()
   res.json({
     success: true,
-    message: 'API health check passed (DuckDB)',
+    message: `API health check passed (${dbInfo.type.toUpperCase()})`,
     timestamp: new Date().toISOString(),
     version: '1.0.0',
-    database: 'DuckDB'
+    database: dbInfo.type
   })
 })
-
-// Mount API routes
-app.use('/api', apiRoutes)
 
 app.use((req, res) => {
   res.status(404).json({
@@ -112,12 +112,19 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
 
 const startServer = async (): Promise<void> => {
   try {
+    const dbInfo = getDatabaseInfo()
+    
+    // Connect to database
     await connectDatabases()
     
+    // Dynamically load and mount API routes
+    const apiRoutes = await createRoutes()
+    app.use('/api', apiRoutes)
+    
     const server = app.listen(config.port, () => {
-      logger.info(`🚀 HeSocial API server running on port ${config.port} (DuckDB)`)
+      logger.info(`🚀 HeSocial API server running on port ${config.port}`)
       logger.info(`📱 Environment: ${config.nodeEnv}`)
-      logger.info(`🗄️  Database: DuckDB (Full functionality)`)
+      logger.info(`🗄️  Database: ${dbInfo.description}`)
       logger.info(`🔒 CORS Origins: ${config.corsOrigins.join(', ')}`)
       logger.info(`📝 Health Check: http://localhost:${config.port}/api/health`)
       logger.info(`🎯 Events API: http://localhost:${config.port}/api/events`)
