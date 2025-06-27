@@ -19,7 +19,8 @@
       "Bash(npx tsc:*)",
       "Bash(timeout 10s npm run dev)",
       "Bash(timeout 10s npm run dev:backend)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
