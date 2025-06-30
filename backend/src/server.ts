@@ -85,13 +85,7 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Route not found',
-    message: `${req.method} ${req.path} is not a valid endpoint`
-  })
-})
+// Initialize backup service and API routes in startServer function
 
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error('Unhandled error:', {
@@ -134,6 +128,15 @@ const startServer = async (): Promise<void> => {
     // Dynamically load and mount API routes
     const apiRoutes = await createRoutes()
     app.use('/api', apiRoutes)
+    
+    // Catch-all route for unmatched requests (must be after API routes)
+    app.use((req, res) => {
+      res.status(404).json({
+        success: false,
+        error: 'Route not found',
+        message: `${req.method} ${req.path} is not a valid endpoint`
+      })
+    })
     
     const server = app.listen(config.port, () => {
       logger.info(`🚀 HeSocial API server running on port ${config.port}`)

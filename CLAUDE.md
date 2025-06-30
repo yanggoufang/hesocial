@@ -183,3 +183,12 @@ The backend supports three different server configurations:
 - Health check endpoints for monitoring
 - Structured error responses with success/error flags
 - Request/response logging for debugging
+
+## Task Management
+
+### Checking Plans and Todos
+When asked to check plans or todos, always search the repository for:
+- **Plan files**: `**/*plan*`, `**/*PLAN*` patterns (e.g., `CLOUDFLARE_R2_PLAN.md`)
+- **Todo files**: `**/*todo*`, `**/*TODO*` patterns
+- **Current implementation status**: Check if plan items are implemented in the codebase
+- **Use TodoRead tool**: For active session todos
