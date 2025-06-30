@@ -26,8 +26,9 @@ This guide walks through setting up Cloudflare R2 for DuckDB persistence. You ne
 ### 1.3 Configure Bucket Settings
 1. Go to your bucket → **Settings**
 2. **Public access**: Disabled (keep private)
-3. **Versioning**: Enable (recommended for backups)
-4. **Lifecycle rules**: Optional (for automatic cleanup)
+3. **Lifecycle rules**: Configure automatic cleanup (R2 doesn't have native versioning)
+   - Delete files older than 30 days (optional)
+   - Keep recent backups for disaster recovery
 
 ## Step 2: Generate API Tokens
 
@@ -124,8 +125,8 @@ rm test.txt
 
 ### 5.3 Bucket Security
 - Keep bucket private (no public access)
-- Enable versioning for backup history
-- Set up lifecycle rules to manage storage costs
+- Use timestamp-based file naming for backup history (R2 doesn't have native versioning)
+- Set up lifecycle rules to manage storage costs and retention
 
 ## Step 6: Cost Optimization
 

@@ -1,7 +1,19 @@
-# Cloudflare R2 DuckDB Persistence Implementation Plan
+# ⚠️ OUTDATED: Custom AWS SDK Implementation Plan
+
+**⚠️ WARNING: This implementation plan is OUTDATED.**
+
+**RECOMMENDED APPROACH: Use rclone + Cloudflare R2 instead**
+
+See `CLOUDFLARE_R2_RCLONE_SETUP.md` for the simplified, production-ready approach using rclone.
+
+---
+
+# Cloudflare R2 DuckDB Persistence Implementation Plan (LEGACY)
 
 ## Overview
-Implement Cloudflare R2 as persistent storage for DuckDB database files, enabling data persistence across server restarts and deployments while maintaining local performance.
+~~Implement Cloudflare R2 as persistent storage for DuckDB database files, enabling data persistence across server restarts and deployments while maintaining local performance.~~
+
+**REPLACED BY**: Simple rclone backup/restore scripts with cron scheduling.
 
 ## Current State Analysis
 

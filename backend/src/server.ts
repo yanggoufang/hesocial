@@ -8,6 +8,7 @@ import { connectDatabases, closeDatabases, getDatabaseInfo } from './database/co
 import config from './utils/config.js'
 import logger from './utils/logger.js'
 import createRoutes from './routes/main.js'
+import { R2BackupService } from './services/r2-backup.js'
 
 const app = express()
 
@@ -117,6 +118,19 @@ const startServer = async (): Promise<void> => {
     // Connect to database
     await connectDatabases()
     
+    // Initialize backup service
+    const backupService = new R2BackupService()
+    
+    // Test R2 connection on startup
+    if (process.env.BACKUP_ENABLED === 'true') {
+      const connectionTest = await backupService.testConnection()
+      if (connectionTest) {
+        logger.info('✅ R2 backup service connected successfully')
+      } else {
+        logger.warn('⚠️  R2 backup service connection failed - backups will be disabled')
+      }
+    }
+    
     // Dynamically load and mount API routes
     const apiRoutes = await createRoutes()
     app.use('/api', apiRoutes)
@@ -137,6 +151,16 @@ const startServer = async (): Promise<void> => {
         logger.info('HTTP server closed')
         
         try {
+          // Create backup before closing database
+          logger.info('Creating backup before shutdown...')
+          const backupId = await backupService.backupOnShutdown()
+          if (backupId) {
+            logger.info(`✅ Shutdown backup created: ${backupId}`)
+          } else {
+            logger.warn('⚠️  Shutdown backup failed or disabled')
+          }
+          
+          // Close database connections
           await closeDatabases()
           logger.info('Graceful shutdown completed')
           process.exit(0)
@@ -145,6 +169,12 @@ const startServer = async (): Promise<void> => {
           process.exit(1)
         }
       })
+      
+      // Force shutdown after 30 seconds
+      setTimeout(() => {
+        logger.error('Forced shutdown after timeout')
+        process.exit(1)
+      }, 30000)
     }
 
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
