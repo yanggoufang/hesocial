@@ -33,7 +33,10 @@ This is a high-end social event platform targeting affluent individuals aged 45-
 
 ### Database Options
 - **Primary**: DuckDB with schema defined in `database/duckdb-schema.sql`
-- **Production Persistence**: Cloudflare R2 for DuckDB database file storage
+- **Production Persistence**: Cloudflare R2 backup system (COMPLETED - Production Ready)
+  - Graceful shutdown auto-backup
+  - Manual backup API endpoints (`POST /api/admin/backup`, `GET /api/admin/backups`)
+  - Environment separation (dev: `hesocial-duckdb-dev`, prod: `hesocial-duckdb`)
 - **Development**: Local DuckDB file for development
 - **Key Tables**: Users, Events, Registrations, Financial verification
 
@@ -183,6 +186,11 @@ The backend supports three different server configurations:
 - Health check endpoints for monitoring
 - Structured error responses with success/error flags
 - Request/response logging for debugging
+- **Admin backup endpoints** (Production Ready):
+  - `POST /api/admin/backup` - Create manual backup
+  - `GET /api/admin/backups` - List available backups
+  - `PUT /api/admin/backup/:id/status` - Update backup status
+  - `DELETE /api/admin/backups/cleanup` - Cleanup old backups
 
 ## Task Management
 
