@@ -1,14 +1,22 @@
 # Cloudflare R2 Setup Guide for HeSocial
 
 ## Overview
-This guide walks through setting up Cloudflare R2 for DuckDB persistence. You need to configure R2 **before** implementing the sync code.
+This guide walks through setting up Cloudflare R2 for DuckDB persistence. The implementation is **COMPLETED** and production-ready.
+
+## ✅ Implementation Status
+
+**COMPLETED (2025-06-30)** - The R2 backup system is fully implemented and working:
+- ✅ Graceful shutdown auto-backup
+- ✅ Manual backup API endpoints
+- ✅ Environment separation (dev/prod buckets)
+- ✅ Production-ready deployment
 
 ## When to Configure R2
 
-**Configure Cloudflare R2 FIRST** - before implementing the sync code. This is required for:
-- Getting the necessary credentials
-- Testing connectivity
-- Setting up the bucket structure
+**Configure Cloudflare R2** for production deployment. This provides:
+- Automatic database persistence
+- Manual backup capabilities
+- Environment separation
 
 ## Step 1: Create Cloudflare R2 Bucket
 
@@ -19,7 +27,9 @@ This guide walks through setting up Cloudflare R2 for DuckDB persistence. You ne
 
 ### 1.2 Create Bucket
 1. Click **Create bucket**
-2. **Bucket name**: `hesocial-duckdb`
+2. **Bucket names**: 
+   - Development: `hesocial-duckdb-dev`
+   - Production: `hesocial-duckdb`
 3. **Location**: Auto (or choose your preferred region)
 4. Click **Create bucket**
 
@@ -58,17 +68,14 @@ Add to your `backend/.env` file:
 R2_ACCOUNT_ID=your-account-id-here
 R2_ACCESS_KEY_ID=your-access-key-here
 R2_SECRET_ACCESS_KEY=your-secret-key-here
-R2_BUCKET_NAME=hesocial-duckdb
+R2_BUCKET_NAME=hesocial-duckdb-dev  # or hesocial-duckdb for production
 R2_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
 R2_REGION=auto
 
-# Sync Configuration
-R2_SYNC_ENABLED=true
-R2_BACKUP_INTERVAL_MINUTES=30
-R2_DATABASE_KEY=hesocial-production.duckdb
-R2_BACKUP_RETENTION_DAYS=30
-R2_COMPRESS_UPLOADS=true
-R2_VALIDATE_DOWNLOADS=true
+# Backup Configuration (IMPLEMENTED)
+BACKUP_ENABLED=true
+R2_BACKUP_PATH=/backups/
+BACKUP_RETENTION_DAYS=30
 ```
 
 ### 3.2 Replace Placeholder Values
@@ -171,11 +178,18 @@ Before implementing sync code, verify:
 
 ## Next Steps
 
-Once R2 is configured:
-1. Install AWS SDK v3 in backend
-2. Implement R2 client wrapper
-3. Create upload/download functionality
-4. Integrate with DuckDB lifecycle
+✅ **COMPLETED** - R2 integration is fully implemented:
+1. ✅ AWS SDK v3 installed in backend
+2. ✅ R2 client wrapper implemented (`backend/src/services/r2-backup.ts`)
+3. ✅ Upload/download functionality working
+4. ✅ Integrated with DuckDB lifecycle (graceful shutdown)
+
+## Available API Endpoints
+
+- `POST /api/admin/backup` - Create manual backup
+- `GET /api/admin/backups` - List available backups
+- `PUT /api/admin/backup/:id/status` - Update backup status
+- `DELETE /api/admin/backups/cleanup` - Cleanup old backups
 
 ## Support Resources
 

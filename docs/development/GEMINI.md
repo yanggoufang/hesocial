@@ -144,7 +144,7 @@ The backend supports three different server configurations:
 ### Getting Started
 1. **Initial Setup**: `npm run setup` - installs all dependencies
 2. **Development**: `npm run dev` - starts both frontend (port 3000) and backend (port 5000)
-3. **Database Setup**: See SETUP_DATABASES.md for database configuration options
+3. **Database Setup**: DuckDB runs automatically - see docs/setup/ for R2 configuration
 
 ### Testing Commands
 - `npm run test` - run all tests (frontend + backend)

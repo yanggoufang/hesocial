@@ -147,7 +147,7 @@ The backend supports three different server configurations:
 ### Getting Started
 1. **Initial Setup**: `npm run setup` - installs all dependencies
 2. **Development**: `npm run dev` - starts both frontend (port 3000) and backend (port 5000)
-3. **Database Setup**: See SETUP_DATABASES.md for database configuration options
+3. **Database Setup**: See docs/setup/ for database configuration options
 
 ### Testing Commands
 - `npm run test` - run all tests (frontend + backend)
@@ -196,7 +196,7 @@ The backend supports three different server configurations:
 
 ### Checking Plans and Todos
 When asked to check plans or todos, always search the repository for:
-- **Plan files**: `**/*plan*`, `**/*PLAN*` patterns (e.g., `CLOUDFLARE_R2_PLAN.md`)
+- **Plan files**: `docs/plans/` directory and `**/*plan*`, `**/*PLAN*` patterns
 - **Todo files**: `**/*todo*`, `**/*TODO*` patterns
 - **Current implementation status**: Check if plan items are implemented in the codebase
 - **Use TodoRead tool**: For active session todos
