@@ -25,20 +25,28 @@ This is a high-end social event platform targeting affluent individuals aged 45-
 - **Runtime**: Node.js with Express framework
 - **Language**: TypeScript with ESM modules
 - **Database**: DuckDB as primary database with Cloudflare R2 persistence
+- **Migration System**: Comprehensive database migration framework with rollback capabilities
 - **Authentication**: JWT with Passport.js (Google OAuth, LinkedIn OAuth)
 - **Security**: Helmet, CORS, rate limiting, compression
 - **Logging**: Winston with Morgan middleware
 - **File Processing**: Multer with Sharp for image processing
 - **Payments**: Stripe integration
+- **Health Monitoring**: Startup health checks and operational metrics
 
 ### Database Options
 - **Primary**: DuckDB with schema defined in `database/duckdb-schema.sql`
+- **Migration System**: (COMPLETED - Production Ready)
+  - Comprehensive migration framework with version control
+  - Rollback capabilities with safety checks
+  - CLI tools for migration management
+  - Automatic migration validation and integrity checks
+  - Smart restore logic with timestamp comparison
 - **Production Persistence**: Cloudflare R2 backup system (COMPLETED - Production Ready)
   - Graceful shutdown auto-backup
   - Manual backup API endpoints (`POST /api/admin/backup`, `GET /api/admin/backups`)
   - Environment separation (dev: `hesocial-duckdb-dev`, prod: `hesocial-duckdb`)
 - **Development**: Local DuckDB file for development
-- **Key Tables**: Users, Events, Registrations, Financial verification
+- **Key Tables**: Users, Events, Registrations, Financial verification, Server state tracking
 
 ## Development Commands
 
@@ -63,8 +71,15 @@ npm run lint
 npm run typecheck
 
 # Database operations
-npm run migrate      # Run database migrations
+npm run migrate      # Run database migrations (help)
 npm run seed         # Seed development data
+
+# Migration management
+npm run migrate:status    # Show migration status
+npm run migrate:up        # Apply pending migrations
+npm run migrate:rollback  # Rollback to version
+npm run migrate:create    # Generate migration template
+npm run migrate:validate  # Validate migration integrity
 ```
 
 ### Frontend Commands (cd frontend/)
@@ -88,8 +103,14 @@ npm run start        # Start production server
 npm run lint         # ESLint with auto-fix
 npm run typecheck    # TypeScript type checking
 npm run test         # Run Vitest tests
-npm run migrate      # Run database migrations
 npm run seed         # Seed database with sample data
+
+# Migration management (same as root commands)
+npm run migrate:status    # Show migration status
+npm run migrate:up        # Apply pending migrations
+npm run migrate:rollback  # Rollback to version
+npm run migrate:create    # Generate migration template
+npm run migrate:validate  # Validate migration integrity
 ```
 
 ## Project Architecture
@@ -109,11 +130,14 @@ hesocial/
 │   ├── src/
 │   │   ├── controllers/   # Route handlers
 │   │   ├── database/      # DB connections and migrations
+│   │   │   └── migrations/    # Migration framework and files
 │   │   ├── middleware/    # Express middleware
 │   │   ├── routes/        # API route definitions
+│   │   ├── services/      # Business logic and system services
+│   │   ├── config/        # Configuration management
 │   │   ├── types/         # Shared TypeScript types
 │   │   └── utils/         # Configuration and logging
-│   ├── server.ts          # Main PostgreSQL server
+│   ├── server.ts          # Main production server with enhanced startup
 │   ├── server-duckdb.ts   # DuckDB embedded server
 │   └── server-demo.ts     # Demo server with mock data
 ├── database/          # SQL schemas and seed data
@@ -125,15 +149,24 @@ hesocial/
 
 ### Backend Server Variants
 The backend supports three different server configurations:
-1. **Production Server** (`server.ts`): DuckDB with Cloudflare R2 persistence
+1. **Production Server** (`server.ts`): DuckDB with Cloudflare R2 persistence, enhanced startup sequence
 2. **DuckDB Server** (`server-duckdb.ts`): Local DuckDB file for development
 3. **Demo Server** (`server-demo.ts`): Mock data for quick prototyping
+
+### Enhanced Server Features
+- **9-Step Startup Sequence**: Configuration validation → Service initialization → Smart restore → Database connection → Migration checks → Health validation → Route loading → Server start
+- **Health Monitoring**: Comprehensive startup health checks with visual indicators
+- **Server State Tracking**: Operational metrics including uptime, session duration, and startup counts
+- **Smart Backup/Restore**: Automatic timestamp-based restoration with data loss prevention
+- **Graceful Shutdown**: Clean shutdown with automatic backup creation and state recording
 
 ### Database Architecture
 - **User Management**: Multi-tier membership system (Platinum, Diamond, Black Card)
 - **Event System**: Premium events with pricing, exclusivity levels, and venue management
 - **Registration System**: Event registration with approval workflows
 - **Financial Verification**: Required for platform access
+- **Migration System**: Version-controlled schema changes with rollback capabilities
+- **Operational Tracking**: Server state, migration history, and audit trails
 
 ### Authentication & Security
 - JWT-based authentication with refresh tokens
@@ -191,6 +224,78 @@ The backend supports three different server configurations:
   - `GET /api/admin/backups` - List available backups
   - `PUT /api/admin/backup/:id/status` - Update backup status
   - `DELETE /api/admin/backups/cleanup` - Cleanup old backups
+- **Enhanced health endpoints**:
+  - `GET /api/health` - Basic health check
+  - `GET /api/health/detailed` - Comprehensive system status with migration info, server stats, and uptime
+
+## Database Migration System
+
+### Migration Framework (Production Ready)
+A comprehensive database migration system that provides safe schema changes and deployments:
+
+#### Core Features
+- **Version Control**: Each migration has unique ID and sequential versioning
+- **Dependency Tracking**: Migrations can specify dependencies on other migrations
+- **Rollback Capabilities**: Safe reversible operations with down() methods
+- **Transaction Safety**: Atomic execution with comprehensive error handling
+- **Integrity Validation**: Checksums and validation to detect modified migrations
+- **Risk Assessment**: Identifies potentially dangerous operations before execution
+
+#### CLI Commands
+```bash
+# Migration status and management
+npm run migrate:status          # Show current migration status
+npm run migrate:up              # Apply all pending migrations
+npm run migrate:rollback <ver>  # Rollback to specific version
+npm run migrate:create          # Generate new migration template
+npm run migrate:validate        # Validate migration integrity
+
+# Advanced options
+npm run migrate:rollback <ver> --force    # Force rollback (ignoring risks)
+npm run migrate:up --dry-run              # Preview without executing
+```
+
+#### Migration File Structure
+```typescript
+// Example: 001_add_user_preferences.migration.ts
+import { BaseMigration } from '../Migration.js';
+
+export default class AddUserPreferences extends BaseMigration {
+  id = '001_add_user_preferences';
+  version = 1;
+  name = 'Add User Preferences';
+  description = 'Add user preferences table and columns';
+  category = 'schema' as const;
+
+  async up(): Promise<void> {
+    await this.executeSQL(`
+      CREATE TABLE user_preferences (
+        id INTEGER PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        preference_key VARCHAR(100) NOT NULL,
+        preference_value TEXT
+      );
+    `);
+  }
+
+  async down(): Promise<void> {
+    await this.executeSQL(`DROP TABLE user_preferences;`);
+  }
+}
+```
+
+#### Health Check Integration
+- **Startup Validation**: Checks migration status during server startup
+- **Auto-Migration**: Optional automatic migration execution (configurable)
+- **Health Endpoints**: Migration status included in health check responses
+- **Error Prevention**: Prevents startup with critical migration issues
+
+#### Safety Features
+- **Backup Integration**: Automatic backups before risky operations
+- **Production Checks**: Enhanced safety validations for production environments
+- **Dependency Resolution**: Automatic validation of migration dependencies
+- **Rollback Planning**: Safe rollback validation with risk assessment
+- **Dry Run Mode**: Preview changes without executing them
 
 ## Task Management
 
