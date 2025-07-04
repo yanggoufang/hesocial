@@ -253,6 +253,9 @@ class DuckDBConnection {
 // Export singleton instance
 export const duckdb = new DuckDBConnection()
 
+// Export individual DB connection getter for compatibility
+export const getDuckDBConnection = () => duckdb
+
 // Mock Redis functions for development
 export const redisClient = {
   connect: async () => logger.info('Redis mock: connected'),

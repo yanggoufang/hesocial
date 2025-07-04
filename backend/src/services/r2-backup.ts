@@ -311,6 +311,106 @@ export class R2BackupService {
   }
 
   /**
+   * Smart restore logic - only restore if backup is newer than local DB
+   */
+  async smartRestore(forceRestore: boolean = false): Promise<boolean> {
+    if (!this.enabled) {
+      logger.info('Backup service disabled, skipping smart restore');
+      return false;
+    }
+
+    try {
+      const dbPath = join(process.cwd(), 'hesocial.duckdb');
+      const localDbExists = existsSync(dbPath);
+      
+      // Get latest backup
+      const backups = await this.listBackups(1);
+      if (backups.length === 0) {
+        logger.info('No backups found, skipping restore');
+        return false;
+      }
+
+      const latestBackup = backups[0];
+      const backupTimestamp = new Date(latestBackup.timestamp);
+      
+      // If no local DB exists, restore from backup
+      if (!localDbExists) {
+        logger.info('No local database found, restoring from backup', { 
+          backupId: latestBackup.id,
+          backupTimestamp: backupTimestamp.toISOString()
+        });
+        await this.downloadFromR2(latestBackup.id, dbPath);
+        await this.updateBackupStatus(latestBackup.id, 'latest_restored');
+        return true;
+      }
+
+      // Compare timestamps if local DB exists
+      const localDbStats = statSync(dbPath);
+      const localDbTimestamp = localDbStats.mtime;
+      
+      logger.info('Comparing timestamps for smart restore', {
+        localDbTimestamp: localDbTimestamp.toISOString(),
+        backupTimestamp: backupTimestamp.toISOString(),
+        forceRestore
+      });
+
+      // Only restore if backup is newer or force restore is requested
+      if (forceRestore || backupTimestamp > localDbTimestamp) {
+        logger.info('Restoring from backup', { 
+          reason: forceRestore ? 'forced' : 'backup is newer',
+          backupId: latestBackup.id
+        });
+        
+        // Create backup of current local DB before restoring
+        const backupPath = `${dbPath}.backup-${Date.now()}`;
+        await this.createLocalBackup(dbPath, backupPath);
+        
+        await this.downloadFromR2(latestBackup.id, dbPath);
+        await this.updateBackupStatus(latestBackup.id, 'latest_restored');
+        return true;
+      } else {
+        logger.info('Local database is up-to-date, skipping restore');
+        return false;
+      }
+    } catch (error) {
+      logger.error('Smart restore failed', { 
+        error: error instanceof Error ? error.message : error 
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Create local backup copy
+   */
+  private async createLocalBackup(sourcePath: string, backupPath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const readStream = createReadStream(sourcePath);
+      const writeStream = createWriteStream(backupPath);
+      
+      readStream.pipe(writeStream);
+      readStream.on('error', reject);
+      writeStream.on('error', reject);
+      writeStream.on('finish', () => {
+        logger.info('Local backup created', { sourcePath, backupPath });
+        resolve();
+      });
+    });
+  }
+
+  /**
+   * Get database file timestamp
+   */
+  getDatabaseTimestamp(): Date | null {
+    const dbPath = join(process.cwd(), 'hesocial.duckdb');
+    if (!existsSync(dbPath)) {
+      return null;
+    }
+    const stats = statSync(dbPath);
+    return stats.mtime;
+  }
+
+  /**
    * Test R2 connectivity
    */
   async testConnection(): Promise<boolean> {
