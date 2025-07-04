@@ -11,6 +11,7 @@ import createRoutes from './routes/main.js'
 import { R2BackupService } from './services/r2-backup.js'
 import { StartupHealthCheck } from './services/StartupHealthCheck.js'
 import { ServerStateService } from './services/ServerStateService.js'
+import { MigrationService } from './services/MigrationService.js'
 import { productionConfig } from './config/production.js'
 
 const app = express()
@@ -128,6 +129,7 @@ const startServer = async (): Promise<void> => {
     const backupService = new R2BackupService()
     const healthCheck = new StartupHealthCheck()
     const serverState = new ServerStateService()
+    const migrationService = new MigrationService()
     
     // 3. Attempt smart restore before database connection
     logger.info('💾 Checking for database restore...')
@@ -144,6 +146,15 @@ const startServer = async (): Promise<void> => {
     // 5. Initialize server state tracking
     logger.info('📊 Initializing server state tracking...')
     await serverState.initialize()
+    
+    // 5.5. Check and run database migrations
+    logger.info('🔄 Checking database migrations...')
+    const migrationResult = await migrationService.checkAndMigrate()
+    logger.info(`Migration status: ${migrationResult.status}`, {
+      currentVersion: migrationResult.currentVersion,
+      pendingCount: migrationResult.pendingCount,
+      message: migrationResult.message
+    })
     
     // 6. Run comprehensive health checks
     logger.info('🏥 Running health checks...')

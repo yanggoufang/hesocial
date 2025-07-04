@@ -1,5 +1,6 @@
 import { R2BackupService } from './r2-backup.js';
 import { duckdb } from '../database/duckdb-connection.js';
+import { MigrationService } from './MigrationService.js';
 import logger from '../utils/logger.js';
 
 export interface HealthCheckResult {
@@ -19,9 +20,11 @@ export interface HealthCheckSummary {
 
 export class StartupHealthCheck {
   private r2BackupService: R2BackupService;
+  private migrationService: MigrationService;
 
   constructor() {
     this.r2BackupService = new R2BackupService();
+    this.migrationService = new MigrationService();
   }
 
   /**
@@ -77,6 +80,15 @@ export class StartupHealthCheck {
       criticalErrors.push(authCheck.message);
     } else if (authCheck.status === 'warning') {
       warnings.push(authCheck.message);
+    }
+
+    // Check database migrations
+    const migrationCheck = await this.checkDatabaseMigrations();
+    results.push(migrationCheck);
+    if (migrationCheck.status === 'error') {
+      criticalErrors.push(migrationCheck.message);
+    } else if (migrationCheck.status === 'warning') {
+      warnings.push(migrationCheck.message);
     }
 
     // Determine overall status
@@ -303,6 +315,23 @@ export class StartupHealthCheck {
       message: 'Authentication service is properly configured',
       details: { hasGoogleOAuth, hasLinkedInOAuth }
     };
+  }
+
+  /**
+   * Check database migrations status
+   */
+  private async checkDatabaseMigrations(): Promise<HealthCheckResult> {
+    try {
+      await this.migrationService.initialize();
+      return await this.migrationService.createHealthCheckResult();
+    } catch (error) {
+      return {
+        component: 'Database Migrations',
+        status: 'error',
+        message: `Migration service initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        details: { error }
+      };
+    }
   }
 
   /**
