@@ -12,7 +12,13 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
-    "seed": "tsx src/database/seed.ts"
+    "seed": "tsx src/database/seed.ts",
+    "migrate": "tsx src/database/migrations/cli.ts",
+    "migrate:status": "tsx src/database/migrations/cli.ts status",
+    "migrate:up": "tsx src/database/migrations/cli.ts migrate",
+    "migrate:rollback": "tsx src/database/migrations/cli.ts rollback",
+    "migrate:create": "tsx src/database/migrations/cli.ts create",
+    "migrate:validate": "tsx src/database/migrations/cli.ts validate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.842.0",

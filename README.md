@@ -38,16 +38,30 @@ hesocial/
 
 ## Technology Stack
 
-- **Frontend**: React, TypeScript, Tailwind CSS
+- **Frontend**: React, TypeScript, Tailwind CSS, Vite
 - **Backend**: Node.js, Express, TypeScript
-- **Database**: PostgreSQL
-- **Authentication**: OAuth 2.0 + JWT
-- **Payments**: Stripe, Adyen, BitPay
-- **Infrastructure**: AWS (ECS, RDS, CloudFront)
+- **Database**: DuckDB with Cloudflare R2 backup system
+- **Authentication**: OAuth 2.0 + JWT (Google, LinkedIn)
+- **Payments**: Stripe integration
+- **Infrastructure**: Cloudflare R2 for database persistence
 
-## Development
+## Documentation
 
-See [CLAUDE.md](./CLAUDE.md) for detailed development guidelines and architecture information.
+- **[Development Guide](./CLAUDE.md)** - AI assistant guidance and architecture information
+- **[Setup Documentation](./docs/setup/)** - Database and service setup guides
+- **[Project Plans](./docs/plans/)** - Implementation plans and roadmaps
+- **[Specifications](./docs/specifications/)** - Platform specifications and requirements
+
+## Database & Backup
+
+The platform uses DuckDB as the primary database with Cloudflare R2 for production-ready backup and persistence:
+
+- **Automatic Backups**: Created on graceful server shutdown
+- **Manual Backups**: Available via admin API endpoints
+- **Environment Separation**: Development and production buckets
+- **Backup Endpoints**: 
+  - `POST /api/admin/backup` - Create manual backup
+  - `GET /api/admin/backups` - List available backups
 
 ## Security
 

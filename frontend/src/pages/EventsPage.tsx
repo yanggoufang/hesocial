@@ -1,12 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { Calendar, MapPin, Users, Star, Search } from 'lucide-react'
+import axios from 'axios'
 
 const EventsPage = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedLevel, setSelectedLevel] = useState('all')
+  const [events, setEvents] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 2,
+    total: 0,
+    totalPages: 0
+  })
+  const [hasMore, setHasMore] = useState(true)
 
   const categories = [
     { id: 'all', name: '全部活動' },
@@ -126,6 +136,72 @@ const EventsPage = () => {
     }
   }
 
+  // API base URL - you may need to adjust this based on your setup
+  const API_BASE_URL = 'http://localhost:5000/api'
+
+  const fetchEvents = async (reset = false) => {
+    if (loading) return
+    
+    setLoading(true)
+    try {
+      const currentPage = reset ? 1 : pagination.page
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: pagination.limit.toString(),
+      })
+
+      if (searchTerm) params.append('search', searchTerm)
+      if (selectedCategory !== 'all') params.append('category', selectedCategory)
+      if (selectedLevel !== 'all') params.append('exclusivityLevel', selectedLevel)
+
+      const response = await axios.get(`${API_BASE_URL}/events?${params}`)
+      
+      if (response.data.success) {
+        const newEvents = response.data.data
+        const newPagination = response.data.pagination
+
+        if (reset) {
+          setEvents(newEvents)
+        } else {
+          setEvents(prev => [...prev, ...newEvents])
+        }
+        
+        setPagination(newPagination)
+        setHasMore(newPagination.page < newPagination.totalPages)
+      }
+    } catch (error) {
+      console.error('Failed to fetch events:', error)
+      // Fallback to mock data on error
+      if (reset || events.length === 0) {
+        setEvents(mockEvents)
+        setHasMore(false)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadMoreEvents = () => {
+    if (hasMore && !loading) {
+      setPagination(prev => ({ ...prev, page: prev.page + 1 }))
+    }
+  }
+
+  // Fetch events on component mount and when filters change
+  useEffect(() => {
+    fetchEvents(true)
+  }, [searchTerm, selectedCategory, selectedLevel])
+
+  // Fetch more events when page changes
+  useEffect(() => {
+    if (pagination.page > 1) {
+      fetchEvents(false)
+    }
+  }, [pagination.page])
+
+  // Use API events if available, otherwise fallback to mock events
+  const displayEvents = events.length > 0 ? events : mockEvents
+
   return (
     <div className="min-h-screen bg-luxury-midnight-black py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -190,7 +266,7 @@ const EventsPage = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-          {mockEvents.map((event, index) => (
+          {displayEvents.map((event, index) => (
             <motion.div
               key={event.id}
               initial={{ opacity: 0, y: 50 }}
@@ -240,7 +316,7 @@ const EventsPage = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {event.tags.map((tag, tagIndex) => (
+                  {event.tags?.map((tag: string, tagIndex: number) => (
                     <span
                       key={tagIndex}
                       className="px-2 py-1 bg-luxury-gold/20 text-luxury-gold text-xs rounded-full"
@@ -267,16 +343,22 @@ const EventsPage = () => {
           ))}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="text-center mt-12"
-        >
-          <button className="luxury-button-outline px-8 py-3">
-            載入更多活動
-          </button>
-        </motion.div>
+        {hasMore && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="text-center mt-12"
+          >
+            <button
+              onClick={loadMoreEvents}
+              disabled={loading}
+              className="luxury-button-outline px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? '載入中...' : '載入更多活動'}
+            </button>
+          </motion.div>
+        )}
       </div>
     </div>
   )

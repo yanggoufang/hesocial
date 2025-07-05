@@ -8,6 +8,7 @@ import { connectDatabases, closeDatabases } from './database/duckdb-connection.j
 import config from './utils/config.js'
 import logger from './utils/logger.js'
 import createRoutes from './routes/main.js'
+import { r2BackupService } from './services/R2BackupService.js'
 
 const app = express()
 
@@ -110,6 +111,8 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
 
 const startServer = async (): Promise<void> => {
   try {
+    logger.info('🚀 Starting HeSocial API Server...')
+    
     // Connect to database (includes R2 restore if enabled)
     await connectDatabases()
     
@@ -118,16 +121,22 @@ const startServer = async (): Promise<void> => {
     app.use('/api', apiRoutes)
     
     const server = app.listen(config.port, () => {
-      logger.info(`🚀 HeSocial API server running on port ${config.port}`)
+      logger.info('='.repeat(60))
+      logger.info('🎉 HESOCIAL API SERVER STARTED SUCCESSFULLY')
+      logger.info('='.repeat(60))
+      logger.info(`🚀 Server: http://localhost:${config.port}`)
       logger.info(`📱 Environment: ${config.nodeEnv}`)
       logger.info(`🗄️  Database: DuckDB with R2 sync enabled`)
       logger.info(`🔒 CORS Origins: ${config.corsOrigins.join(', ')}`)
       logger.info(`📝 Health Check: http://localhost:${config.port}/api/health`)
       logger.info(`🎯 Events API: http://localhost:${config.port}/api/events`)
+      logger.info('='.repeat(60))
     })
 
     const gracefulShutdown = async (signal: string): Promise<void> => {
+      logger.info('='.repeat(60))
       logger.info(`🛑 Received ${signal}. Starting graceful shutdown...`)
+      logger.info('='.repeat(60))
       
       // Set a timeout to force shutdown if graceful shutdown takes too long
       const forceShutdownTimeout = setTimeout(() => {
@@ -142,7 +151,9 @@ const startServer = async (): Promise<void> => {
           // This will trigger R2 backup before closing DuckDB
           await closeDatabases()
           clearTimeout(forceShutdownTimeout)
-          logger.info('✅ Graceful shutdown completed successfully')
+          logger.info('='.repeat(60))
+          logger.info('✅ GRACEFUL SHUTDOWN COMPLETED')
+          logger.info('='.repeat(60))
           process.exit(0)
         } catch (error) {
           clearTimeout(forceShutdownTimeout)
