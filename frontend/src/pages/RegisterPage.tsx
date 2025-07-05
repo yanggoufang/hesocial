@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Crown, Mail, Lock, User, Briefcase, DollarSign, Plus, X } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 
 const RegisterPage = () => {
   const navigate = useNavigate()
+  const { register } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
     email: '',
@@ -146,14 +148,30 @@ const RegisterPage = () => {
     setError('')
 
     try {
-      // TODO: Implement actual registration API call
-      await new Promise(resolve => setTimeout(resolve, 2000)) // Simulate API call
+      const registrationData = {
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        age: parseInt(formData.age),
+        profession: formData.profession,
+        annualIncome: parseInt(formData.annualIncome),
+        netWorth: parseInt(formData.netWorth),
+        bio: formData.bio,
+        interests: formData.interests
+      }
+
+      const result = await register(registrationData)
       
-      console.log('Registration data:', formData)
-      navigate('/login', { 
-        state: { message: '註冊成功！請登入您的帳戶。' }
-      })
+      if (result.success) {
+        navigate('/dashboard', { 
+          state: { message: '註冊成功！歡迎加入 HeSocial。' }
+        })
+      } else {
+        setError(result.error || '註冊失敗，請稍後再試')
+      }
     } catch (err) {
+      console.error('Registration error:', err)
       setError('註冊失敗，請稍後再試')
     } finally {
       setIsLoading(false)

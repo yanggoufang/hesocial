@@ -76,7 +76,7 @@ router.get('/r2-sync', async (req, res) => {
     // Get recent backups
     const recentBackups = await r2BackupService.listBackups(5);
     
-    res.json({
+    return res.json({
       success: true,
       r2Sync: {
         enabled: r2Status.enabled,
@@ -96,7 +96,7 @@ router.get('/r2-sync', async (req, res) => {
     });
   } catch (error) {
     logger.error('R2 sync health check failed:', error);
-    res.status(503).json({
+    return res.status(503).json({
       success: false,
       error: 'R2 sync health check failed',
       r2Sync: {

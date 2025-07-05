@@ -83,7 +83,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       email,
       membershipTier
     }
-    const token = jwt.sign(tokenPayload, config.jwtSecret as string, { expiresIn: config.jwtExpiresIn as string })
+    const token = jwt.sign(tokenPayload, config.jwtSecret, { expiresIn: config.jwtExpiresIn } as jwt.SignOptions)
 
     // Get created user (without password)
     const userQuery = `
@@ -165,7 +165,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       email: user.email,
       membershipTier: user.membershipTier
     }
-    const token = jwt.sign(tokenPayload, config.jwtSecret as string, { expiresIn: config.jwtExpiresIn as string })
+    const token = jwt.sign(tokenPayload, config.jwtSecret, { expiresIn: config.jwtExpiresIn } as jwt.SignOptions)
 
     // Remove password from response
     delete user.password_hash
@@ -315,7 +315,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       email: user.email,
       membershipTier: user.membershipTier
     }
-    const token = jwt.sign(tokenPayload, config.jwtSecret as string, { expiresIn: config.jwtExpiresIn as string })
+    const token = jwt.sign(tokenPayload, config.jwtSecret, { expiresIn: config.jwtExpiresIn } as jwt.SignOptions)
 
     res.json({
       success: true,

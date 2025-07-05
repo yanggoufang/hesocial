@@ -49,7 +49,7 @@ router.get('/google/callback',
         email: user.email,
         membershipTier: user.membershipTier
       }
-      const token = jwt.sign(tokenPayload, config.jwtSecret as string, { expiresIn: config.jwtExpiresIn as string })
+      const token = jwt.sign(tokenPayload, config.jwtSecret, { expiresIn: config.jwtExpiresIn } as jwt.SignOptions)
 
       logger.info(`Google OAuth successful for user: ${user.email}`)
 

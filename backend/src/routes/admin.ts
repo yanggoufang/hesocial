@@ -24,7 +24,7 @@ router.post('/backup', authenticateToken, requireAdmin, async (req, res) => {
     logger.info('Manual backup requested via API');
     const backupId = await r2BackupService.createManualBackup();
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Manual backup created successfully',
       data: {
@@ -35,7 +35,7 @@ router.post('/backup', authenticateToken, requireAdmin, async (req, res) => {
     });
   } catch (error) {
     logger.error('Manual backup failed via API:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to create manual backup',
       message: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -76,7 +76,7 @@ router.post('/restore', authenticateToken, requireSuperAdmin, async (req, res) =
     }
 
     if (restoredBackup) {
-      res.json({
+      return res.json({
         success: true,
         message: 'Database restored successfully',
         data: {
@@ -86,7 +86,7 @@ router.post('/restore', authenticateToken, requireSuperAdmin, async (req, res) =
         }
       });
     } else {
-      res.json({
+      return res.json({
         success: true,
         message: 'No restore needed - local database is up to date',
         data: {
@@ -97,7 +97,7 @@ router.post('/restore', authenticateToken, requireSuperAdmin, async (req, res) =
     }
   } catch (error) {
     logger.error('Database restore failed via API:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to restore database',
       message: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -123,7 +123,7 @@ router.get('/backups', authenticateToken, requireAdmin, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const backups = await r2BackupService.listBackups(limit);
 
-    res.json({
+    return res.json({
       success: true,
       message: `Found ${backups.length} backups`,
       data: backups.map(backup => ({
@@ -141,7 +141,7 @@ router.get('/backups', authenticateToken, requireAdmin, async (req, res) => {
     });
   } catch (error) {
     logger.error('Failed to list backups via API:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to list backups',
       message: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -167,7 +167,7 @@ router.post('/cleanup', authenticateToken, requireAdmin, async (req, res) => {
     logger.info('Backup cleanup requested via API');
     await r2BackupService.cleanupOldBackups();
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Backup cleanup completed successfully',
       data: {
@@ -177,7 +177,7 @@ router.post('/cleanup', authenticateToken, requireAdmin, async (req, res) => {
     });
   } catch (error) {
     logger.error('Backup cleanup failed via API:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to cleanup backups',
       message: error instanceof Error ? error.message : 'Unknown error occurred'
