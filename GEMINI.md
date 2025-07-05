@@ -18,3 +18,4 @@ HeSocial is a social event platform with a monorepo structure.
 ## Deployment Considerations
 
 - When checking production deployments, always verify the commit ID to ensure the correct version is deployed.
+- The application is hosted on Render.com. The backend is `hesocial-api` and the frontend is `hesocial-frontend`.

@@ -6,7 +6,7 @@ This file provides specific instructions for interacting with the backend of the
 
 - **Language:** TypeScript
 - **Framework:** Node.js with Express
-- **Database:** PostgreSQL (primary), DuckDB (for local development)
+- **Database:** DuckDB
 - **Package Manager:** npm
 
 ## Key Commands
