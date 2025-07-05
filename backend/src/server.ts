@@ -4,7 +4,7 @@ import helmet from 'helmet'
 import compression from 'compression'
 import rateLimit from 'express-rate-limit'
 import morgan from 'morgan'
-import { connectDatabases, closeDatabases, getDatabaseInfo } from './database/connection.js'
+import { connectDatabases, closeDatabases } from './database/duckdb-connection.js'
 import config from './utils/config.js'
 import logger from './utils/logger.js'
 import createRoutes from './routes/main.js'
@@ -63,24 +63,22 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // Health check endpoints
 app.get('/health', (req, res) => {
-  const dbInfo = getDatabaseInfo()
   res.json({
     success: true,
-    message: `HeSocial API is running (${dbInfo.type.toUpperCase()})`,
+    message: 'HeSocial API is running (DuckDB)',
     timestamp: new Date().toISOString(),
     environment: config.nodeEnv,
-    database: dbInfo.description
+    database: 'DuckDB with R2 sync'
   })
 })
 
 app.get('/api/health', (req, res) => {
-  const dbInfo = getDatabaseInfo()
   res.json({
     success: true,
-    message: `API health check passed (${dbInfo.type.toUpperCase()})`,
+    message: 'API health check passed (DuckDB)',
     timestamp: new Date().toISOString(),
     version: '1.0.0',
-    database: dbInfo.type
+    database: 'duckdb'
   })
 })
 
@@ -112,9 +110,7 @@ app.use((error: Error, req: express.Request, res: express.Response, next: expres
 
 const startServer = async (): Promise<void> => {
   try {
-    const dbInfo = getDatabaseInfo()
-    
-    // Connect to database
+    // Connect to database (includes R2 restore if enabled)
     await connectDatabases()
     
     // Dynamically load and mount API routes
@@ -124,27 +120,42 @@ const startServer = async (): Promise<void> => {
     const server = app.listen(config.port, () => {
       logger.info(`🚀 HeSocial API server running on port ${config.port}`)
       logger.info(`📱 Environment: ${config.nodeEnv}`)
-      logger.info(`🗄️  Database: ${dbInfo.description}`)
+      logger.info(`🗄️  Database: DuckDB with R2 sync enabled`)
       logger.info(`🔒 CORS Origins: ${config.corsOrigins.join(', ')}`)
       logger.info(`📝 Health Check: http://localhost:${config.port}/api/health`)
       logger.info(`🎯 Events API: http://localhost:${config.port}/api/events`)
     })
 
     const gracefulShutdown = async (signal: string): Promise<void> => {
-      logger.info(`Received ${signal}. Starting graceful shutdown...`)
+      logger.info(`🛑 Received ${signal}. Starting graceful shutdown...`)
+      
+      // Set a timeout to force shutdown if graceful shutdown takes too long
+      const forceShutdownTimeout = setTimeout(() => {
+        logger.error('⏰ Forced shutdown due to timeout')
+        process.exit(1)
+      }, 30000) // 30 seconds timeout
       
       server.close(async () => {
-        logger.info('HTTP server closed')
+        logger.info('🔒 HTTP server closed')
         
         try {
+          // This will trigger R2 backup before closing DuckDB
           await closeDatabases()
-          logger.info('Graceful shutdown completed')
+          clearTimeout(forceShutdownTimeout)
+          logger.info('✅ Graceful shutdown completed successfully')
           process.exit(0)
         } catch (error) {
-          logger.error('Error during graceful shutdown:', error)
+          clearTimeout(forceShutdownTimeout)
+          logger.error('❌ Error during graceful shutdown:', error)
           process.exit(1)
         }
       })
+      
+      // If server.close() callback doesn't execute, force shutdown
+      setTimeout(() => {
+        logger.error('⏰ Force shutdown - server.close() callback timeout')
+        process.exit(1)
+      }, 25000) // 25 seconds timeout for server.close()
     }
 
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))

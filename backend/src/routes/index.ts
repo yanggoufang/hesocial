@@ -5,8 +5,16 @@ import {
   getEventCategories,
   getVenues
 } from '../controllers/eventController.js'
+import healthRoutes from './health.js'
+import adminRoutes from './admin.js'
 
 const router = Router()
+
+// Health check routes
+router.use('/health', healthRoutes)
+
+// Admin routes
+router.use('/admin', adminRoutes)
 
 // Event routes
 router.get('/events', getEvents)
@@ -30,7 +38,13 @@ router.get('/', (req, res) => {
       events: '/api/events',
       categories: '/api/events/categories',
       venues: '/api/events/venues',
-      health: '/api/health'
+      health: '/api/health',
+      healthDatabase: '/api/health/database',
+      healthR2Sync: '/api/health/r2-sync',
+      healthFull: '/api/health/full',
+      adminBackup: '/api/admin/backup',
+      adminRestore: '/api/admin/restore',
+      adminBackups: '/api/admin/backups'
     },
     documentation: 'https://api.hesocial.com/docs'
   })

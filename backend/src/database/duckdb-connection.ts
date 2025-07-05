@@ -3,6 +3,7 @@ import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import logger from '../utils/logger.js'
+import { r2BackupService } from '../services/R2BackupService.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -122,6 +123,26 @@ class DuckDBConnection {
         }
       }
       
+      // Initialize migration support tables
+      const migrationPath = join(__dirname, '../../../database/duckdb-migration-support.sql')
+      try {
+        const migrationSQL = await readFile(migrationPath, 'utf-8')
+        const migrationStatements = migrationSQL
+          .split(';')
+          .map(stmt => stmt.trim())
+          .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'))
+        
+        for (const statement of migrationStatements) {
+          if (statement.trim()) {
+            logger.info(`Executing migration: ${statement.substring(0, 50)}...`)
+            await this.query(statement)
+          }
+        }
+        logger.info('✅ Migration support tables initialized')
+      } catch (migrationError) {
+        logger.warn('⚠️ Migration support tables not found, skipping...')
+      }
+      
       // Commit transaction
       await this.query('COMMIT')
       
@@ -143,8 +164,18 @@ class DuckDBConnection {
       // Start explicit transaction
       await this.query('BEGIN TRANSACTION')
       
-      const seedPath = join(__dirname, '../../../database/duckdb-seed.sql')
-      const seedSQL = await readFile(seedPath, 'utf-8')
+      // Try to use realistic seed data first, fallback to basic seed
+      const realisticSeedPath = join(__dirname, '../../../database/duckdb-seed-realistic.sql')
+      const basicSeedPath = join(__dirname, '../../../database/duckdb-seed.sql')
+      
+      let seedSQL: string
+      try {
+        seedSQL = await readFile(realisticSeedPath, 'utf-8')
+        logger.info('✅ Using realistic seed data')
+      } catch (realisticError) {
+        logger.info('⚠️ Realistic seed data not found, using basic seed data')
+        seedSQL = await readFile(basicSeedPath, 'utf-8')
+      }
       
       // Split by semicolon and execute each statement
       const statements = seedSQL
@@ -262,8 +293,21 @@ export const redisClient = {
 
 export const connectDatabases = async (): Promise<void> => {
   try {
+    // Step 1: Try to restore from R2 backup if enabled and no local database exists
+    if (r2BackupService.isEnabled()) {
+      logger.info('🔄 R2 backup service enabled - checking for restore...')
+      const restoredBackup = await r2BackupService.restoreLatestBackup(false)
+      if (restoredBackup) {
+        logger.info(`✅ Restored database from backup: ${restoredBackup}`)
+      } else {
+        logger.info('ℹ️  No restore needed or backup not found')
+      }
+    }
+
+    // Step 2: Connect to DuckDB (local file)
     await duckdb.connect()
     
+    // Step 3: Initialize database if needed
     const isInitialized = await duckdb.checkIfInitialized()
     
     if (!isInitialized) {
@@ -271,17 +315,29 @@ export const connectDatabases = async (): Promise<void> => {
       await duckdb.runInit()
       await duckdb.seedData()
       logger.info('✅ DuckDB setup completed - Full functionality available')
+      
+      // Create initial backup after setup
+      if (r2BackupService.isEnabled()) {
+        logger.info('📤 Creating initial backup after database setup...')
+        await r2BackupService.createManualBackup()
+      }
     } else {
       logger.info('✅ DuckDB already initialized - Full functionality available')
     }
     
-    // Record server startup
+    // Step 4: Record server startup
     await duckdb.recordServerStart()
     
-    // Display server stats
+    // Step 5: Display server stats
     const stats = await duckdb.getServerStats()
     if (stats) {
       logger.info(`📊 Server Stats: Startup #${stats.start_count}, Total uptime: ${Math.floor(stats.total_lifetime / 60)}min`)
+    }
+
+    // Step 6: Test R2 connection and display status
+    if (r2BackupService.isEnabled()) {
+      const r2Status = await r2BackupService.getStatus()
+      logger.info('📦 R2 Backup Status:', r2Status)
     }
     
   } catch (error) {
@@ -292,12 +348,25 @@ export const connectDatabases = async (): Promise<void> => {
 
 export const closeDatabases = async (): Promise<void> => {
   try {
-    // Record server stop before closing
+    // Step 1: Record server stop before closing
     await duckdb.recordServerStop()
+    
+    // Step 2: Create shutdown backup to R2 if enabled
+    if (r2BackupService.isEnabled()) {
+      logger.info('📤 Creating shutdown backup to R2...')
+      const backupId = await r2BackupService.backupOnShutdown()
+      if (backupId) {
+        logger.info(`✅ Shutdown backup created: ${backupId}`)
+      } else {
+        logger.warn('⚠️ Shutdown backup failed')
+      }
+    }
+    
+    // Step 3: Close DuckDB connection
     await duckdb.close()
-    logger.info('Database connections closed')
+    logger.info('✅ Database connections closed')
   } catch (error) {
-    logger.error('Error closing database connections:', error)
+    logger.error('❌ Error closing database connections:', error)
     throw error
   }
 }
