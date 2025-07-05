@@ -50,6 +50,7 @@ hesocial/
 
 - **[Development Guide](./CLAUDE.md)** - AI assistant guidance and architecture information
 - **[Authentication Implementation](./docs/AUTHENTICATION_IMPLEMENTATION.md)** - Complete authentication system documentation
+- **[Business Features Roadmap](./docs/BUSINESS_FEATURES_ROADMAP.md)** - Event and sales management implementation plan
 - **[Default Users Guide](./docs/DEFAULT_USERS.md)** - Admin accounts and test users documentation
 - **[Setup Documentation](./docs/setup/)** - Database and service setup guides
 - **[Specifications](./docs/specifications/)** - Platform specifications and requirements
@@ -111,6 +112,24 @@ Complete authentication system with JWT tokens, Google OAuth 2.0, role-based acc
 - **Membership Tiers**: Automatic assignment (Platinum, Diamond, Black Card)
 - **Session Persistence**: Seamless authentication across app reloads
 - **Frontend Integration**: Full React component integration with authentication state
+
+## 🚀 **Upcoming Major Features**
+
+### **Event Content Management System** 
+Complete event lifecycle management for luxury social experiences:
+- Event creation, editing, and approval workflows
+- Venue and category management for premium events
+- Media management and event publishing controls
+- Advanced scheduling and calendar integration
+
+### **Sales Management System**
+Complete sales pipeline and CRM for membership business:
+- Lead management and conversion tracking  
+- Membership sales analytics and revenue reporting
+- Customer relationship management for high-net-worth clientele
+- Payment processing and financial reporting integration
+
+*See [Business Features Roadmap](./docs/BUSINESS_FEATURES_ROADMAP.md) for detailed implementation plan.*
 
 ### **Health Check Endpoints**
 - `GET /api/health/database` - Database connection and query performance
