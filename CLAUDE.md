@@ -263,6 +263,13 @@ The backend supports three different server configurations:
   - `GET /api/auth/google/callback` - Google OAuth callback with user creation/matching
   - `GET /api/auth/profile` - Get authenticated user profile
   - `PUT /api/auth/profile` - Update user profile information
+- **Admin API endpoints** (Production Ready):
+  - `POST /api/admin/backup` - Create manual backup (Admin+)
+  - `GET /api/admin/backups` - List available backups (Admin+)
+  - `POST /api/admin/restore` - Restore database (Super Admin only)
+  - `GET /api/users` - User management with pagination and filtering (Admin+)
+  - `POST /api/users/:id/verify` - User verification management (Admin+)
+  - `POST /api/users/:id/role` - Role management (Super Admin only)
   - `POST /api/auth/refresh` - Refresh JWT token
   - `POST /api/auth/logout` - Logout (client-side token removal)
   - `GET /api/auth/validate` - Validate JWT token and return user data

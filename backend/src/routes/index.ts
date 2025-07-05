@@ -8,6 +8,7 @@ import {
 import healthRoutes from './health.js'
 import adminRoutes from './admin.js'
 import authRoutes from './authRoutes.js'
+import userManagementRoutes from './userManagement.js'
 
 const router = Router()
 
@@ -19,6 +20,9 @@ router.use('/health', healthRoutes)
 
 // Admin routes
 router.use('/admin', adminRoutes)
+
+// User management routes (admin only)
+router.use('/users', userManagementRoutes)
 
 // Event routes
 router.get('/events', getEvents)

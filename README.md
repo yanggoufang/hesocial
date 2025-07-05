@@ -85,11 +85,17 @@ Complete authentication system with JWT tokens, Google OAuth 2.0, role-based acc
 #### **Admin System**
 - **Role-Based Access**: Three-tier system (user, admin, super_admin)
 - **Default Admin Accounts**: Ready-to-use administrative accounts
+- **Admin Dashboard**: Complete interface with system monitoring and quick actions
+- **Backup Management**: Manual backup interface with full control (preferred approach)
+- **User Management**: Full CRUD operations for user accounts, verification, and roles
 - **Protected Admin APIs**: Secure admin-only endpoints with authentication
 - **Admin Endpoints**:
   - `POST /api/admin/backup` - Create manual backup (Admin+)
   - `GET /api/admin/backups` - List available backups (Admin+)
   - `POST /api/admin/restore` - Restore database (Super Admin only)
+  - `GET /api/users` - User management with pagination and filtering (Admin+)
+  - `POST /api/users/:id/verify` - User verification management (Admin+)
+  - `POST /api/users/:id/role` - Role management (Super Admin only)
 
 #### **Default Users**
 - **3 Admin Accounts**: System administration (admin@hesocial.com, etc.)
