@@ -7,8 +7,12 @@ import {
 } from '../controllers/eventController.js'
 import healthRoutes from './health.js'
 import adminRoutes from './admin.js'
+import authRoutes from './authRoutes.js'
 
 const router = Router()
+
+// Authentication routes
+router.use('/auth', authRoutes)
 
 // Health check routes
 router.use('/health', healthRoutes)
@@ -148,30 +152,7 @@ router.get('/', (req, res) => {
   })
 })
 
-// Auth placeholder routes
-router.get('/auth/profile', (req, res) => {
-  res.status(501).json({
-    success: false,
-    error: 'Authentication not implemented yet',
-    message: 'Auth system will be added in next phase'
-  })
-})
-
-router.post('/auth/login', (req, res) => {
-  res.status(501).json({
-    success: false,
-    error: 'Authentication not implemented yet',
-    message: 'Auth system will be added in next phase'
-  })
-})
-
-router.post('/auth/register', (req, res) => {
-  res.status(501).json({
-    success: false,
-    error: 'Authentication not implemented yet',
-    message: 'Auth system will be added in next phase'
-  })
-})
+// Note: Auth routes are now implemented in /auth/* endpoints
 
 // Catch all for other API routes
 router.use('*', (req, res) => {

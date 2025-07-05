@@ -11,6 +11,7 @@ export interface User {
   privacyLevel: 1 | 2 | 3 | 4 | 5
   isVerified: boolean
   verificationStatus: 'pending' | 'approved' | 'rejected'
+  role?: 'user' | 'admin' | 'super_admin'
   profilePicture?: string
   bio?: string
   interests: string[]

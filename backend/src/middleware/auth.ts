@@ -31,7 +31,7 @@ export const authenticateToken = async (
         age, profession, annual_income as "annualIncome", net_worth as "netWorth",
         membership_tier as "membershipTier", privacy_level as "privacyLevel",
         is_verified as "isVerified", verification_status as "verificationStatus",
-        profile_picture as "profilePicture", bio, interests,
+        role, profile_picture as "profilePicture", bio, interests,
         created_at as "createdAt", updated_at as "updatedAt"
       FROM users 
       WHERE id = $1 AND deleted_at IS NULL
@@ -134,7 +134,7 @@ export const optionalAuth = async (
         age, profession, annual_income as "annualIncome", net_worth as "netWorth",
         membership_tier as "membershipTier", privacy_level as "privacyLevel",
         is_verified as "isVerified", verification_status as "verificationStatus",
-        profile_picture as "profilePicture", bio, interests,
+        role, profile_picture as "profilePicture", bio, interests,
         created_at as "createdAt", updated_at as "updatedAt"
       FROM users 
       WHERE id = $1 AND deleted_at IS NULL
@@ -151,4 +151,46 @@ export const optionalAuth = async (
     logger.warn('Optional auth error:', error)
     next()
   }
+}
+
+export const requireAdmin = (req: Request, res: Response, next: NextFunction): void => {
+  const authReq = req as AuthenticatedRequest
+  if (!authReq.user) {
+    res.status(401).json({
+      success: false,
+      error: 'Authentication required'
+    })
+    return
+  }
+
+  if (!authReq.user.role || !['admin', 'super_admin'].includes(authReq.user.role)) {
+    res.status(403).json({
+      success: false,
+      error: 'Admin access required'
+    })
+    return
+  }
+
+  next()
+}
+
+export const requireSuperAdmin = (req: Request, res: Response, next: NextFunction): void => {
+  const authReq = req as AuthenticatedRequest
+  if (!authReq.user) {
+    res.status(401).json({
+      success: false,
+      error: 'Authentication required'
+    })
+    return
+  }
+
+  if (authReq.user.role !== 'super_admin') {
+    res.status(403).json({
+      success: false,
+      error: 'Super admin access required'
+    })
+    return
+  }
+
+  next()
 }

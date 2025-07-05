@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { r2BackupService } from '../services/R2BackupService.js';
 import { duckdb } from '../database/duckdb-connection.js';
+import { authenticateToken, requireAdmin, requireSuperAdmin } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 
 const router = Router();
@@ -8,8 +9,9 @@ const router = Router();
 /**
  * POST /api/admin/backup
  * Create a manual backup to R2
+ * Requires admin authentication
  */
-router.post('/backup', async (req, res) => {
+router.post('/backup', authenticateToken, requireAdmin, async (req, res) => {
   try {
     if (!r2BackupService.isEnabled()) {
       return res.status(503).json({
@@ -44,8 +46,9 @@ router.post('/backup', async (req, res) => {
 /**
  * POST /api/admin/restore
  * Restore database from R2 backup
+ * Requires super admin authentication
  */
-router.post('/restore', async (req, res) => {
+router.post('/restore', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     if (!r2BackupService.isEnabled()) {
       return res.status(503).json({
@@ -105,8 +108,9 @@ router.post('/restore', async (req, res) => {
 /**
  * GET /api/admin/backups
  * List available backups in R2
+ * Requires admin authentication
  */
-router.get('/backups', async (req, res) => {
+router.get('/backups', authenticateToken, requireAdmin, async (req, res) => {
   try {
     if (!r2BackupService.isEnabled()) {
       return res.status(503).json({
@@ -148,8 +152,9 @@ router.get('/backups', async (req, res) => {
 /**
  * POST /api/admin/cleanup
  * Clean up old backups based on retention policy
+ * Requires admin authentication
  */
-router.post('/cleanup', async (req, res) => {
+router.post('/cleanup', authenticateToken, requireAdmin, async (req, res) => {
   try {
     if (!r2BackupService.isEnabled()) {
       return res.status(503).json({
