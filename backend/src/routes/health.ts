@@ -83,6 +83,8 @@ router.get('/r2-sync', async (req, res) => {
         connectionHealthy: r2Status.connectionHealthy,
         lastBackup: r2Status.lastBackup,
         backupCount: r2Status.backupCount,
+        periodicBackupsEnabled: r2Status.periodicBackupsEnabled,
+        periodicBackupInterval: r2Status.periodicBackupInterval,
         recentBackups: recentBackups.map(backup => ({
           id: backup.id,
           type: backup.type,

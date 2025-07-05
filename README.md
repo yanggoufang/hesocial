@@ -60,6 +60,7 @@ The platform uses DuckDB as the primary database with Cloudflare R2 for producti
 
 ### ✅ **Production-Ready R2 Integration**
 - **Automatic Backups**: Created on graceful server shutdown with SIGTERM/SIGINT handling
+- **Periodic Backups**: Configurable automatic backups with interval scheduling (disabled by default)
 - **Smart Restore Logic**: Timestamp comparison to prevent data loss during startup
 - **Manual Operations**: Full admin API for backup management and restoration
 - **Health Monitoring**: Real-time status of database and R2 sync connectivity

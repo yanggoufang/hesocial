@@ -58,6 +58,13 @@ POST /api/admin/restore          # Restore database (Super Admin only)
 POST /api/admin/cleanup          # Clean up old backups (Admin+)
 ```
 
+### **Health Check Endpoints**
+```bash
+GET  /api/health/database        # Database connection and query performance
+GET  /api/health/r2-sync         # R2 backup service status with periodic backup info
+GET  /api/health/full            # Comprehensive system status
+```
+
 ### Files Implemented
 
 #### **Backend Implementation**

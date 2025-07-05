@@ -116,6 +116,9 @@ const startServer = async (): Promise<void> => {
     // Connect to database (includes R2 restore if enabled)
     await connectDatabases()
     
+    // Start periodic backups if enabled
+    r2BackupService.startPeriodicBackups()
+    
     // Dynamically load and mount API routes
     const apiRoutes = await createRoutes()
     app.use('/api', apiRoutes)
@@ -148,6 +151,9 @@ const startServer = async (): Promise<void> => {
         logger.info('🔒 HTTP server closed')
         
         try {
+          // Stop periodic backups
+          r2BackupService.stopPeriodicBackups()
+          
           // This will trigger R2 backup before closing DuckDB
           await closeDatabases()
           clearTimeout(forceShutdownTimeout)

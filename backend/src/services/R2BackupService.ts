@@ -26,6 +26,7 @@ export class R2BackupService {
   private bucketName: string = '';
   private backupPath: string = '';
   private enabled: boolean;
+  private periodicBackupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.enabled = process.env.R2_SYNC_ENABLED === 'true';
@@ -95,25 +96,6 @@ export class R2BackupService {
   }
 
   /**
-   * Create a periodic backup
-   */
-  async createPeriodicBackup(): Promise<string | null> {
-    if (!this.enabled || !this.s3Client) {
-      return null;
-    }
-
-    try {
-      logger.info('🔄 Starting periodic backup...');
-      const backupId = await this.createBackup('periodic');
-      logger.info('✅ Periodic backup completed successfully', { backupId });
-      return backupId;
-    } catch (error) {
-      logger.error('❌ Periodic backup failed', { error: error instanceof Error ? error.message : error });
-      return null;
-    }
-  }
-
-  /**
    * Create a manual backup
    */
   async createManualBackup(): Promise<string> {
@@ -124,6 +106,20 @@ export class R2BackupService {
     logger.info('🔄 Starting manual backup...');
     const backupId = await this.createBackup('manual');
     logger.info('✅ Manual backup completed successfully', { backupId });
+    return backupId;
+  }
+
+  /**
+   * Create a periodic backup
+   */
+  async createPeriodicBackup(): Promise<string> {
+    if (!this.enabled || !this.s3Client) {
+      throw new Error('Backup service is disabled or not configured');
+    }
+
+    logger.info('⏰ Starting periodic backup...');
+    const backupId = await this.createBackup('periodic');
+    logger.info('✅ Periodic backup completed successfully', { backupId });
     return backupId;
   }
 
@@ -432,6 +428,50 @@ export class R2BackupService {
   }
 
   /**
+   * Start periodic backups with configurable interval
+   */
+  startPeriodicBackups(): void {
+    if (!this.enabled) {
+      logger.info('📦 Periodic backups disabled - R2 service not enabled');
+      return;
+    }
+
+    const periodicBackupEnabled = process.env.R2_PERIODIC_BACKUP_ENABLED === 'true';
+    if (!periodicBackupEnabled) {
+      logger.info('📦 Periodic backups disabled via configuration');
+      return;
+    }
+
+    const intervalHours = parseInt(process.env.R2_PERIODIC_BACKUP_INTERVAL_HOURS || '24');
+    const intervalMs = intervalHours * 60 * 60 * 1000;
+
+    logger.info('⏰ Starting periodic backup scheduler', { intervalHours });
+
+    this.periodicBackupInterval = setInterval(async () => {
+      try {
+        await this.createPeriodicBackup();
+        // Clean up old backups after each periodic backup
+        await this.cleanupOldBackups();
+      } catch (error) {
+        logger.error('❌ Periodic backup failed', { 
+          error: error instanceof Error ? error.message : error 
+        });
+      }
+    }, intervalMs);
+  }
+
+  /**
+   * Stop periodic backups
+   */
+  stopPeriodicBackups(): void {
+    if (this.periodicBackupInterval) {
+      clearInterval(this.periodicBackupInterval);
+      this.periodicBackupInterval = null;
+      logger.info('⏹️  Periodic backup scheduler stopped');
+    }
+  }
+
+  /**
    * Get backup service status and metrics
    */
   async getStatus(): Promise<{
@@ -439,14 +479,20 @@ export class R2BackupService {
     lastBackup?: string;
     backupCount: number;
     connectionHealthy: boolean;
+    periodicBackupsEnabled?: boolean;
+    periodicBackupInterval?: number;
   }> {
     if (!this.enabled) {
       return {
         enabled: false,
         backupCount: 0,
-        connectionHealthy: false
+        connectionHealthy: false,
+        periodicBackupsEnabled: false
       };
     }
+
+    const periodicBackupEnabled = process.env.R2_PERIODIC_BACKUP_ENABLED === 'true';
+    const intervalHours = parseInt(process.env.R2_PERIODIC_BACKUP_INTERVAL_HOURS || '24');
 
     try {
       const connectionHealthy = await this.testConnection();
@@ -456,13 +502,17 @@ export class R2BackupService {
         enabled: true,
         lastBackup: backups.length > 0 ? backups[0].timestamp : undefined,
         backupCount: backups.length,
-        connectionHealthy
+        connectionHealthy,
+        periodicBackupsEnabled: periodicBackupEnabled,
+        periodicBackupInterval: periodicBackupEnabled ? intervalHours : undefined
       };
     } catch (error) {
       return {
         enabled: true,
         backupCount: 0,
-        connectionHealthy: false
+        connectionHealthy: false,
+        periodicBackupsEnabled: periodicBackupEnabled,
+        periodicBackupInterval: periodicBackupEnabled ? intervalHours : undefined
       };
     }
   }

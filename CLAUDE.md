@@ -169,6 +169,7 @@ The backend supports three different server configurations:
 - **Health Monitoring**: Comprehensive startup health checks with visual indicators
 - **Server State Tracking**: Operational metrics including uptime, session duration, and startup counts
 - **Smart Backup/Restore**: Automatic timestamp-based restoration with data loss prevention
+- **Periodic Backups**: Configurable automatic backups with interval scheduling (disabled by default, manual preferred)
 - **Graceful Shutdown**: Clean shutdown with automatic backup creation and state recording
 
 ### Database Architecture
