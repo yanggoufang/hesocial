@@ -13,6 +13,7 @@ import eventManagementRoutes from './eventManagement.js'
 import venueManagementRoutes from './venueManagement.js'
 import categoryManagementRoutes from './categoryManagement.js'
 import salesManagementRoutes from './salesManagement.js'
+import registrationRoutes from './registrationRoutes.js'
 
 const router = Router()
 
@@ -39,6 +40,9 @@ router.use('/categories', categoryManagementRoutes)
 
 // Sales management routes (CRM and sales pipeline)
 router.use('/sales', salesManagementRoutes)
+
+// Event registration routes (member registration and payment)
+router.use('/registrations', registrationRoutes)
 
 // Legacy event routes (for backwards compatibility during transition)
 router.get('/legacy/events', getEvents)
@@ -172,6 +176,8 @@ router.get('/', (req, res) => {
       users: '/api/users/*',
       // Sales Management (CRM)
       sales: '/api/sales/*',
+      // Event Registration & Payment
+      registrations: '/api/registrations/*',
       // Health & Monitoring
       health: '/api/health/*',
       // Admin Operations

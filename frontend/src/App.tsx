@@ -14,6 +14,8 @@ import EventManagement from './pages/EventManagement'
 import VenueManagement from './pages/VenueManagement'
 import UserManagement from './pages/UserManagement'
 import CategoryManagement from './pages/CategoryManagement'
+import EventRegistration from './pages/EventRegistration'
+import MyRegistrations from './pages/MyRegistrations'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
@@ -36,6 +38,8 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/registrations" element={<MyRegistrations />} />
+            <Route path="/events/:eventId/register" element={<EventRegistration />} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />

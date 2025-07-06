@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 import { motion } from 'framer-motion'
 import { 
   Calendar, MapPin, Users, Star, Crown, Clock, Shield, 
@@ -9,6 +10,8 @@ import {
 
 const EventDetailPage = () => {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const { user, isAuthenticated } = useAuth()
   const [event, setEvent] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -449,13 +452,27 @@ const EventDetailPage = () => {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setShowRegistrationModal(true)}
-                  className="w-full luxury-button py-3 mb-4"
-                  disabled={event.currentAttendees >= event.capacity}
-                >
-                  {event.currentAttendees >= event.capacity ? '已額滿' : '立即報名'}
-                </button>
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => navigate(`/events/${id}/register`)}
+                    className="w-full luxury-button py-3 mb-4"
+                    disabled={event.currentAttendees >= event.capacity}
+                  >
+                    {event.currentAttendees >= event.capacity ? '已額滿' : '立即報名'}
+                  </button>
+                ) : (
+                  <div className="space-y-2 mb-4">
+                    <button
+                      onClick={() => navigate('/login')}
+                      className="w-full luxury-button py-3"
+                    >
+                      登入後報名
+                    </button>
+                    <p className="text-center text-luxury-platinum/60 text-xs">
+                      需要登入會員帳號才能報名活動
+                    </p>
+                  </div>
+                )}
 
                 <div className="text-center">
                   <p className="text-luxury-platinum/60 text-xs">

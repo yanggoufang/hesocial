@@ -327,3 +327,54 @@ export interface SalesOpportunityFilters {
     end?: Date
   }
 }
+
+// Event Registration System Types
+export interface RegistrationRequest {
+  specialRequests?: string
+}
+
+export interface RegistrationDetails extends Registration {
+  eventName: string
+  eventDescription: string
+  eventDateTime: Date
+  registrationDeadline: Date
+  exclusivityLevel: string
+  dressCode: number
+  capacity: number
+  currentAttendees: number
+  pricing: any
+  amenities: string[]
+  privacyGuarantees: string[]
+  requirements: any[]
+  eventImages: string[]
+  venueName: string
+  venueAddress: string
+  latitude: number
+  longitude: number
+  venueAmenities: string[]
+  venueImages: string[]
+  categoryName: string
+  categoryDescription: string
+}
+
+export interface RegistrationFilters {
+  status?: Registration['status']
+  paymentStatus?: Registration['paymentStatus']
+  eventId?: string
+  userId?: string
+  search?: string
+  dateRange?: {
+    start?: Date
+    end?: Date
+  }
+}
+
+export interface RegistrationApproval {
+  approved: boolean
+  notes?: string
+}
+
+export interface PaymentStatusUpdate {
+  paymentStatus: Registration['paymentStatus']
+  paymentIntentId?: string
+}

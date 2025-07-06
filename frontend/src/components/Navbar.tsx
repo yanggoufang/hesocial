@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Crown, User, LogOut } from 'lucide-react'
+import { Menu, X, Crown, User, LogOut, Calendar } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const location = useLocation()
-  const isAuthenticated = false
+  const { user, isAuthenticated, logout } = useAuth()
 
   const navItems = [
     { name: '首頁', path: '/', icon: null },
@@ -70,9 +71,24 @@ const Navbar = () => {
                         className="block px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
+                        <User className="inline h-4 w-4 mr-2" />
                         個人檔案
                       </Link>
-                      <button className="block w-full text-left px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors">
+                      <Link
+                        to="/profile/registrations"
+                        className="block px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <Calendar className="inline h-4 w-4 mr-2" />
+                        我的報名
+                      </Link>
+                      <button 
+                        onClick={() => {
+                          logout()
+                          setIsUserMenuOpen(false)
+                        }}
+                        className="block w-full text-left px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                      >
                         <LogOut className="inline h-4 w-4 mr-2" />
                         登出
                       </button>
