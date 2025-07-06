@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Search, MapPin, Users, Edit, Trash2, ArrowLeft, Building, Phone, Mail } from 'lucide-react'
+import { Plus, Search, MapPin, Users, Edit, Trash2, ArrowLeft, Building, Phone, Mail, Image } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import eventService, { Venue, VenueFilters } from '../services/eventService'
+import MediaGallery from '../components/MediaGallery'
 
 const VenueManagement: React.FC = () => {
   const { user } = useAuth()
@@ -328,6 +329,22 @@ const VenueManagement: React.FC = () => {
                             )}
                           </div>
                         )}
+
+                        {/* Compact Venue Media Preview */}
+                        <div className="mt-3">
+                          <div className="flex items-center text-xs text-gray-400 mb-2">
+                            <Image className="h-3 w-3 mr-1" />
+                            Venue Images
+                          </div>
+                          <div className="max-w-2xl">
+                            <MediaGallery
+                              venueId={venue.id}
+                              type="image"
+                              editable={false}
+                              className="max-h-20 overflow-hidden"
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       <div className="flex items-center space-x-2">

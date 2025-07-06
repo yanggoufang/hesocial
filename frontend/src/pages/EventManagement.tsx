@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Search, Calendar, MapPin, Users, Eye, Edit, Trash2, CheckCircle, XCircle, ExternalLink, ArrowLeft } from 'lucide-react'
+import { Plus, Search, Calendar, MapPin, Users, Eye, Edit, Trash2, CheckCircle, XCircle, ExternalLink, ArrowLeft, Image } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import eventService, { Event, EventFilters, EventCategory, Venue } from '../services/eventService'
 import EventForm from '../components/EventForm'
+import MediaGallery from '../components/MediaGallery'
 
 const EventManagement: React.FC = () => {
   const { user } = useAuth()
@@ -394,6 +395,22 @@ const EventManagement: React.FC = () => {
                           <span>Diamond: {formatPrice(event.price_diamond, event.currency)}</span>
                           <span>Black Card: {formatPrice(event.price_black_card, event.currency)}</span>
                         </div>
+
+                        {/* Compact Media Preview */}
+                        <div className="mt-3">
+                          <div className="flex items-center text-xs text-gray-400 mb-2">
+                            <Image className="h-3 w-3 mr-1" />
+                            Event Media
+                          </div>
+                          <div className="max-w-2xl">
+                            <MediaGallery
+                              eventId={event.id}
+                              type="image"
+                              editable={false}
+                              className="max-h-20 overflow-hidden"
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       <div className="flex items-center space-x-2">
@@ -446,6 +463,14 @@ const EventManagement: React.FC = () => {
                         >
                           <Edit className="h-3 w-3 mr-1" />
                           Edit
+                        </button>
+
+                        <button
+                          onClick={() => navigate(`/events/${event.id}/media`)}
+                          className="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          <Image className="h-3 w-3 mr-1" />
+                          Media
                         </button>
 
                         {user?.role === 'super_admin' && (

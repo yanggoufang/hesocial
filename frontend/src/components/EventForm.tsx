@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { X, Calendar, MapPin, DollarSign, Users, Clock, Info, Save, AlertCircle } from 'lucide-react'
+import { X, Calendar, MapPin, DollarSign, Users, Clock, Info, Save, AlertCircle, Image } from 'lucide-react'
 import eventService, { Event, EventCategory, Venue, CreateEventData } from '../services/eventService'
+import MediaUploader from './MediaUploader'
+import MediaGallery from './MediaGallery'
 
 interface EventFormProps {
   event?: Event | null
@@ -15,6 +17,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, isOpen, onClose, onSuccess
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mediaRefresh, setMediaRefresh] = useState(0)
   
   const [formData, setFormData] = useState<CreateEventData>({
     title: '',
@@ -686,6 +689,78 @@ const EventForm: React.FC<EventFormProps> = ({ event, isOpen, onClose, onSuccess
                 />
               </div>
             </div>
+
+            {/* Media Management - Only show for existing events */}
+            {event && (
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <h4 className="text-lg font-medium text-gray-900 flex items-center mb-4">
+                    <Image className="h-5 w-5 mr-2" />
+                    Event Media
+                  </h4>
+                  <p className="text-sm text-gray-600 mb-6">
+                    Upload images and documents for this event. Images will be used in event galleries and marketing materials.
+                  </p>
+                </div>
+
+                {/* Media Upload Section */}
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <h5 className="text-md font-medium text-gray-900 mb-4">Upload New Media</h5>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Image Upload */}
+                    <div>
+                      <h6 className="text-sm font-medium text-gray-700 mb-2">Event Images</h6>
+                      <MediaUploader
+                        eventId={event.id}
+                        type="image"
+                        maxFiles={5}
+                        maxSizeMB={10}
+                        onUploadComplete={() => {
+                          setMediaRefresh(prev => prev + 1)
+                        }}
+                        className="border-dashed border-2 border-gray-300 rounded-lg p-4"
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        Upload up to 5 images (JPEG, PNG, WebP, GIF) - Max 10MB each
+                      </p>
+                    </div>
+
+                    {/* Document Upload */}
+                    <div>
+                      <h6 className="text-sm font-medium text-gray-700 mb-2">Event Documents</h6>
+                      <MediaUploader
+                        eventId={event.id}
+                        type="document"
+                        maxFiles={3}
+                        maxSizeMB={10}
+                        onUploadComplete={() => {
+                          setMediaRefresh(prev => prev + 1)
+                        }}
+                        className="border-dashed border-2 border-gray-300 rounded-lg p-4"
+                      />
+                      <p className="text-xs text-gray-500 mt-2">
+                        Upload documents (PDF, DOC, XLS) - Max 10MB each
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Media Gallery Section */}
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h5 className="text-md font-medium text-gray-900 mb-4">Current Media</h5>
+                  <MediaGallery
+                    eventId={event.id}
+                    type="all"
+                    editable={true}
+                    onMediaChange={() => {
+                      setMediaRefresh(prev => prev + 1)
+                    }}
+                    key={mediaRefresh}
+                    className="min-h-32"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Form Actions */}
             <div className="flex items-center justify-end space-x-4 pt-6 border-t">

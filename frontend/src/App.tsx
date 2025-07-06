@@ -17,6 +17,7 @@ import CategoryManagement from './pages/CategoryManagement'
 import EventRegistration from './pages/EventRegistration'
 import MyRegistrations from './pages/MyRegistrations'
 import SystemHealthDashboard from './pages/SystemHealthDashboard'
+import EventMediaManagement from './pages/EventMediaManagement'
 import AccessTestPage from './pages/AccessTestPage'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -115,6 +116,11 @@ function App() {
             <Route path="/events/categories" element={
               <EventManagementRoute>
                 <CategoryManagement />
+              </EventManagementRoute>
+            } />
+            <Route path="/events/:eventId/media" element={
+              <EventManagementRoute>
+                <EventMediaManagement />
               </EventManagementRoute>
             } />
             
