@@ -1,7 +1,6 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { createReadStream, createWriteStream, existsSync, statSync } from 'fs';
-import { constants } from 'crypto';
 import { join, basename } from 'path';
 import logger from '../utils/logger.js';
 import { Agent } from 'https';
@@ -63,8 +62,7 @@ export class R2BackupService {
       requestHandler: new NodeHttpHandler({
         httpsAgent: new Agent({
           secureProtocol: 'TLSv1_2_method',
-          ciphers: 'ECDHE-RSA-AES128-GCM-SHA256',
-          maxVersion: 'TLSv1.2' as any
+          ciphers: 'ECDHE-RSA-AES128-GCM-SHA256'
         })
       })
     });
