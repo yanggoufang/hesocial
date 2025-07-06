@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
 import { pool } from '../database/duckdb-pool.js'
 import { Registration, ApiResponse, AuthenticatedRequest } from '../types/index.js'
-import { logger } from '../utils/logger.js'
+import logger from '../utils/logger.js'
 
 // Event Registration Management
 export const registerForEvent = async (req: AuthenticatedRequest, res: Response) => {

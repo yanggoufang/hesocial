@@ -246,10 +246,10 @@ const AdminDashboard = () => {
               </p>
               <div className="space-y-3">
                 <button
-                  onClick={() => navigate('/admin/monitoring')}
+                  onClick={() => navigate('/admin/system')}
                   className="w-full luxury-button text-center"
                 >
-                  View Monitoring
+                  View System Health
                 </button>
                 <div className="grid grid-cols-2 gap-3">
                   <button 
@@ -258,8 +258,11 @@ const AdminDashboard = () => {
                   >
                     Refresh Status
                   </button>
-                  <button className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm">
-                    Health Report
+                  <button 
+                    onClick={() => navigate('/admin/system')}
+                    className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm"
+                  >
+                    Health Dashboard
                   </button>
                 </div>
               </div>

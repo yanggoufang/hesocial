@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { requireAuth, requireAdmin } from '../middleware/auth.js'
+import { authenticateToken as requireAuth, requireAdmin } from '../middleware/auth.js'
 import {
   // User registration functions
   registerForEvent,

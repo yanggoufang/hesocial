@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Crown, User, LogOut, Calendar } from 'lucide-react'
+import { Menu, X, Crown, User, LogOut, Calendar, Settings, Shield, Activity } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { usePermissions } from '../hooks/useRoleAccess'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const location = useLocation()
   const { user, isAuthenticated, logout } = useAuth()
+  const { can } = usePermissions()
 
   const navItems = [
     { name: '首頁', path: '/', icon: null },
@@ -82,6 +84,39 @@ const Navbar = () => {
                         <Calendar className="inline h-4 w-4 mr-2" />
                         我的報名
                       </Link>
+                      
+                      {/* Admin Menu Items */}
+                      {can.viewAdmin && (
+                        <>
+                          <div className="border-t border-luxury-gold/20 my-2"></div>
+                          <Link
+                            to="/admin"
+                            className="block px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                            onClick={() => setIsUserMenuOpen(false)}
+                          >
+                            <Shield className="inline h-4 w-4 mr-2" />
+                            管理後台
+                          </Link>
+                          <Link
+                            to="/events/manage"
+                            className="block px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                            onClick={() => setIsUserMenuOpen(false)}
+                          >
+                            <Settings className="inline h-4 w-4 mr-2" />
+                            活動管理
+                          </Link>
+                          <Link
+                            to="/admin/system"
+                            className="block px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                            onClick={() => setIsUserMenuOpen(false)}
+                          >
+                            <Activity className="inline h-4 w-4 mr-2" />
+                            系統健康
+                          </Link>
+                        </>
+                      )}
+                      
+                      <div className="border-t border-luxury-gold/20 my-2"></div>
                       <button 
                         onClick={() => {
                           logout()

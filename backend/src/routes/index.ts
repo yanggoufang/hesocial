@@ -15,6 +15,7 @@ import categoryManagementRoutes from './categoryManagement.js'
 import salesManagementRoutes from './salesManagement.js'
 import registrationRoutes from './registrationRoutes.js'
 import mediaRoutes from './mediaRoutes.js'
+import systemHealthRoutes from './systemHealthRoutes.js'
 
 const router = Router()
 
@@ -47,6 +48,9 @@ router.use('/registrations', registrationRoutes)
 
 // Media management routes (file upload and management)
 router.use('/media', mediaRoutes)
+
+// System health monitoring routes (admin dashboard)
+router.use('/system', systemHealthRoutes)
 
 // Legacy event routes (for backwards compatibility during transition)
 router.get('/legacy/events', getEvents)
@@ -186,6 +190,7 @@ router.get('/', (req, res) => {
       media: '/api/media/*',
       // Health & Monitoring
       health: '/api/health/*',
+      system: '/api/system/*',
       // Admin Operations
       admin: '/api/admin/*',
       // Legacy endpoints (deprecated)
