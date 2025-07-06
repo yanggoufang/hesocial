@@ -143,6 +143,26 @@ class DuckDBConnection {
         logger.warn('⚠️ Migration support tables not found, skipping...')
       }
       
+      // Initialize event management schema
+      const eventSchemaPath = join(__dirname, '../../../database/event-management-schema.sql')
+      try {
+        const eventSchemaSQL = await readFile(eventSchemaPath, 'utf-8')
+        const eventStatements = eventSchemaSQL
+          .split(';')
+          .map(stmt => stmt.trim())
+          .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'))
+        
+        for (const statement of eventStatements) {
+          if (statement.trim()) {
+            logger.info(`Executing event schema: ${statement.substring(0, 50)}...`)
+            await this.query(statement)
+          }
+        }
+        logger.info('✅ Event management schema initialized')
+      } catch (eventSchemaError) {
+        logger.warn('⚠️ Event management schema not found, skipping...')
+      }
+      
       // Commit transaction
       await this.query('COMMIT')
       

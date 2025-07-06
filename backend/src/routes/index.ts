@@ -9,6 +9,9 @@ import healthRoutes from './health.js'
 import adminRoutes from './admin.js'
 import authRoutes from './authRoutes.js'
 import userManagementRoutes from './userManagement.js'
+import eventManagementRoutes from './eventManagement.js'
+import venueManagementRoutes from './venueManagement.js'
+import categoryManagementRoutes from './categoryManagement.js'
 
 const router = Router()
 
@@ -24,11 +27,20 @@ router.use('/admin', adminRoutes)
 // User management routes (admin only)
 router.use('/users', userManagementRoutes)
 
-// Event routes
-router.get('/events', getEvents)
-router.get('/events/categories', getEventCategories)
-router.get('/events/venues', getVenues)
-router.get('/events/:id', getEventById)
+// Event management routes (comprehensive CRUD system)
+router.use('/events', eventManagementRoutes)
+
+// Venue management routes (admin-controlled)
+router.use('/venues', venueManagementRoutes)
+
+// Event category management routes (admin-controlled)  
+router.use('/categories', categoryManagementRoutes)
+
+// Legacy event routes (for backwards compatibility during transition)
+router.get('/legacy/events', getEvents)
+router.get('/legacy/events/categories', getEventCategories)
+router.get('/legacy/events/venues', getVenues)
+router.get('/legacy/events/:id', getEventById)
 
 // Debug route to check all events regardless of date
 router.get('/debug/events-all', async (req, res) => {
@@ -136,21 +148,30 @@ router.get('/', (req, res) => {
     version: '1.0.0',
     database: 'DuckDB',
     features: {
-      events: 'Full functionality',
-      authentication: 'Coming soon',
-      payments: 'Coming soon'
+      authentication: '✅ Production Ready - JWT + Google OAuth',
+      events: '✅ Event Content Management System - Full CRUD',
+      venues: '✅ Venue Management - Admin controlled',
+      categories: '✅ Event Categories - Luxury event types',
+      userManagement: '✅ User Management - Admin dashboard',
+      backupSystem: '✅ R2 Backup - Manual backup preferred',
+      salesManagement: '🚧 Sales Pipeline - Coming soon',
+      payments: '🚧 Payment Processing - Coming soon'
     },
     endpoints: {
-      events: '/api/events',
-      categories: '/api/events/categories',
-      venues: '/api/events/venues',
-      health: '/api/health',
-      healthDatabase: '/api/health/database',
-      healthR2Sync: '/api/health/r2-sync',
-      healthFull: '/api/health/full',
-      adminBackup: '/api/admin/backup',
-      adminRestore: '/api/admin/restore',
-      adminBackups: '/api/admin/backups'
+      // Authentication
+      auth: '/api/auth/*',
+      // Event Management (Full CRUD)
+      events: '/api/events/*',
+      venues: '/api/venues/*',
+      categories: '/api/categories/*',
+      // User Management (Admin)
+      users: '/api/users/*',
+      // Health & Monitoring
+      health: '/api/health/*',
+      // Admin Operations
+      admin: '/api/admin/*',
+      // Legacy endpoints (deprecated)
+      legacyEvents: '/api/legacy/events'
     },
     documentation: 'https://api.hesocial.com/docs'
   })
