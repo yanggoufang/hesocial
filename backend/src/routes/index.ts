@@ -12,6 +12,7 @@ import userManagementRoutes from './userManagement.js'
 import eventManagementRoutes from './eventManagement.js'
 import venueManagementRoutes from './venueManagement.js'
 import categoryManagementRoutes from './categoryManagement.js'
+import salesManagementRoutes from './salesManagement.js'
 
 const router = Router()
 
@@ -35,6 +36,9 @@ router.use('/venues', venueManagementRoutes)
 
 // Event category management routes (admin-controlled)  
 router.use('/categories', categoryManagementRoutes)
+
+// Sales management routes (CRM and sales pipeline)
+router.use('/sales', salesManagementRoutes)
 
 // Legacy event routes (for backwards compatibility during transition)
 router.get('/legacy/events', getEvents)
@@ -154,7 +158,7 @@ router.get('/', (req, res) => {
       categories: '✅ Event Categories - Luxury event types',
       userManagement: '✅ User Management - Admin dashboard',
       backupSystem: '✅ R2 Backup - Manual backup preferred',
-      salesManagement: '🚧 Sales Pipeline - Coming soon',
+      salesManagement: '✅ Sales Pipeline - CRM and opportunity management',
       payments: '🚧 Payment Processing - Coming soon'
     },
     endpoints: {
@@ -166,6 +170,8 @@ router.get('/', (req, res) => {
       categories: '/api/categories/*',
       // User Management (Admin)
       users: '/api/users/*',
+      // Sales Management (CRM)
+      sales: '/api/sales/*',
       // Health & Monitoring
       health: '/api/health/*',
       // Admin Operations

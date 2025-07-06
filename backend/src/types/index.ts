@@ -162,3 +162,168 @@ export interface OAuthConfig {
     clientSecret: string
   }
 }
+
+// Sales Management System Types
+export interface SalesLead {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
+  company?: string
+  jobTitle?: string
+  annualIncome?: number
+  netWorth?: number
+  source: 'website' | 'referral' | 'event' | 'cold_call' | 'linkedin' | 'advertisement'
+  referralCode?: string
+  leadScore: number
+  status: 'new' | 'qualified' | 'contacted' | 'nurturing' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost'
+  interestedMembershipTier?: 'Platinum' | 'Diamond' | 'Black Card'
+  budgetRange?: string
+  timeline?: string
+  painPoints?: string
+  interests: string[]
+  notes?: string
+  lastContactDate?: Date
+  nextFollowUpDate?: Date
+  assignedTo?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SalesOpportunity {
+  id: string
+  leadId: string
+  name: string
+  description?: string
+  stage: 'qualification' | 'needs_analysis' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost'
+  probability: number
+  value: number
+  expectedCloseDate?: Date
+  actualCloseDate?: Date
+  membershipTier: 'Platinum' | 'Diamond' | 'Black Card'
+  paymentTerms?: string
+  closeReason?: string
+  assignedTo: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SalesActivity {
+  id: string
+  leadId?: string
+  opportunityId?: string
+  activityType: 'call' | 'email' | 'meeting' | 'demo' | 'proposal' | 'follow_up' | 'note'
+  subject: string
+  description?: string
+  outcome?: string
+  durationMinutes?: number
+  scheduledAt?: Date
+  completedAt?: Date
+  createdBy: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SalesPipelineStage {
+  id: string
+  name: string
+  displayOrder: number
+  defaultProbability: number
+  isActive: boolean
+  colorCode?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SalesTarget {
+  id: string
+  salesRepId: string
+  periodType: 'monthly' | 'quarterly' | 'yearly'
+  periodStart: Date
+  periodEnd: Date
+  targetRevenue: number
+  targetLeads?: number
+  targetConversions?: number
+  actualRevenue: number
+  actualLeads: number
+  actualConversions: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SalesTeamMember {
+  id: string
+  userId: string
+  role: 'sales_rep' | 'senior_sales_rep' | 'sales_manager' | 'sales_director'
+  territory?: string
+  commissionRate: number
+  isActive: boolean
+  hireDate?: Date
+  managerId?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SalesCommission {
+  id: string
+  salesRepId: string
+  opportunityId: string
+  commissionType: 'new_member' | 'renewal' | 'upsell' | 'referral'
+  baseAmount: number
+  commissionRate: number
+  commissionAmount: number
+  paymentStatus: 'pending' | 'approved' | 'paid' | 'disputed'
+  periodMonth: number
+  periodYear: number
+  paidAt?: Date
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SalesMetrics {
+  totalLeads: number
+  qualifiedLeads: number
+  totalOpportunities: number
+  totalPipelineValue: number
+  conversionRate: number
+  averageDealSize: number
+  salesCycleLength: number
+  winRate: number
+  monthlyRevenue: number
+  quarterlyRevenue: number
+  yearlyRevenue: number
+}
+
+export interface SalesLeadFilters {
+  status?: SalesLead['status']
+  source?: SalesLead['source']
+  assignedTo?: string
+  membershipTier?: SalesLead['interestedMembershipTier']
+  leadScore?: {
+    min?: number
+    max?: number
+  }
+  dateRange?: {
+    start?: Date
+    end?: Date
+  }
+}
+
+export interface SalesOpportunityFilters {
+  stage?: SalesOpportunity['stage']
+  assignedTo?: string
+  membershipTier?: SalesOpportunity['membershipTier']
+  probability?: {
+    min?: number
+    max?: number
+  }
+  value?: {
+    min?: number
+    max?: number
+  }
+  dateRange?: {
+    start?: Date
+    end?: Date
+  }
+}

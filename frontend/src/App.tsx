@@ -12,6 +12,8 @@ import AdminDashboard from './pages/AdminDashboard'
 import BackupManagement from './pages/BackupManagement'
 import EventManagement from './pages/EventManagement'
 import VenueManagement from './pages/VenueManagement'
+import UserManagement from './pages/UserManagement'
+import CategoryManagement from './pages/CategoryManagement'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
@@ -38,11 +40,13 @@ function App() {
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/backups" element={<BackupManagement />} />
+            <Route path="/admin/users" element={<UserManagement />} />
             
             {/* Event Management Routes (Separate System) */}
             <Route path="/events/manage" element={<EventManagement />} />
             <Route path="/events/admin" element={<EventManagement />} />
             <Route path="/events/venues" element={<VenueManagement />} />
+            <Route path="/events/categories" element={<CategoryManagement />} />
           </Routes>
         </motion.main>
         <Footer />
