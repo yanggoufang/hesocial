@@ -46,12 +46,55 @@ export class R2BackupService {
       return;
     }
 
+    // Validate environment variable formats
+    const endpoint = process.env.R2_ENDPOINT!;
+    const accessKey = process.env.R2_ACCESS_KEY_ID!;
+    const secretKey = process.env.R2_SECRET_ACCESS_KEY!;
+    
+    const configIssues = [];
+    
+    // Check endpoint format
+    if (endpoint.includes('account-id') || endpoint.includes('your-account')) {
+      configIssues.push('R2_ENDPOINT contains placeholder text');
+    }
+    
+    // Check credential lengths (typical R2 keys are longer)
+    if (accessKey.length < 20) {
+      configIssues.push(`R2_ACCESS_KEY_ID seems too short (${accessKey.length} chars)`);
+    }
+    
+    if (secretKey.length < 40) {
+      configIssues.push(`R2_SECRET_ACCESS_KEY seems too short (${secretKey.length} chars)`);
+    }
+    
+    if (configIssues.length > 0) {
+      logger.warn(`⚠️  R2 backup disabled: Configuration issues detected:`);
+      configIssues.forEach(issue => logger.warn(`    - ${issue}`));
+      logger.warn(`    Please check your Cloudflare R2 credentials and endpoint URL`);
+      this.enabled = false;
+      return;
+    }
+
     this.enabled = true;
 
     this.bucketName = process.env.R2_BUCKET_NAME!;
     this.backupPath = process.env.R2_BACKUP_PATH || 'backups/';
     
-    // Initialize S3 client for R2
+    // Initialize S3 client for R2 with Cloudflare-optimized configuration
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    const httpAgent = new Agent({
+      keepAlive: true,
+      maxSockets: 10,
+      timeout: 60000,
+      // More lenient SSL configuration for Cloudflare R2 compatibility
+      secureProtocol: undefined, // Let Node.js choose the best protocol
+      rejectUnauthorized: isProduction,
+      // Add additional SSL options for better compatibility
+      servername: undefined,
+      checkServerIdentity: isProduction ? undefined : () => undefined,
+    });
+
     this.s3Client = new S3Client({
       region: process.env.R2_REGION || 'auto',
       endpoint: process.env.R2_ENDPOINT!,
@@ -59,12 +102,25 @@ export class R2BackupService {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
       },
+      requestHandler: new NodeHttpHandler({
+        httpsAgent: httpAgent,
+        connectionTimeout: 60000,
+        socketTimeout: 60000,
+      }),
+      // Essential for R2 compatibility
+      forcePathStyle: true,
     });
 
+    // Log configuration details for debugging (without sensitive info)
     logger.info('✅ R2BackupService initialized', {
       bucket: this.bucketName,
       backupPath: this.backupPath,
-      enabled: this.enabled
+      enabled: this.enabled,
+      endpoint: process.env.R2_ENDPOINT?.replace(/\/\/.*@/, '//[REDACTED]@') || 'not set',
+      region: process.env.R2_REGION || 'auto',
+      hasAccessKey: !!process.env.R2_ACCESS_KEY_ID,
+      hasSecretKey: !!process.env.R2_SECRET_ACCESS_KEY,
+      environment: process.env.NODE_ENV || 'development'
     });
   }
 
@@ -404,24 +460,47 @@ export class R2BackupService {
    */
   async testConnection(): Promise<boolean> {
     if (!this.enabled || !this.s3Client) {
+      logger.warn('R2 connection test skipped - service disabled or not configured');
       return false;
     }
 
-    try {
-      const command = new ListObjectsV2Command({
-        Bucket: this.bucketName,
-        MaxKeys: 1
-      });
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-      await this.s3Client.send(command);
-      logger.info('✅ R2 connection test successful');
-      return true;
-    } catch (error) {
-      logger.error('❌ R2 connection test failed', { 
-        error: error instanceof Error ? error.message : error 
-      });
-      return false;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logger.info(`🔄 R2 connection test attempt ${attempt}/${maxRetries}...`);
+        
+        const command = new ListObjectsV2Command({
+          Bucket: this.bucketName,
+          MaxKeys: 1
+        });
+
+        await this.s3Client.send(command);
+        logger.info('✅ R2 connection test successful');
+        return true;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        logger.warn(`⚠️  R2 connection test attempt ${attempt} failed`, { 
+          error: lastError.message,
+          attempt,
+          retrying: attempt < maxRetries
+        });
+        
+        // Wait before retry (exponential backoff)
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+        }
+      }
     }
+
+    logger.error('❌ R2 connection test failed after all attempts', { 
+      error: lastError?.message,
+      attempts: maxRetries,
+      endpoint: process.env.R2_ENDPOINT,
+      bucket: this.bucketName
+    });
+    return false;
   }
 
   /**

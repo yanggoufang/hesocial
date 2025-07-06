@@ -1,4 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
+import { NodeHttpHandler } from '@aws-sdk/node-http-handler'
+import { Agent } from 'https'
 import sharp from 'sharp'
 import { v4 as uuidv4 } from 'uuid'
 import path from 'path'
@@ -27,13 +29,35 @@ class MediaService {
   private bucketName: string
 
   constructor() {
+    // Initialize R2 client with Cloudflare-optimized configuration
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    const httpAgent = new Agent({
+      keepAlive: true,
+      maxSockets: 10,
+      timeout: 60000,
+      // More lenient SSL configuration for Cloudflare R2 compatibility
+      secureProtocol: undefined, // Let Node.js choose the best protocol
+      rejectUnauthorized: isProduction,
+      // Add additional SSL options for better compatibility
+      servername: undefined,
+      checkServerIdentity: isProduction ? undefined : () => undefined,
+    });
+
     this.r2Client = new S3Client({
       region: 'auto',
       endpoint: config.r2.endpoint,
       credentials: {
         accessKeyId: config.r2.accessKeyId,
         secretAccessKey: config.r2.secretAccessKey,
-      }
+      },
+      requestHandler: new NodeHttpHandler({
+        httpsAgent: httpAgent,
+        connectionTimeout: 60000,
+        socketTimeout: 60000,
+      }),
+      // Essential for R2 compatibility
+      forcePathStyle: true,
     })
     this.bucketName = config.r2.bucketName
   }
