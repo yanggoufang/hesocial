@@ -59,12 +59,6 @@ export class R2BackupService {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
       },
-      requestHandler: new NodeHttpHandler({
-        httpsAgent: new Agent({
-          secureProtocol: 'TLSv1_2_method',
-          ciphers: 'ECDHE-RSA-AES128-GCM-SHA256'
-        })
-      })
     });
 
     logger.info('✅ R2BackupService initialized', {
