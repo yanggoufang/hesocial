@@ -40,5 +40,8 @@
   "workspaces": [
     "frontend",
     "backend"
-  ]
+  ],
+  "dependencies": {
+    "@aws-sdk/node-http-handler": "^3.370.0"
+  }
 }
