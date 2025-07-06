@@ -61,7 +61,8 @@ export class R2BackupService {
       },
       requestHandler: new NodeHttpHandler({
         httpsAgent: new Agent({
-          secureProtocol: 'TLSv1_2_method'
+          secureProtocol: 'TLSv1_2_method',
+          ciphers: 'ECDHE-RSA-AES128-GCM-SHA256'
         })
       })
     });
