@@ -62,7 +62,27 @@ After updating the environment variables, restart your application and check the
 - **Endpoint**: Must contain your actual account ID, not placeholder text
 
 ## Troubleshooting
-If you still get SSL handshake errors after correct credentials:
+
+### SSL Handshake Failures
+**Important**: SSL handshake failures (like "sslv3 alert handshake failure") are almost always caused by **invalid credentials**, not SSL configuration issues.
+
+**Common Error Messages that Actually Mean "Wrong Credentials":**
+- `write EPROTO...sslv3 alert handshake failure`
+- `SSL handshake failed`
+- `EPROTO: SSL routines`
+
+**Root Cause**: These errors occur when:
+1. Using placeholder credentials (like 15-character dummy keys)
+2. Access Key ID or Secret Access Key are incorrect
+3. Credentials don't have proper R2 permissions
+
+**Solution**: 
+1. Double-check your Cloudflare R2 credentials are real (not placeholders)
+2. Verify Access Key ID is ~20+ characters and Secret Access Key is ~40+ characters
+3. Ensure your R2 API token has proper permissions for the bucket
+
+### True SSL Issues (Rare)
+Only if credentials are verified correct:
 1. Verify your network allows HTTPS connections to Cloudflare
 2. Check if corporate firewall/proxy is interfering
 3. Try testing from a different network environment

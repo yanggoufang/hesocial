@@ -107,8 +107,29 @@ class MediaService {
         return key
       }
     } catch (error) {
-      logger.error('R2 upload error:', error)
-      throw new Error('Failed to upload file to storage')
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Provide specific diagnosis for common R2 errors
+      if (errorMessage.includes('sslv3 alert handshake failure') || 
+          errorMessage.includes('SSL handshake') ||
+          errorMessage.includes('EPROTO')) {
+        logger.error('R2 upload failed - SSL handshake failure (likely invalid credentials):', { 
+          error: errorMessage,
+          diagnosis: 'SSL handshake failures typically indicate invalid R2 credentials, not SSL configuration issues.',
+          suggestion: 'Verify R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY are correct Cloudflare R2 credentials.'
+        });
+        throw new Error('Failed to upload file to storage: Invalid R2 credentials');
+      } else if (errorMessage.includes('InvalidAccessKeyId') || 
+                 errorMessage.includes('SignatureDoesNotMatch')) {
+        logger.error('R2 upload failed - Invalid credentials:', errorMessage);
+        throw new Error('Failed to upload file to storage: Invalid R2 credentials');
+      } else if (errorMessage.includes('NoSuchBucket')) {
+        logger.error('R2 upload failed - Bucket not found:', errorMessage);
+        throw new Error('Failed to upload file to storage: R2 bucket not found');
+      }
+      
+      logger.error('R2 upload error:', error);
+      throw new Error('Failed to upload file to storage');
     }
   }
 

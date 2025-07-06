@@ -481,8 +481,28 @@ export class R2BackupService {
         return true;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
+        
+        // Provide more specific error diagnosis
+        const errorMessage = lastError.message;
+        let diagnosis = '';
+        
+        if (errorMessage.includes('sslv3 alert handshake failure') || 
+            errorMessage.includes('SSL handshake') ||
+            errorMessage.includes('EPROTO')) {
+          diagnosis = 'Most likely cause: Invalid or placeholder R2 credentials. SSL handshake failures typically indicate authentication issues, not SSL configuration problems.';
+        } else if (errorMessage.includes('InvalidAccessKeyId') || 
+                   errorMessage.includes('SignatureDoesNotMatch') ||
+                   errorMessage.includes('InvalidSecurityToken')) {
+          diagnosis = 'Credential error: Invalid R2 Access Key ID or Secret Access Key.';
+        } else if (errorMessage.includes('NoSuchBucket')) {
+          diagnosis = 'Bucket error: The specified R2 bucket does not exist or is inaccessible.';
+        } else if (errorMessage.includes('ENOTFOUND') || errorMessage.includes('ECONNREFUSED')) {
+          diagnosis = 'Network error: Cannot reach R2 endpoint. Check your internet connection and endpoint URL.';
+        }
+        
         logger.warn(`⚠️  R2 connection test attempt ${attempt} failed`, { 
-          error: lastError.message,
+          error: errorMessage,
+          diagnosis: diagnosis || 'Unknown error - check R2 configuration',
           attempt,
           retrying: attempt < maxRetries
         });
@@ -494,8 +514,29 @@ export class R2BackupService {
       }
     }
 
+    // Provide final diagnosis with specific next steps
+    const finalError = lastError?.message || 'Unknown error';
+    let finalDiagnosis = '';
+    let nextSteps = '';
+    
+    if (finalError.includes('sslv3 alert handshake failure') || 
+        finalError.includes('SSL handshake') ||
+        finalError.includes('EPROTO')) {
+      finalDiagnosis = 'SSL handshake failure typically indicates invalid R2 credentials, not SSL configuration issues.';
+      nextSteps = 'Please verify your R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY are correct Cloudflare R2 credentials (not placeholders).';
+    } else if (finalError.includes('InvalidAccessKeyId') || 
+               finalError.includes('SignatureDoesNotMatch')) {
+      finalDiagnosis = 'Authentication failed with current R2 credentials.';
+      nextSteps = 'Verify R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY match your Cloudflare R2 API token.';
+    } else if (finalError.includes('NoSuchBucket')) {
+      finalDiagnosis = 'R2 bucket not found or inaccessible.';
+      nextSteps = 'Check that R2_BUCKET_NAME exists in your Cloudflare R2 dashboard and your credentials have access.';
+    }
+
     logger.error('❌ R2 connection test failed after all attempts', { 
-      error: lastError?.message,
+      error: finalError,
+      diagnosis: finalDiagnosis || 'Connection failed - check R2 configuration',
+      nextSteps: nextSteps || 'Review R2_ENDPOINT, credentials, and bucket configuration',
       attempts: maxRetries,
       endpoint: process.env.R2_ENDPOINT,
       bucket: this.bucketName
