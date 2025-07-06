@@ -10,7 +10,7 @@ import {
   ApiResponse,
   AuthenticatedRequest
 } from '../types/index.js'
-import { logger } from '../utils/logger.js'
+import logger from '../utils/logger.js'
 
 // Sales Leads Management
 export const getLeads = async (req: Request, res: Response) => {

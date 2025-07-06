@@ -3,6 +3,14 @@ import { EmailConfig, StripeConfig, OAuthConfig } from '../types/index.js'
 
 dotenv.config()
 
+interface R2Config {
+  endpoint: string
+  accessKeyId: string
+  secretAccessKey: string
+  bucketName: string
+  publicUrl: string
+}
+
 interface Config {
   port: number
   nodeEnv: string
@@ -11,6 +19,7 @@ interface Config {
   email: EmailConfig
   stripe: StripeConfig
   oauth: OAuthConfig
+  r2: R2Config
   corsOrigins: string[]
   rateLimitWindowMinutes: number
   rateLimitMaxRequests: number
@@ -49,6 +58,14 @@ const config: Config = {
       clientId: process.env.LINKEDIN_CLIENT_ID || '',
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET || ''
     }
+  },
+
+  r2: {
+    endpoint: process.env.R2_ENDPOINT || 'https://hesocial.r2.cloudflarestorage.com',
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    bucketName: process.env.R2_BUCKET_NAME || 'hesocial-media',
+    publicUrl: process.env.R2_PUBLIC_URL || 'https://media.hesocial.com'
   },
 
   corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],

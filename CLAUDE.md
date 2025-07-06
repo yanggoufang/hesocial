@@ -88,6 +88,24 @@ node backend/temp-server.cjs
 # User: test@example.com / test123
 ```
 
+### R2 Storage Configuration
+For production media storage using Cloudflare R2:
+```bash
+# Required environment variables for R2 integration
+R2_ENDPOINT=https://your-account.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=your-r2-access-key-id
+R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+R2_BUCKET_NAME=hesocial-media
+R2_PUBLIC_URL=https://media.hesocial.com
+
+# Features:
+# - Automatic image optimization and thumbnail generation
+# - Secure document storage with signed URLs
+# - CDN delivery for public images
+# - File validation and size limits (10MB)
+# - Render.com compatible (no ephemeral file system dependency)
+```
+
 ## Development Commands
 
 ### Root Level Commands
@@ -505,6 +523,16 @@ The backend supports three different server configurations:
   - `PUT /api/registrations/:id/approve` - Approve registration (Admin+ only)
   - `PUT /api/registrations/:id/reject` - Reject registration (Admin+ only)
   - `GET /api/registrations/stats` - Registration statistics and analytics (Admin+ only)
+- **Event Media Management API endpoints** (Production Ready):
+  - `POST /api/media/events/:eventId/images` - Upload event images with automatic thumbnails (Owner/Admin+)
+  - `POST /api/media/events/:eventId/documents` - Upload event documents with secure storage (Owner/Admin+)
+  - `GET /api/media/events/:eventId` - Get event media with optional type filtering (Public with auth-aware URLs)
+  - `POST /api/media/venues/:venueId/images` - Upload venue images with multiple sizes (Admin+ only)
+  - `GET /api/media/venues/:venueId` - Get venue media gallery (Public)
+  - `DELETE /api/media/:mediaId` - Delete media file and R2 storage cleanup (Owner/Admin+)
+  - `GET /api/media/download/:mediaId` - Generate signed URL for document download (Auth required)
+  - `GET /api/media/stats` - Media storage statistics and analytics (Admin+ only)
+  - `POST /api/media/cleanup` - Clean up orphaned media files (Super Admin only)
 - **Admin endpoints** (Production Ready - Requires Authentication):
   - `POST /api/admin/backup` - Create manual backup to R2 (Admin+)
   - `GET /api/admin/backups` - List available R2 backups with metadata (Admin+)
@@ -774,6 +802,19 @@ export default class AddUserPreferences extends BaseMigration {
   - Integration with existing authentication and event management systems
   - Temporary server implementation for development and testing continuity
 
+#### **Phase 6: Event Media Management System** ✅
+- **Complete Media Management with R2 Storage**: Production-ready media system for scalable file handling
+  - Cloudflare R2 integration for reliable, CDN-delivered media storage
+  - Image processing with Sharp including automatic thumbnail generation (thumb, medium, large)
+  - Document management with secure private storage and expiring signed URLs
+  - Multi-file upload system with drag & drop interface and validation
+  - Media gallery with lightbox, download, and management capabilities
+  - Role-based permissions for upload, view, and delete operations
+  - File type validation (images: JPEG, PNG, WebP, GIF; documents: PDF, DOC, XLS)
+  - Size limits (10MB per file) and comprehensive error handling
+  - Database schema with event_media and venue_media tables plus indexing
+  - Complete REST API with admin controls and media statistics
+
 ### ✅ **Recently Completed (Phase 2):**
 
 #### **🔴 High Priority Tasks - COMPLETED:**
@@ -784,10 +825,10 @@ export default class AddUserPreferences extends BaseMigration {
 ### 🎯 **Active Development Priorities:**
 
 #### **📊 High Priority Tasks:**
-1. **Event Media Management**: Upload and management of event images and documents
-2. **Admin Route Protection**: Frontend middleware for admin interface access
-3. **System Health Dashboard**: Admin monitoring interface for system status
-4. **Main Server Database Fix**: Resolve DuckDB connection issues for production server
+1. **Admin Route Protection**: Frontend middleware for admin interface access
+2. **System Health Dashboard**: Admin monitoring interface for system status
+3. **Main Server Database Fix**: Resolve DuckDB connection issues for production server
+4. **Event Media Integration**: Integrate media upload/gallery into event management pages
 
 #### **🔧 Medium Priority Tasks:**
 5. **Event Calendar Integration**: Advanced scheduling and calendar management
@@ -800,7 +841,7 @@ export default class AddUserPreferences extends BaseMigration {
 10. **Report Generation**: Automated reporting for events, sales, and user analytics
 
 ### 📈 **Implementation Progress:**
-- **Completed**: 9/9 Major System Components (100% of Phase 1 & Phase 2)
+- **Completed**: 10/10 Major System Components (100% of Phase 1 & Phase 2)
 - **Authentication System**: ✅ Production Ready
 - **R2 Backup System**: ✅ Production Ready  
 - **Database Migration System**: ✅ Production Ready
@@ -810,7 +851,8 @@ export default class AddUserPreferences extends BaseMigration {
 - **User Management Interface**: ✅ Production Ready
 - **Category Management System**: ✅ Production Ready
 - **Event Registration System**: ✅ Production Ready (Frontend + Backend)
-- **Next Focus**: Event Media Management and Admin Route Protection
+- **Event Media Management System**: ✅ Production Ready (R2 Storage + Full UI)
+- **Next Focus**: Admin Route Protection and System Health Dashboard
 
 ### 🎯 **Implementation Approach:**
 Based on analysis of the sirex project's production-ready patterns, this implementation follows enterprise-grade practices:

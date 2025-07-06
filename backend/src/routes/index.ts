@@ -14,6 +14,7 @@ import venueManagementRoutes from './venueManagement.js'
 import categoryManagementRoutes from './categoryManagement.js'
 import salesManagementRoutes from './salesManagement.js'
 import registrationRoutes from './registrationRoutes.js'
+import mediaRoutes from './mediaRoutes.js'
 
 const router = Router()
 
@@ -43,6 +44,9 @@ router.use('/sales', salesManagementRoutes)
 
 // Event registration routes (member registration and payment)
 router.use('/registrations', registrationRoutes)
+
+// Media management routes (file upload and management)
+router.use('/media', mediaRoutes)
 
 // Legacy event routes (for backwards compatibility during transition)
 router.get('/legacy/events', getEvents)
@@ -178,6 +182,8 @@ router.get('/', (req, res) => {
       sales: '/api/sales/*',
       // Event Registration & Payment
       registrations: '/api/registrations/*',
+      // Media Management (Images & Documents)
+      media: '/api/media/*',
       // Health & Monitoring
       health: '/api/health/*',
       // Admin Operations
