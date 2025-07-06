@@ -10,7 +10,8 @@ import {
   BarChart3,
   AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Calendar
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { adminService, SystemHealth } from '../services/adminService'
@@ -192,7 +193,7 @@ const AdminDashboard = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
             {/* Backup Management */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -293,6 +294,46 @@ const AdminDashboard = () => {
                   </button>
                   <button className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm">
                     User Stats
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Event Management */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              className="luxury-glass p-6 rounded-xl"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <Calendar className="h-6 w-6 text-luxury-gold" />
+                <h2 className="text-xl font-luxury font-bold text-luxury-gold">
+                  Event Management
+                </h2>
+              </div>
+              <p className="text-luxury-platinum/80 mb-6">
+                Create and manage luxury social events, venues, and categories for the platform.
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate('/events/manage')}
+                  className="w-full luxury-button text-center"
+                >
+                  Manage Events
+                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => navigate('/events/venues')}
+                    className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm"
+                  >
+                    Venues
+                  </button>
+                  <button 
+                    onClick={() => navigate('/events/categories')}
+                    className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm"
+                  >
+                    Categories
                   </button>
                 </div>
               </div>

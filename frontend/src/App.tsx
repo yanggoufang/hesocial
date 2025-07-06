@@ -8,6 +8,10 @@ import RegisterPage from './pages/RegisterPage'
 import ProfilePage from './pages/ProfilePage'
 import EventDetailPage from './pages/EventDetailPage'
 import VVIPPage from './pages/VVIPPage'
+import AdminDashboard from './pages/AdminDashboard'
+import BackupManagement from './pages/BackupManagement'
+import EventManagement from './pages/EventManagement'
+import VenueManagement from './pages/VenueManagement'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 
@@ -30,6 +34,15 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/backups" element={<BackupManagement />} />
+            
+            {/* Event Management Routes (Separate System) */}
+            <Route path="/events/manage" element={<EventManagement />} />
+            <Route path="/events/admin" element={<EventManagement />} />
+            <Route path="/events/venues" element={<VenueManagement />} />
           </Routes>
         </motion.main>
         <Footer />
