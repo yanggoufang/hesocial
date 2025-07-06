@@ -53,7 +53,7 @@ The Cloudflare R2 backup system has been **COMPLETED** and is production-ready a
 
 ```bash
 # Cloudflare R2 Configuration
-R2_SYNC_ENABLED=false                     # Set to true to enable R2 backup
+
 R2_ACCOUNT_ID=your-cloudflare-account-id
 R2_ACCESS_KEY_ID=your-r2-access-key-id
 R2_SECRET_ACCESS_KEY=your-r2-secret-access-key

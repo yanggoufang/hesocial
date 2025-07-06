@@ -246,10 +246,90 @@ router.get('/database/stats', async (req, res) => {
   }
 });
 
+
+/**
+ * POST /api/admin/periodic-backup/start
+ * Start periodic backups
+ * Requires admin authentication
+ */
+router.post('/periodic-backup/start', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    if (!r2BackupService.isEnabled()) {
+      return res.status(503).json({
+        success: false,
+        error: 'R2 backup service is disabled',
+        message: 'Cannot start periodic backups when R2 sync is disabled'
+      });
+    }
+
+    r2BackupService.startPeriodicBackups();
+    res.json({
+      success: true,
+      message: 'Periodic backups started successfully.'
+    });
+  } catch (error) {
+    logger.error('Failed to start periodic backups via API:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start periodic backups',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
+});
+
+/**
+ * POST /api/admin/periodic-backup/stop
+ * Stop periodic backups
+ * Requires admin authentication
+ */
+router.post('/periodic-backup/stop', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    r2BackupService.stopPeriodicBackups();
+    res.json({
+      success: true,
+      message: 'Periodic backups stopped successfully.'
+    });
+  } catch (error) {
+    logger.error('Failed to stop periodic backups via API:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to stop periodic backups',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
+});
+
+/**
+ * GET /api/admin/periodic-backup/status
+ * Get the status of periodic backups
+ * Requires admin authentication
+ */
+router.get('/periodic-backup/status', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const status = await r2BackupService.getStatus();
+    res.json({
+      success: true,
+      data: {
+        periodicBackupsEnabled: status.periodicBackupsEnabled,
+        periodicBackupInterval: status.periodicBackupInterval,
+        lastBackup: status.lastBackup,
+      }
+    });
+  } catch (error) {
+    logger.error('Failed to get periodic backup status via API:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get periodic backup status',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
+});
+
 /**
  * POST /api/admin/database/checkpoint
  * Manually trigger database checkpoint/flush
  */
+
 router.post('/database/checkpoint', async (req, res) => {
   try {
     // DuckDB automatically manages checkpoints, but we can force a checkpoint

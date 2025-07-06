@@ -29,13 +29,6 @@ export class R2BackupService {
   private periodicBackupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
-    this.enabled = process.env.R2_SYNC_ENABLED === 'true';
-    
-    if (!this.enabled) {
-      logger.info('📦 R2 backup service disabled');
-      return;
-    }
-
     // Validate required environment variables
     const requiredEnvs = [
       'R2_ACCESS_KEY_ID', 
@@ -50,6 +43,8 @@ export class R2BackupService {
       this.enabled = false;
       return;
     }
+
+    this.enabled = true;
 
     this.bucketName = process.env.R2_BUCKET_NAME!;
     this.backupPath = process.env.R2_BACKUP_PATH || 'backups/';

@@ -69,7 +69,7 @@ app.get('/health', (req, res) => {
     message: 'HeSocial API is running (DuckDB)',
     timestamp: new Date().toISOString(),
     environment: config.nodeEnv,
-    database: 'DuckDB with R2 sync'
+    database: `DuckDB with R2 sync ${r2BackupService.isEnabled() ? 'enabled' : 'disabled'}`
   })
 })
 
@@ -129,7 +129,8 @@ const startServer = async (): Promise<void> => {
       logger.info('='.repeat(60))
       logger.info(`🚀 Server: http://localhost:${config.port}`)
       logger.info(`📱 Environment: ${config.nodeEnv}`)
-      logger.info(`🗄️  Database: DuckDB with R2 sync enabled`)
+      const r2Status = r2BackupService.isEnabled() ? 'enabled' : 'disabled'
+      logger.info(`🗄️  Database: DuckDB with R2 sync ${r2Status}`)
       logger.info(`🔒 CORS Origins: ${config.corsOrigins.join(', ')}`)
       logger.info(`📝 Health Check: http://localhost:${config.port}/api/health`)
       logger.info(`🎯 Events API: http://localhost:${config.port}/api/events`)
