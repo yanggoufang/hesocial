@@ -3,6 +3,8 @@ import { Upload } from '@aws-sdk/lib-storage';
 import { createReadStream, createWriteStream, existsSync, statSync } from 'fs';
 import { join, basename } from 'path';
 import logger from '../utils/logger.js';
+import { Agent } from 'https';
+import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
 
 interface BackupMetadata {
   type: 'shutdown' | 'manual' | 'periodic';
@@ -57,6 +59,11 @@ export class R2BackupService {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
       },
+      requestHandler: new NodeHttpHandler({
+        httpsAgent: new Agent({
+          secureProtocol: 'TLSv1_2_method'
+        })
+      })
     });
 
     logger.info('✅ R2BackupService initialized', {
