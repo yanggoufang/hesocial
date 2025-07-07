@@ -147,13 +147,13 @@ export const registerForEvent = async (req: AuthenticatedRequest, res: Response)
         status: 'pending',
         message: 'Registration submitted successfully. Pending approval.'
       }
-    })
+    });
   } catch (error) {
-    logger.error('Error registering for event:', error)
-    res.status(500).json({
+    logger.error('Error registering for event:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to register for event'
-    })
+    });
   }
 }
 
@@ -219,13 +219,13 @@ export const getUserRegistrations = async (req: AuthenticatedRequest, res: Respo
       }
     }
 
-    res.json(response)
+    res.json(response);
   } catch (error) {
-    logger.error('Error fetching user registrations:', error)
-    res.status(500).json({
+    logger.error('Error fetching user registrations:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch registrations'
-    })
+    });
   }
 }
 
@@ -284,13 +284,13 @@ export const getRegistrationById = async (req: AuthenticatedRequest, res: Respon
     res.json({
       success: true,
       data: result.rows[0]
-    })
+    });
   } catch (error) {
-    logger.error('Error fetching registration details:', error)
-    res.status(500).json({
+    logger.error('Error fetching registration details:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch registration details'
-    })
+    });
   }
 }
 
@@ -362,13 +362,13 @@ export const updateRegistration = async (req: AuthenticatedRequest, res: Respons
     res.json({
       success: true,
       message: 'Registration updated successfully'
-    })
+    });
   } catch (error) {
-    logger.error('Error updating registration:', error)
-    res.status(500).json({
+    logger.error('Error updating registration:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to update registration'
-    })
+    });
   }
 }
 
@@ -449,13 +449,13 @@ export const cancelRegistration = async (req: AuthenticatedRequest, res: Respons
     res.json({
       success: true,
       message: 'Registration cancelled successfully'
-    })
+    });
   } catch (error) {
-    logger.error('Error cancelling registration:', error)
-    res.status(500).json({
+    logger.error('Error cancelling registration:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to cancel registration'
-    })
+    });
   }
 }
 
@@ -550,13 +550,13 @@ export const getAllRegistrations = async (req: Request, res: Response) => {
       }
     }
 
-    res.json(response)
+    res.json(response);
   } catch (error) {
-    logger.error('Error fetching all registrations:', error)
-    res.status(500).json({
+    logger.error('Error fetching all registrations:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch registrations'
-    })
+    });
   }
 }
 
@@ -592,13 +592,13 @@ export const approveRegistration = async (req: Request, res: Response) => {
     res.json({
       success: true,
       message: `Registration ${status} successfully`
-    })
+    });
   } catch (error) {
-    logger.error('Error approving registration:', error)
-    res.status(500).json({
+    logger.error('Error approving registration:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to update registration status'
-    })
+    });
   }
 }
 
@@ -632,12 +632,12 @@ export const updatePaymentStatus = async (req: Request, res: Response) => {
     res.json({
       success: true,
       message: 'Payment status updated successfully'
-    })
+    });
   } catch (error) {
-    logger.error('Error updating payment status:', error)
-    res.status(500).json({
+    logger.error('Error updating payment status:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to update payment status'
-    })
+    });
   }
 }

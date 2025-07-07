@@ -86,13 +86,13 @@ export const getLeads = async (req: Request, res: Response) => {
       }
     }
 
-    res.json(response)
+    res.json(response);
   } catch (error) {
-    logger.error('Error fetching sales leads:', error)
-    res.status(500).json({
+    logger.error('Error fetching sales leads:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch sales leads'
-    })
+    });
   }
 }
 
@@ -121,13 +121,13 @@ export const getLeadById = async (req: Request, res: Response) => {
     res.json({
       success: true,
       data: result.rows[0]
-    })
+    });
   } catch (error) {
-    logger.error('Error fetching lead by ID:', error)
-    res.status(500).json({
+    logger.error('Error fetching lead by ID:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch lead'
-    })
+    });
   }
 }
 
@@ -182,13 +182,13 @@ export const createLead = async (req: AuthenticatedRequest, res: Response) => {
       success: true,
       data: result.rows[0],
       message: 'Lead created successfully'
-    })
+    });
   } catch (error) {
-    logger.error('Error creating lead:', error)
-    res.status(500).json({
+    logger.error('Error creating lead:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to create lead'
-    })
+    });
   }
 }
 
@@ -231,13 +231,13 @@ export const updateLead = async (req: AuthenticatedRequest, res: Response) => {
       success: true,
       data: result.rows[0],
       message: 'Lead updated successfully'
-    })
+    });
   } catch (error) {
-    logger.error('Error updating lead:', error)
-    res.status(500).json({
+    logger.error('Error updating lead:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to update lead'
-    })
+    });
   }
 }
 
@@ -258,13 +258,13 @@ export const deleteLead = async (req: Request, res: Response) => {
     res.json({
       success: true,
       message: 'Lead deleted successfully'
-    })
+    });
   } catch (error) {
-    logger.error('Error deleting lead:', error)
-    res.status(500).json({
+    logger.error('Error deleting lead:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to delete lead'
-    })
+    });
   }
 }
 
@@ -333,13 +333,13 @@ export const getOpportunities = async (req: Request, res: Response) => {
       }
     }
 
-    res.json(response)
+    res.json(response);
   } catch (error) {
-    logger.error('Error fetching sales opportunities:', error)
-    res.status(500).json({
+    logger.error('Error fetching sales opportunities:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch sales opportunities'
-    })
+    });
   }
 }
 
@@ -375,13 +375,13 @@ export const createOpportunity = async (req: AuthenticatedRequest, res: Response
       success: true,
       data: result.rows[0],
       message: 'Opportunity created successfully'
-    })
+    });
   } catch (error) {
-    logger.error('Error creating opportunity:', error)
-    res.status(500).json({
+    logger.error('Error creating opportunity:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to create opportunity'
-    })
+    });
   }
 }
 
@@ -424,13 +424,13 @@ export const updateOpportunity = async (req: AuthenticatedRequest, res: Response
       success: true,
       data: result.rows[0],
       message: 'Opportunity updated successfully'
-    })
+    });
   } catch (error) {
-    logger.error('Error updating opportunity:', error)
-    res.status(500).json({
+    logger.error('Error updating opportunity:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to update opportunity'
-    })
+    });
   }
 }
 
@@ -471,13 +471,13 @@ export const getActivities = async (req: Request, res: Response) => {
     res.json({
       success: true,
       data: result.rows
-    })
+    });
   } catch (error) {
-    logger.error('Error fetching sales activities:', error)
-    res.status(500).json({
+    logger.error('Error fetching sales activities:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch sales activities'
-    })
+    });
   }
 }
 
@@ -512,13 +512,13 @@ export const createActivity = async (req: AuthenticatedRequest, res: Response) =
       success: true,
       data: result.rows[0],
       message: 'Activity created successfully'
-    })
+    });
   } catch (error) {
-    logger.error('Error creating activity:', error)
-    res.status(500).json({
+    logger.error('Error creating activity:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to create activity'
-    })
+    });
   }
 }
 
@@ -602,13 +602,13 @@ export const getSalesMetrics = async (req: Request, res: Response) => {
       }
     }
 
-    res.json(response)
+    res.json(response);
   } catch (error) {
-    logger.error('Error fetching sales metrics:', error)
-    res.status(500).json({
+    logger.error('Error fetching sales metrics:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch sales metrics'
-    })
+    });
   }
 }
 
@@ -625,13 +625,13 @@ export const getPipelineStages = async (req: Request, res: Response) => {
     res.json({
       success: true,
       data: result.rows
-    })
+    });
   } catch (error) {
-    logger.error('Error fetching pipeline stages:', error)
-    res.status(500).json({
+    logger.error('Error fetching pipeline stages:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch pipeline stages'
-    })
+    });
   }
 }
 
@@ -656,12 +656,12 @@ export const getSalesTeam = async (req: Request, res: Response) => {
     res.json({
       success: true,
       data: result.rows
-    })
+    });
   } catch (error) {
-    logger.error('Error fetching sales team:', error)
-    res.status(500).json({
+    logger.error('Error fetching sales team:', error);
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch sales team'
-    })
+    });
   }
 }

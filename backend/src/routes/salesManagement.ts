@@ -31,28 +31,28 @@ const router = Router()
 router.use(requireAuth)
 
 // Sales Leads Routes
-router.get('/leads', getLeads)
-router.get('/leads/:id', getLeadById)
-router.post('/leads', createLead)
-router.put('/leads/:id', updateLead)
-router.delete('/leads/:id', requireAdmin, deleteLead) // Only admins can delete
+router.get('/leads', getLeads as (req: Request, res: Response) => Promise<void>);
+router.get('/leads/:id', getLeadById as (req: Request, res: Response) => Promise<void>);
+router.post('/leads', createLead as (req: Request, res: Response) => Promise<void>);
+router.put('/leads/:id', updateLead as (req: Request, res: Response) => Promise<void>);
+router.delete('/leads/:id', requireAdmin, deleteLead as (req: Request, res: Response) => Promise<void>); // Only admins can delete
 
 // Sales Opportunities Routes
-router.get('/opportunities', getOpportunities)
-router.post('/opportunities', createOpportunity)
-router.put('/opportunities/:id', updateOpportunity)
+router.get('/opportunities', getOpportunities as (req: Request, res: Response) => Promise<void>);
+router.post('/opportunities', createOpportunity as (req: Request, res: Response) => Promise<void>);
+router.put('/opportunities/:id', updateOpportunity as (req: Request, res: Response) => Promise<void>);
 
 // Sales Activities Routes
-router.get('/activities', getActivities)
-router.post('/activities', createActivity)
+router.get('/activities', getActivities as (req: Request, res: Response) => Promise<void>);
+router.post('/activities', createActivity as (req: Request, res: Response) => Promise<void>);
 
 // Sales Metrics & Analytics Routes
-router.get('/metrics', getSalesMetrics)
+router.get('/metrics', getSalesMetrics as (req: Request, res: Response) => Promise<void>);
 
 // Pipeline Management Routes
-router.get('/pipeline/stages', getPipelineStages)
+router.get('/pipeline/stages', getPipelineStages as (req: Request, res: Response) => Promise<void>);
 
 // Sales Team Routes
-router.get('/team', getSalesTeam)
+router.get('/team', getSalesTeam as (req: Request, res: Response) => Promise<void>);
 
 export default router

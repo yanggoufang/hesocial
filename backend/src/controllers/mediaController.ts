@@ -59,11 +59,12 @@ export const uploadEventImages = async (req: AuthenticatedRequest, res: Response
     }
 
     // Check if event exists and user has permission
-    const eventCheck = await duckdb.prepare(`
+    const stmt = await duckdb.prepare(`
       SELECT id, organizer_id 
       FROM events 
       WHERE id = ? AND is_active = true
-    `).get(eventId)
+    `);
+    const eventCheck = await stmt.get(eventId);
 
     if (!eventCheck) {
       res.status(404).json({
@@ -126,11 +127,12 @@ export const uploadEventDocuments = async (req: AuthenticatedRequest, res: Respo
     }
 
     // Check if event exists and user has permission
-    const eventCheck = await duckdb.prepare(`
+    const stmt = await duckdb.prepare(`
       SELECT id, organizer_id 
       FROM events 
       WHERE id = ? AND is_active = true
-    `).get(eventId)
+    `);
+    const eventCheck = await stmt.get(eventId);
 
     if (!eventCheck) {
       res.status(404).json({
@@ -203,7 +205,8 @@ export const getEventMedia = async (req: Request, res: Response): Promise<void> 
       ORDER BY created_at DESC
     `
 
-    const result = await duckdb.prepare(mediaQuery).all(...params)
+    const stmt = await duckdb.prepare(mediaQuery);
+    const result = await stmt.all(...params);
 
     const media = await Promise.all(result.map(async (item: any) => {
       let filePath = item.filePath
@@ -252,7 +255,7 @@ export const deleteMedia = async (req: AuthenticatedRequest, res: Response): Pro
     const { mediaId } = req.params
 
     // Get media record with event/venue info
-    const media = await duckdb.prepare(`
+    const stmt = await duckdb.prepare(`
       SELECT 
         em.*, e.organizer_id,
         'event' as media_source
@@ -265,7 +268,8 @@ export const deleteMedia = async (req: AuthenticatedRequest, res: Response): Pro
         'venue' as media_source
       FROM venue_media vm
       WHERE vm.id = ?
-    `).get(mediaId, mediaId)
+    `);
+    const media = await stmt.get(mediaId, mediaId);
 
     if (!media) {
       res.status(404).json({
@@ -329,9 +333,10 @@ export const uploadVenueImages = async (req: AuthenticatedRequest, res: Response
       return
     }
 
-    const venueCheck = await duckdb.prepare(`
+    const stmt = await duckdb.prepare(`
       SELECT id FROM venues WHERE id = ? AND is_active = true
-    `).get(venueId)
+    `);
+    const venueCheck = await stmt.get(venueId);
 
     if (!venueCheck) {
       res.status(404).json({
@@ -384,7 +389,8 @@ export const getVenueMedia = async (req: Request, res: Response): Promise<void> 
       ORDER BY created_at DESC
     `
 
-    const result = await duckdb.prepare(mediaQuery).all(venueId)
+    const stmt = await duckdb.prepare(mediaQuery);
+    const result = await stmt.all(venueId);
 
     const media = result.map((item: any) => ({
       ...item,
@@ -413,9 +419,10 @@ export const downloadDocument = async (req: AuthenticatedRequest, res: Response)
     const { mediaId } = req.params
 
     // Get document record
-    const document = await duckdb.prepare(`
+    const stmt = await duckdb.prepare(`
       SELECT * FROM event_media WHERE id = ? AND type = 'document'
-    `).get(mediaId)
+    `);
+    const document = await stmt.get(mediaId);
 
     if (!document) {
       res.status(404).json({

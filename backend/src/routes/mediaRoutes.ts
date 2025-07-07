@@ -23,7 +23,7 @@ router.post(
   '/events/:eventId/images',
   authenticateToken,
   uploadMiddleware,
-  uploadEventImages
+  uploadEventImages as (req: Request, res: Response) => Promise<void>
 )
 
 /**
@@ -35,7 +35,7 @@ router.post(
   '/events/:eventId/documents',
   authenticateToken,
   uploadMiddleware,
-  uploadEventDocuments
+  uploadEventDocuments as (req: Request, res: Response) => Promise<void>
 )
 
 /**
@@ -56,7 +56,7 @@ router.post(
   authenticateToken,
   requireAdmin,
   uploadMiddleware,
-  uploadVenueImages
+  uploadVenueImages as (req: Request, res: Response) => Promise<void>
 )
 
 /**
@@ -72,14 +72,14 @@ router.get('/venues/:venueId', getVenueMedia)
  * Delete a media file
  * Requires authentication and proper permissions
  */
-router.delete('/:mediaId', authenticateToken, deleteMedia)
+router.delete('/:mediaId', authenticateToken, deleteMedia as (req: Request, res: Response) => Promise<void>)
 
 /**
  * GET /api/media/download/:mediaId
  * Download a document (generates signed URL)
  * Requires authentication
  */
-router.get('/download/:mediaId', authenticateToken, downloadDocument)
+router.get('/download/:mediaId', authenticateToken, downloadDocument as (req: Request, res: Response) => Promise<void>)
 
 /**
  * GET /api/media/stats
