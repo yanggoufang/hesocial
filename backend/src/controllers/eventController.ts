@@ -96,6 +96,18 @@ export const getEvents = async (req: Request, res: Response): Promise<void> => {
 
     const events = eventsResult.rows.map((event: any) => ({
       ...event,
+      // Map database fields to frontend interface
+      title: event.name,
+      start_datetime: event.dateTime,
+      end_datetime: event.dateTime, // Use same datetime for now
+      current_registrations: event.currentAttendees,
+      status: 'published', // Default status for seeded events
+      approval_status: 'approved', // Default approval status
+      timezone: 'Asia/Taipei',
+      currency: 'TWD',
+      language: 'zh-TW',
+      required_membership_tiers: ['Platinum', 'Diamond', 'Black Card'],
+      required_verification: true,
       pricing: typeof event.pricing === 'string' ? JSON.parse(event.pricing) : event.pricing,
       requirements: typeof event.requirements === 'string' ? JSON.parse(event.requirements) : event.requirements,
       venue: {
@@ -110,6 +122,8 @@ export const getEvents = async (req: Request, res: Response): Promise<void> => {
         icon: event.categoryIcon
       },
       organizer: event.organizerName,
+      venue_name: event.venueName,
+      category_name: event.categoryName,
       // Remove individual venue/category/organizer fields
       venueName: undefined,
       venueAddress: undefined,

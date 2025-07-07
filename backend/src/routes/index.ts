@@ -136,8 +136,9 @@ router.post('/debug/manual-seed', async (req, res) => {
     await pool.query(`INSERT OR IGNORE INTO users (id, email, password_hash, first_name, last_name, age, profession, annual_income, net_worth, membership_tier, is_verified, verification_status) VALUES 
       (1, 'admin@hesocial.com', '$2b$10$hash', 'Admin', 'User', 35, 'Administrator', 5000000, 30000000, 'Black Card', true, 'approved')`)
     
-    // Insert basic events with future dates
-    await pool.query(`INSERT OR IGNORE INTO events (id, name, description, date_time, registration_deadline, venue_id, category_id, organizer_id, pricing, exclusivity_level, dress_code, capacity, current_attendees, is_active) VALUES 
+    // Insert basic events with future dates and all required fields
+    await pool.query(`DELETE FROM events WHERE id IN (1, 2, 3)`)
+    await pool.query(`INSERT INTO events (id, name, description, date_time, registration_deadline, venue_id, category_id, organizer_id, pricing, exclusivity_level, dress_code, capacity, current_attendees, is_active) VALUES 
       (1, '頂級威士忌品鑑晚宴', '邀請威士忌專家分享珍稀威士忌，搭配精緻法式料理', '2025-08-15 19:00:00', '2025-08-10 18:00:00', 1, 1, 1, '{"platinum": 15000, "diamond": 12000, "black_card": 8000}', 'VIP', 4, 20, 8, true),
       (2, '私人遊艇星空派對', '在豪華遊艇上享受星空下的奢華體驗', '2025-08-20 20:00:00', '2025-08-18 12:00:00', 2, 2, 1, '{"platinum": 25000, "diamond": 20000, "black_card": 15000}', 'VVIP', 5, 30, 15, true),
       (3, '藝術收藏家私享會', '與知名藝術收藏家交流，欣賞珍貴藝術品', '2025-08-25 15:00:00', '2025-08-22 17:00:00', 2, 3, 1, '{"platinum": 18000, "diamond": 15000, "black_card": 12000}', 'Invitation Only', 3, 25, 12, true)`)

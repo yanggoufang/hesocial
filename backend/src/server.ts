@@ -277,6 +277,29 @@ const startServer = async (): Promise<void> => {
       })
     })
     
+    // Add token validation endpoint
+    app.post('/api/auth/validate', (req, res) => {
+      const token = req.headers.authorization?.replace('Bearer ', '')
+      if (token === 'dev-token-12345') {
+        res.json({
+          success: true,
+          data: {
+            user: {
+              id: 1,
+              email: 'admin@hesocial.com',
+              role: 'admin',
+              membershipTier: 'Black Card'
+            }
+          }
+        })
+      } else {
+        res.status(401).json({
+          success: false,
+          error: 'Invalid token'
+        })
+      }
+    })
+    
     logger.info('✅ Temporary auth routes configured')
     
     // Add the specific health endpoints that admin console needs
