@@ -50,7 +50,7 @@ const SystemHealthDashboard: React.FC = () => {
       setDiagnostics(diag)
     } catch (error) {
       console.error('Failed to load health data:', error)
-      setError('Failed to load system health data')
+      setError('載入系統健康資料失敗')
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -89,7 +89,7 @@ const SystemHealthDashboard: React.FC = () => {
           <div className="luxury-glass p-8 rounded-2xl text-center">
             <XCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
             <h2 className="text-2xl font-luxury font-bold text-luxury-gold mb-2">
-              System Health Unavailable
+              系統健康狀況無法使用
             </h2>
             <p className="text-luxury-platinum/80 mb-6">{error}</p>
             <button
@@ -97,7 +97,7 @@ const SystemHealthDashboard: React.FC = () => {
               className="luxury-button-primary"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
+              重試
             </button>
           </div>
         </div>
@@ -131,10 +131,10 @@ const SystemHealthDashboard: React.FC = () => {
             {getOverallStatusIcon(healthData?.overall || 'error')}
             <div>
               <h3 className="text-2xl font-luxury font-bold text-luxury-gold">
-                System Status: {healthData?.overall?.toUpperCase()}
+                系統狀態：{healthData?.overall === 'healthy' ? '健康' : healthData?.overall === 'warning' ? '警告' : healthData?.overall === 'error' ? '錯誤' : healthData?.overall?.toUpperCase()}
               </h3>
               <p className="text-luxury-platinum/80">
-                Last updated: {healthData?.timestamp ? new Date(healthData.timestamp).toLocaleString() : 'Unknown'}
+                最後更新：{healthData?.timestamp ? new Date(healthData.timestamp).toLocaleString('zh-TW') : '未知'}
               </p>
             </div>
           </div>
@@ -144,7 +144,7 @@ const SystemHealthDashboard: React.FC = () => {
             className="luxury-button-secondary flex items-center space-x-2"
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
+            <span>重新整理</span>
           </button>
         </div>
       </motion.div>
@@ -160,23 +160,23 @@ const SystemHealthDashboard: React.FC = () => {
         >
           <div className="flex items-center space-x-3 mb-4">
             <Server className="h-6 w-6 text-luxury-gold" />
-            <h4 className="text-lg font-luxury font-semibold text-luxury-platinum">System</h4>
+            <h4 className="text-lg font-luxury font-semibold text-luxury-platinum">系統</h4>
           </div>
           <div className="space-y-2">
             <div className="flex justify-between">
-              <span className="text-luxury-platinum/80">Uptime:</span>
+              <span className="text-luxury-platinum/80">運行時間：</span>
               <span className="text-luxury-platinum font-medium">
                 {healthData?.system ? systemHealthService.formatUptime(healthData.system.uptime) : 'N/A'}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-luxury-platinum/80">Memory:</span>
+              <span className="text-luxury-platinum/80">記憶體：</span>
               <span className="text-luxury-platinum font-medium">
                 {healthData?.system?.memory.usage}%
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-luxury-platinum/80">Environment:</span>
+              <span className="text-luxury-platinum/80">環境：</span>
               <span className="text-luxury-platinum font-medium">
                 {healthData?.system?.environment}
               </span>
@@ -193,7 +193,7 @@ const SystemHealthDashboard: React.FC = () => {
         >
           <div className="flex items-center space-x-3 mb-4">
             <Database className="h-6 w-6 text-luxury-gold" />
-            <h4 className="text-lg font-luxury font-semibold text-luxury-platinum">Database</h4>
+            <h4 className="text-lg font-luxury font-semibold text-luxury-platinum">資料庫</h4>
           </div>
           <div className="space-y-2">
             <div className="flex justify-between">

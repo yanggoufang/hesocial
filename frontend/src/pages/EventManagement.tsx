@@ -192,12 +192,12 @@ const EventManagement: React.FC = () => {
                 className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
               >
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Admin
+                返回管理後台
               </button>
             </div>
-            <h1 className="text-2xl font-semibold text-gray-900">Event Management</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">活動管理</h1>
             <p className="mt-2 text-sm text-gray-700">
-              Manage luxury social events, venues, and categories for the HeSocial platform.
+              為 HeSocial 平台管理頂級社交活動、場地和類別。
             </p>
           </div>
           <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none space-x-3">
@@ -207,7 +207,7 @@ const EventManagement: React.FC = () => {
               className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               <MapPin className="h-4 w-4 mr-2" />
-              Manage Venues
+              管理場地
             </button>
             <button
               type="button"
@@ -215,7 +215,7 @@ const EventManagement: React.FC = () => {
               className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               <Users className="h-4 w-4 mr-2" />
-              Manage Categories
+              管理類別
             </button>
             <button
               type="button"
@@ -223,7 +223,7 @@ const EventManagement: React.FC = () => {
               className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Event
+              建立活動
             </button>
           </div>
         </div>
@@ -233,7 +233,7 @@ const EventManagement: React.FC = () => {
             <div className="flex">
               <XCircle className="h-5 w-5 text-red-400" />
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
+                <h3 className="text-sm font-medium text-red-800">錯誤</h3>
                 <div className="mt-2 text-sm text-red-700">{error}</div>
               </div>
             </div>
@@ -245,13 +245,13 @@ const EventManagement: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label htmlFor="search" className="block text-sm font-medium text-gray-700">
-                Search Events
+                搜尋活動
               </label>
               <div className="mt-1 relative">
                 <input
                   type="text"
                   id="search"
-                  placeholder="Search by title or description..."
+                  placeholder="依標題或描述搜尋..."
                   value={filters.search || ''}
                   onChange={(e) => handleSearch(e.target.value)}
                   className="block w-full pr-10 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -262,7 +262,7 @@ const EventManagement: React.FC = () => {
 
             <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                Status
+                狀態
               </label>
               <select
                 id="status"
@@ -270,21 +270,21 @@ const EventManagement: React.FC = () => {
                 onChange={(e) => handleFilterChange('status', e.target.value)}
                 className="mt-1 block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               >
-                <option value="">All Statuses</option>
-                <option value="draft">Draft</option>
-                <option value="pending_review">Pending Review</option>
-                <option value="approved">Approved</option>
-                <option value="published">Published</option>
-                <option value="full">Full</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="archived">Archived</option>
+                <option value="">所有狀態</option>
+                <option value="draft">草稿</option>
+                <option value="pending_review">待審核</option>
+                <option value="approved">已核准</option>
+                <option value="published">已發布</option>
+                <option value="full">已額滿</option>
+                <option value="completed">已完成</option>
+                <option value="cancelled">已取消</option>
+                <option value="archived">已封存</option>
               </select>
             </div>
 
             <div>
               <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                Category
+                類別
               </label>
               <select
                 id="category"
@@ -292,7 +292,7 @@ const EventManagement: React.FC = () => {
                 onChange={(e) => handleFilterChange('category', e.target.value)}
                 className="mt-1 block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               >
-                <option value="">All Categories</option>
+                <option value="">所有類別</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.slug}>
                     {category.name}

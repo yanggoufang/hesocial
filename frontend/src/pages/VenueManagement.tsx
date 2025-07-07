@@ -115,8 +115,8 @@ const VenueManagement: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-          <p className="text-gray-600">You need admin privileges to access this page.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">拒絕存取</h1>
+          <p className="text-gray-600">您需要管理員權限才能存取此頁面。</p>
         </div>
       </div>
     )
@@ -133,12 +133,12 @@ const VenueManagement: React.FC = () => {
                 className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
               >
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Events
+                返回活動
               </button>
             </div>
-            <h1 className="text-2xl font-semibold text-gray-900">Venue Management</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">場地管理</h1>
             <p className="mt-2 text-sm text-gray-700">
-              Manage luxury venues for HeSocial events and experiences.
+              管理 HeSocial 活動與體驗的頂級場地。
             </p>
           </div>
           <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
@@ -148,7 +148,7 @@ const VenueManagement: React.FC = () => {
               className="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Venue
+              新增場地
             </button>
           </div>
         </div>
@@ -157,7 +157,7 @@ const VenueManagement: React.FC = () => {
           <div className="mt-4 rounded-md bg-red-50 p-4">
             <div className="flex">
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
+                <h3 className="text-sm font-medium text-red-800">錯誤</h3>
                 <div className="mt-2 text-sm text-red-700">{error}</div>
               </div>
             </div>
@@ -169,13 +169,13 @@ const VenueManagement: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label htmlFor="search" className="block text-sm font-medium text-gray-700">
-                Search Venues
+                搜尋場地
               </label>
               <div className="mt-1 relative">
                 <input
                   type="text"
                   id="search"
-                  placeholder="Search by name, address, or city..."
+                  placeholder="依名稱、地址或城市搜尋..."
                   value={filters.search || ''}
                   onChange={(e) => handleSearch(e.target.value)}
                   className="block w-full pr-10 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
@@ -186,7 +186,7 @@ const VenueManagement: React.FC = () => {
 
             <div>
               <label htmlFor="venueType" className="block text-sm font-medium text-gray-700">
-                Venue Type
+                場地類型
               </label>
               <select
                 id="venueType"
@@ -194,13 +194,13 @@ const VenueManagement: React.FC = () => {
                 onChange={(e) => handleFilterChange('venueType', e.target.value)}
                 className="mt-1 block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               >
-                <option value="">All Types</option>
-                <option value="restaurant">Restaurant</option>
-                <option value="yacht">Yacht</option>
-                <option value="gallery">Gallery</option>
-                <option value="private_residence">Private Residence</option>
-                <option value="hotel">Hotel</option>
-                <option value="outdoor">Outdoor</option>
+                <option value="">所有類型</option>
+                <option value="restaurant">餐廳</option>
+                <option value="yacht">遊艇</option>
+                <option value="gallery">藝廊</option>
+                <option value="private_residence">私人住宅</option>
+                <option value="hotel">飯店</option>
+                <option value="outdoor">戶外</option>
               </select>
             </div>
 
