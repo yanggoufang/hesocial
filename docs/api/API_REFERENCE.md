@@ -152,6 +152,13 @@ GET /api/system/metrics         # System performance metrics and resource usage 
 GET /api/system/diagnostics     # Run system diagnostics tests (Admin+)
 ```
 
+## Utility Endpoints
+
+### Placeholder Images
+```bash
+GET /api/placeholder/:width/:height   # Generates a placeholder image with the specified dimensions
+```
+
 ## Access Control Levels
 
 ### Public Endpoints

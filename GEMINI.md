@@ -4,18 +4,33 @@ This file helps Gemini understand the HeSocial project structure and conventions
 
 ## Project Overview
 
-HeSocial is a social event platform with a monorepo structure.
+HeSocial is a high-end social event platform for affluent individuals (NT$5M+ income, NT$30M+ assets). It's designed to facilitate luxury events like private dinners, yacht parties, and art appreciation gatherings.
 
-- **Backend:** Located in the `backend` directory. It's a Node.js/Express application written in TypeScript.
-- **Frontend:** Located in the `frontend` directory. It's a React application built with Vite and styled with Tailwind CSS.
-- **Database:** The project uses DuckDB as its primary database. The schema is defined in `database/duckdb-schema.sql`. For production, we plan to use Cloudflare R2 to persist the DuckDB database file.
+The project is a monorepo with the following structure:
+
+-   **Backend:** Located in the `backend` directory. It's a Node.js/Express application written in TypeScript.
+-   **Frontend:** Located in the `frontend` directory. It's a React application built with Vite and styled with Tailwind CSS.
+-   **Database:** The project uses DuckDB as its primary database. The schema is defined in `database/duckdb-schema.sql`. For production, Cloudflare R2 is used to persist the DuckDB database file.
+
+📖 **For a full overview, see [docs/PROJECT_OVERVIEW.md](docs/PROJECT_OVERVIEW.md)**
 
 ## Development Workflow
 
-- The backend server can be started with `npm run dev` in the `backend` directory.
-- The frontend development server can be started with `npm run dev` in the `frontend` directory.
+The project uses convenient root-level commands for most common tasks:
+
+-   `npm run setup`: Install all dependencies for frontend and backend.
+-   `npm run dev`: Start both frontend and backend development servers concurrently.
+-   `npm run build`: Build both frontend and backend for production.
+-   `npm run test`: Run all tests.
+
+Alternatively, you can run commands in the individual `frontend` or `backend` directories.
+
+### Test Accounts
+
+-   **Admin:** `admin@hesocial.com` / `admin123`
+-   **Test User:** `test.platinum@example.com` / `test123`
 
 ## Deployment Considerations
 
-- When checking production deployments, always verify the commit ID to ensure the correct version is deployed.
-- The application is hosted on Render.com. The backend is `hesocial-api` and the frontend is `hesocial-frontend`.
+-   The application is hosted on Render.com. The backend is `hesocial-api` and the frontend is `hesocial-frontend`.
+-   When checking production deployments, always verify the commit ID to ensure the correct version is deployed.

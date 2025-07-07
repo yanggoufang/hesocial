@@ -277,7 +277,7 @@ const startServer = async (): Promise<void> => {
       })
     })
     
-    // Add token validation endpoint
+    // Add token validation endpoint (POST)
     app.post('/api/auth/validate', (req, res) => {
       const token = req.headers.authorization?.replace('Bearer ', '')
       if (token === 'dev-token-12345') {
@@ -290,6 +290,30 @@ const startServer = async (): Promise<void> => {
               role: 'admin',
               membershipTier: 'Black Card'
             }
+          }
+        })
+      } else {
+        res.status(401).json({
+          success: false,
+          error: 'Invalid token'
+        })
+      }
+    })
+    
+    // Add token validation endpoint (GET) for frontend compatibility
+    app.get('/api/auth/validate', (req, res) => {
+      const token = req.headers.authorization?.replace('Bearer ', '')
+      if (token === 'dev-token-12345') {
+        res.json({
+          success: true,
+          data: {
+            user: {
+              id: 1,
+              email: 'admin@hesocial.com',
+              role: 'admin',
+              membershipTier: 'Black Card'
+            },
+            valid: true
           }
         })
       } else {

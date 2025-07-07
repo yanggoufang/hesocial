@@ -6,6 +6,7 @@ import {
   getVenues
 } from '../controllers/eventController.js'
 import healthRoutes from './health.js'
+import placeholderRoutes from './placeholderRoutes.js';
 // Temporarily disable other routes that may have import issues
 // import adminRoutes from './admin.js'
 // import authRoutes from './authRoutes.js'
@@ -22,6 +23,7 @@ const router = Router()
 
 // Health check routes (only working route for now)
 router.use('/health', healthRoutes)
+router.use('/placeholder', placeholderRoutes);
 
 // Temporarily disable other routes that may have import issues
 // router.use('/auth', authRoutes)
@@ -40,6 +42,14 @@ router.get('/events', getEvents)
 router.get('/events/:id', getEventById)
 router.get('/categories', getEventCategories)
 router.get('/venues', getVenues)
+
+// Basic media endpoints (simplified for now)
+router.get('/media/events/:eventId', async (req, res) => {
+  res.json({
+    success: true,
+    data: []
+  })
+})
 
 // Legacy event routes (for backwards compatibility during transition)
 router.get('/legacy/events', getEvents)
@@ -188,6 +198,59 @@ router.post('/debug/update-dates', async (req, res) => {
   }
 })
 
+// Expanded seeding with 12 luxury events
+router.post('/debug/expand-seed', async (req, res) => {
+  try {
+    const { pool } = await import('../database/duckdb-pool.js')
+    
+    // Add more categories
+    await pool.query(`INSERT OR IGNORE INTO event_categories (id, name, description, icon) VALUES 
+      (4, '品酒會', '頂級葡萄酒與烈酒品鑑', 'wine'),
+      (5, '高爾夫聚會', '私人高爾夫球場社交', 'target'),
+      (6, '慈善晚宴', '高端慈善籌款活動', 'heart'),
+      (7, '商務論壇', '精英商業交流會議', 'briefcase'),
+      (8, '時尚秀', '頂級時裝展示會', 'shirt')`)
+    
+    // Add more venues
+    await pool.query(`INSERT OR IGNORE INTO venues (id, name, address, city, latitude, longitude, rating, amenities, images) VALUES 
+      (3, '台北101觀景台', '台北市信義區信義路五段7號', '台北', 25.0340, 121.5645, 5, '[\"360度景觀\",\"高級餐廳\"]', '[]'),
+      (4, '美麗華百樂園', '台北市中山區敬業三路20號', '台北', 25.0833, 121.5500, 4, '[\"摩天輪\",\"空中花園\"]', '[]'),
+      (5, '圓山大飯店', '台北市中山區中山北路四段1號', '台北', 25.0792, 121.5263, 5, '[\"古典建築\",\"中式庭園\"]', '[]'),
+      (6, '台北萬豪酒店', '台北市中山區樂群二路199號', '台北', 25.0839, 121.5464, 5, '[\"行政酒廊\",\"室外泳池\"]', '[]'),
+      (7, '陽明山中國麗緻大飯店', '台北市北投區格致路237號', '台北', 25.1364, 121.5471, 4, '[\"溫泉\",\"山景\"]', '[]'),
+      (8, '台北寒舍艾美酒店', '台北市信義區松仁路38號', '台北', 25.0368, 121.5645, 5, '[\"藝術收藏\",\"米其林餐廳\"]', '[]')`)
+    
+    // Clear existing events and create 12 new luxury events
+    await pool.query(`DELETE FROM events`)
+    await pool.query(`INSERT INTO events (id, name, description, date_time, registration_deadline, venue_id, category_id, organizer_id, pricing, exclusivity_level, dress_code, capacity, current_attendees, is_active) VALUES 
+      (1, '頂級威士忌品鑑晚宴', '邀請威士忌專家分享珍稀威士忌，搭配精緻法式料理', '2025-08-15 19:00:00', '2025-08-10 18:00:00', 1, 1, 1, '{"platinum": 15000, "diamond": 12000, "black_card": 8000}', 'VIP', 4, 20, 8, true),
+      (2, '私人遊艇星空派對', '在豪華遊艇上享受星空下的奢華體驗', '2025-08-20 20:00:00', '2025-08-18 12:00:00', 2, 2, 1, '{"platinum": 25000, "diamond": 20000, "black_card": 15000}', 'VVIP', 5, 30, 15, true),
+      (3, '藝術收藏家私享會', '與知名藝術收藏家交流，欣賞珍貴藝術品', '2025-08-25 15:00:00', '2025-08-22 17:00:00', 8, 3, 1, '{"platinum": 18000, "diamond": 15000, "black_card": 12000}', 'Invitation Only', 3, 25, 12, true),
+      (4, '法國香檳品鑑會', 'Dom Pérignon與Krug香檳大師班', '2025-09-05 18:30:00', '2025-09-01 15:00:00', 3, 4, 1, '{"platinum": 12000, "diamond": 10000, "black_card": 7000}', 'VIP', 4, 18, 6, true),
+      (5, '義大利超級托斯卡納之夜', '品鑑Sassicaia、Ornellaia等頂級紅酒', '2025-09-10 19:30:00', '2025-09-07 18:00:00', 5, 4, 1, '{"platinum": 20000, "diamond": 17000, "black_card": 14000}', 'VVIP', 4, 16, 9, true),
+      (6, '私人高爾夫錦標賽', '林口國際高爾夫俱樂部專屬比賽', '2025-09-15 08:00:00', '2025-09-10 17:00:00', 4, 5, 1, '{"platinum": 8000, "diamond": 6500, "black_card": 5000}', 'VIP', 2, 40, 22, true),
+      (7, '慈善拍賣晚宴', '支持兒童教育基金會，頂級藝術品拍賣', '2025-09-20 18:00:00', '2025-09-17 20:00:00', 6, 6, 1, '{"platinum": 30000, "diamond": 25000, "black_card": 20000}', 'Invitation Only', 5, 50, 31, true),
+      (8, '企業家論壇峰會', '亞洲頂尖企業家分享商業洞察', '2025-09-25 14:00:00', '2025-09-22 12:00:00', 7, 7, 1, '{"platinum": 15000, "diamond": 12000, "black_card": 10000}', 'VIP', 3, 80, 47, true),
+      (9, '巴黎時裝週預覽', 'Hermès與Chanel最新系列私人展示', '2025-10-01 16:00:00', '2025-09-28 14:00:00', 1, 8, 1, '{"platinum": 35000, "diamond": 30000, "black_card": 25000}', 'VVIP', 5, 35, 18, true),
+      (10, '米其林主廚聯合晚宴', '三位米其林三星主廚聯手創作', '2025-10-05 19:00:00', '2025-10-02 16:00:00', 2, 1, 1, '{"platinum": 28000, "diamond": 24000, "black_card": 20000}', 'Invitation Only', 5, 24, 14, true),
+      (11, '茶藝文化體驗會', '台灣高山茶與日本抹茶道文化', '2025-10-10 14:30:00', '2025-10-07 12:00:00', 3, 3, 1, '{"platinum": 8000, "diamond": 6500, "black_card": 5000}', 'VIP', 2, 30, 11, true),
+      (12, '限量超跑鑑賞會', 'Ferrari、Lamborghini最新車款私人預覽', '2025-10-15 10:00:00', '2025-10-12 18:00:00', 4, 7, 1, '{"platinum": 22000, "diamond": 18000, "black_card": 15000}', 'VVIP', 3, 45, 28, true)`)
+    
+    res.json({
+      success: true,
+      message: '12 luxury events created successfully',
+      events: 12,
+      categories: 8,
+      venues: 8
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Expanded seeding failed'
+    })
+  }
+})
+
 // Debug route to check all table counts
 router.get('/debug/counts', async (req, res) => {
   try {
@@ -198,10 +261,10 @@ router.get('/debug/counts', async (req, res) => {
     
     for (const table of tables) {
       try {
-        const result = await pool.query(`SELECT COUNT(*) as count FROM ${table}`)
+        const result = await pool.query('SELECT COUNT(*) as count FROM ' + table)
         counts[table] = Number(result.rows[0]?.count) || 0
       } catch (error) {
-        counts[table] = `Error: ${error instanceof Error ? error.message : 'Unknown'}`
+        counts[table] = 'Error: ' + (error instanceof Error ? error.message : 'Unknown')
       }
     }
     
