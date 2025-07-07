@@ -98,7 +98,7 @@ const Navbar = () => {
                             管理後台
                           </Link>
                           <Link
-                            to="/events/manage"
+                            to="/event-mgmt"
                             className="block px-4 py-3 text-sm text-gray-700 hover:bg-luxury-gold/10 transition-colors"
                             onClick={() => setIsUserMenuOpen(false)}
                           >

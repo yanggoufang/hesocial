@@ -70,7 +70,7 @@ const config: Config = {
 
   corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
   rateLimitWindowMinutes: parseInt(process.env.RATE_LIMIT_WINDOW_MINUTES || '15', 10),
-  rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+  rateLimitMaxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000', 10),
   fileUploadMaxSize: parseInt(process.env.FILE_UPLOAD_MAX_SIZE || '10485760', 10), // 10MB
   fileUploadPath: process.env.FILE_UPLOAD_PATH || './uploads'
 }

@@ -38,7 +38,7 @@ app.use(cors({
 
 app.use(compression())
 
-const limiter = rateLimit({
+const generalLimiter = rateLimit({
   windowMs: config.rateLimitWindowMinutes * 60 * 1000,
   max: config.rateLimitMaxRequests,
   message: JSON.stringify({
@@ -47,9 +47,28 @@ const limiter = rateLimit({
   }),
   standardHeaders: true,
   legacyHeaders: false,
-})
+});
 
-app.use(limiter)
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 2000, // More permissive for admin actions
+  message: JSON.stringify({
+    success: false,
+    error: 'Admin rate limit exceeded, please try again later.'
+  }),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply more permissive rate limiting to admin and event management routes first
+app.use('/api/admin', adminLimiter);
+app.use('/api/events/manage', adminLimiter);
+app.use('/api/events/admin', adminLimiter);
+app.use('/api/events/venues', adminLimiter);
+app.use('/api/events/categories', adminLimiter);
+
+// Apply general rate limiting to all other /api routes
+app.use('/api', generalLimiter);
 
 app.use(morgan('combined', {
   stream: {
