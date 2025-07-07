@@ -5,6 +5,7 @@ import { join, basename } from 'path';
 import logger from '../utils/logger.js';
 import { Agent } from 'https';
 import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
+import { MigrationRunner } from '../database/migrations/MigrationRunner.js';
 
 interface BackupMetadata {
   type: 'shutdown' | 'manual' | 'periodic';
@@ -29,8 +30,11 @@ export class R2BackupService {
   private backupPath: string = '';
   private enabled: boolean;
   private periodicBackupInterval: NodeJS.Timeout | null = null;
+  private migrationRunner: MigrationRunner;
 
   constructor() {
+    this.migrationRunner = new MigrationRunner();
+    
     // Validate required environment variables
     const requiredEnvs = [
       'R2_ACCESS_KEY_ID', 
@@ -193,11 +197,22 @@ export class R2BackupService {
 
     // Get file stats
     const stats = statSync(dbPath);
+    
+    // Get current schema version from migration runner
+    let schemaVersion = 'v1.0.0';
+    try {
+      await this.migrationRunner.initialize();
+      const currentVersion = this.migrationRunner.getCurrentVersion();
+      schemaVersion = `v${currentVersion}.0.0`;
+    } catch (error) {
+      logger.warn('Failed to get schema version from migrations, using default:', error);
+    }
+    
     const metadata: BackupMetadata = {
       type,
       timestamp: new Date().toISOString(),
       size: stats.size,
-      schema_version: 'v1.0.0' // TODO: Get from database
+      schema_version: schemaVersion
     };
 
     // Upload to R2
@@ -386,12 +401,28 @@ export class R2BackupService {
           type = 'periodic';
         }
 
+        // Try to get schema version from metadata if available
+        let schemaVersion = 'v1.0.0';
+        try {
+          if (obj.Key) {
+            const metadataResponse = await this.s3Client!.send(new GetObjectCommand({
+              Bucket: this.bucketName,
+              Key: obj.Key
+            }));
+            if (metadataResponse.Metadata?.schema_version) {
+              schemaVersion = metadataResponse.Metadata.schema_version;
+            }
+          }
+        } catch (error) {
+          // Fallback to default if metadata not available
+        }
+        
         return {
           id: filename,
           type,
           timestamp: obj.LastModified?.toISOString() || '',
           size,
-          schema_version: 'v1.0.0' // TODO: Extract from metadata
+          schema_version: schemaVersion
         };
       })
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());

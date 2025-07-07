@@ -7,6 +7,7 @@ import {
   ChevronLeft, ChevronRight, Heart, Share2,
   Shirt, Check, AlertCircle
 } from 'lucide-react'
+import { eventService } from '../services/eventService'
 
 const EventDetailPage = () => {
   const { id } = useParams()
@@ -121,8 +122,11 @@ const EventDetailPage = () => {
     setIsRegistering(true)
     
     try {
-      // TODO: Implement actual registration API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      if (!id) {
+        throw new Error('Event ID is required')
+      }
+      
+      await eventService.registerForEvent(id)
       
       setShowRegistrationModal(false)
       // Show success message or redirect

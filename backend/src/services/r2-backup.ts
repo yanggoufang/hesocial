@@ -251,15 +251,33 @@ export class R2BackupService {
       throw new Error('Backup service is disabled');
     }
 
-    // For simplicity, we'll log this. In a more complex system, 
-    // you might store metadata in a separate file or database
-    logger.info('Backup status updated', { backupId, status });
-    
-    // TODO: Implement metadata storage for status tracking
-    // This could be done by:
-    // 1. Storing a metadata.json file in R2
-    // 2. Using object tags (if supported by R2)
-    // 3. Using a local database table for backup metadata
+    try {
+      // Store metadata in R2 as a separate JSON file
+      const metadataKey = `${this.backupPath.replace(/^\//, '')}metadata/${backupId}.json`;
+      const metadata = {
+        backupId,
+        status,
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'system'
+      };
+
+      await this.s3Client!.send(new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: metadataKey,
+        Body: JSON.stringify(metadata, null, 2),
+        ContentType: 'application/json',
+        Metadata: {
+          backup_id: backupId,
+          status: status,
+          updated_at: new Date().toISOString()
+        }
+      }));
+
+      logger.info('Backup status updated and stored in R2', { backupId, status, metadataKey });
+    } catch (error) {
+      logger.error('Failed to store backup metadata in R2', { backupId, status, error });
+      // Don't throw - this is non-critical metadata storage
+    }
   }
 
   /**

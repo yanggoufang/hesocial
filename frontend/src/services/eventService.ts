@@ -416,6 +416,34 @@ class EventService {
       throw new Error(error.response?.data?.error || 'Failed to delete category')
     }
   }
+
+  // Event Registration
+  async registerForEvent(eventId: string, registrationData?: any): Promise<EventResponse<{ registrationId: string }>> {
+    try {
+      const response = await axios.post(`/registrations/events/${eventId}`, registrationData || {})
+      return response.data
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || 'Failed to register for event')
+    }
+  }
+
+  async getUserRegistrations(): Promise<EventResponse<any[]>> {
+    try {
+      const response = await axios.get('/registrations/user')
+      return response.data
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || 'Failed to fetch user registrations')
+    }
+  }
+
+  async cancelRegistration(registrationId: string): Promise<EventResponse<void>> {
+    try {
+      const response = await axios.delete(`/registrations/${registrationId}`)
+      return response.data
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error || 'Failed to cancel registration')
+    }
+  }
 }
 
 export const eventService = new EventService()

@@ -5,9 +5,12 @@ import {
   Crown, Star, Calendar, Edit3, Save, X, Plus,
   Award, TrendingUp, Users
 } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 
 const ProfilePage = () => {
+  const { updateProfile } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [profileData, setProfileData] = useState({
     firstName: '志明',
     lastName: '陳',
@@ -66,10 +69,23 @@ const ProfilePage = () => {
     setEditData(profileData)
   }
 
-  const handleSave = () => {
-    setProfileData(editData)
-    setIsEditing(false)
-    // TODO: Save to API
+  const handleSave = async () => {
+    setIsSaving(true)
+    
+    try {
+      const result = await updateProfile(editData)
+      
+      if (result.success) {
+        setProfileData(editData)
+        setIsEditing(false)
+      } else {
+        console.error('Profile update failed:', result.error)
+      }
+    } catch (error) {
+      console.error('Profile update error:', error)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleCancel = () => {
@@ -411,10 +427,20 @@ const ProfilePage = () => {
                     </button>
                     <button
                       onClick={handleSave}
-                      className="flex-1 luxury-button py-3"
+                      disabled={isSaving}
+                      className="flex-1 luxury-button py-3 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Save className="h-4 w-4 mr-2" />
-                      儲存
+                      {isSaving ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-luxury-midnight-black border-t-transparent rounded-full animate-spin mr-2"></div>
+                          儲存中...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          儲存
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
