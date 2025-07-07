@@ -98,11 +98,11 @@ const AdminDashboard = () => {
             <div className="flex items-center space-x-3 mb-4">
               <Shield className="h-8 w-8 text-luxury-gold" />
               <h1 className="text-3xl font-luxury font-bold text-luxury-gold">
-                Admin Dashboard
+                管理後台
               </h1>
             </div>
             <p className="text-luxury-platinum/80">
-              Welcome back, {user.firstName}. Manage system operations and monitor platform health.
+              歡迎回來，{user.firstName}。管理系統運作並監控平台健康狀況。
             </p>
           </div>
 
@@ -119,13 +119,13 @@ const AdminDashboard = () => {
                 <Database className="h-8 w-8 text-luxury-gold" />
                 {systemHealth && getStatusIcon(systemHealth.database.status)}
               </div>
-              <h3 className="text-luxury-platinum text-lg font-medium mb-2">Database</h3>
+              <h3 className="text-luxury-platinum text-lg font-medium mb-2">資料庫</h3>
               <p className={`text-sm font-medium ${systemHealth ? getStatusColor(systemHealth.database.status) : 'text-gray-400'}`}>
-                {loading ? 'Loading...' : systemHealth?.database.connected ? 'Connected' : 'Disconnected'}
+                {loading ? '載入中...' : systemHealth?.database.connected ? '已連線' : '未連線'}
               </p>
               {systemHealth?.database.queryTime && (
                 <p className="text-luxury-platinum/60 text-xs mt-1">
-                  Query time: {systemHealth.database.queryTime}ms
+                  查詢時間：{systemHealth.database.queryTime}ms
                 </p>
               )}
             </motion.div>
@@ -141,16 +141,16 @@ const AdminDashboard = () => {
                 <Cloud className="h-8 w-8 text-luxury-gold" />
                 {systemHealth && getStatusIcon(systemHealth.r2Sync.status)}
               </div>
-              <h3 className="text-luxury-platinum text-lg font-medium mb-2">R2 Backup</h3>
+              <h3 className="text-luxury-platinum text-lg font-medium mb-2">R2 備份</h3>
               <p className={`text-sm font-medium ${systemHealth ? getStatusColor(systemHealth.r2Sync.status) : 'text-gray-400'}`}>
-                {loading ? 'Loading...' : systemHealth?.r2Sync.enabled ? 
-                  (systemHealth.r2Sync.connectionHealthy ? 'Healthy' : 'Connection Issue') : 
-                  'Disabled'
+                {loading ? '載入中...' : systemHealth?.r2Sync.enabled ? 
+                  (systemHealth.r2Sync.connectionHealthy ? '正常' : '連線問題') : 
+                  '已停用'
                 }
               </p>
               {systemHealth?.r2Sync.backupCount !== undefined && (
                 <p className="text-luxury-platinum/60 text-xs mt-1">
-                  {systemHealth.r2Sync.backupCount} backups available
+                  {systemHealth.r2Sync.backupCount} 個備份可用
                 </p>
               )}
             </motion.div>
@@ -166,10 +166,10 @@ const AdminDashboard = () => {
                 <Activity className="h-8 w-8 text-luxury-gold" />
                 <CheckCircle className="h-5 w-5 text-green-400" />
               </div>
-              <h3 className="text-luxury-platinum text-lg font-medium mb-2">Performance</h3>
-              <p className="text-sm font-medium text-green-400">Optimal</p>
+              <h3 className="text-luxury-platinum text-lg font-medium mb-2">效能</h3>
+              <p className="text-sm font-medium text-green-400">最佳</p>
               <p className="text-luxury-platinum/60 text-xs mt-1">
-                All systems operational
+                所有系統正常運作
               </p>
             </motion.div>
 
@@ -184,10 +184,10 @@ const AdminDashboard = () => {
                 <Users className="h-8 w-8 text-luxury-gold" />
                 <CheckCircle className="h-5 w-5 text-green-400" />
               </div>
-              <h3 className="text-luxury-platinum text-lg font-medium mb-2">Users</h3>
-              <p className="text-sm font-medium text-green-400">Active</p>
+              <h3 className="text-luxury-platinum text-lg font-medium mb-2">使用者</h3>
+              <p className="text-sm font-medium text-green-400">活躍</p>
               <p className="text-luxury-platinum/60 text-xs mt-1">
-                Authentication system online
+                認證系統已上線
               </p>
             </motion.div>
           </div>
@@ -204,25 +204,25 @@ const AdminDashboard = () => {
               <div className="flex items-center space-x-3 mb-4">
                 <Database className="h-6 w-6 text-luxury-gold" />
                 <h2 className="text-xl font-luxury font-bold text-luxury-gold">
-                  Backup Management
+                  備份管理
                 </h2>
               </div>
               <p className="text-luxury-platinum/80 mb-6">
-                Create, restore, and manage database backups. Manual backups are recommended for full control.
+                建立、還原和管理資料庫備份。建議使用手動備份以獲得完整控制。
               </p>
               <div className="space-y-3">
                 <button
                   onClick={() => navigate('/admin/backups')}
                   className="w-full luxury-button text-center"
                 >
-                  Manage Backups
+                  管理備份
                 </button>
                 <div className="grid grid-cols-2 gap-3">
                   <button className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm">
-                    Quick Backup
+                    快速備份
                   </button>
                   <button className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm">
-                    View Health
+                    檢視健康狀況
                   </button>
                 </div>
               </div>
@@ -238,31 +238,31 @@ const AdminDashboard = () => {
               <div className="flex items-center space-x-3 mb-4">
                 <BarChart3 className="h-6 w-6 text-luxury-gold" />
                 <h2 className="text-xl font-luxury font-bold text-luxury-gold">
-                  System Monitoring
+                  系統監控
                 </h2>
               </div>
               <p className="text-luxury-platinum/80 mb-6">
-                Monitor system health, performance metrics, and operational status in real-time.
+                即時監控系統健康狀況、效能指標和運作狀態。
               </p>
               <div className="space-y-3">
                 <button
                   onClick={() => navigate('/admin/system')}
                   className="w-full luxury-button text-center"
                 >
-                  View System Health
+                  檢視系統健康狀況
                 </button>
                 <div className="grid grid-cols-2 gap-3">
                   <button 
                     onClick={loadSystemHealth}
                     className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm"
                   >
-                    Refresh Status
+                    重新整理狀態
                   </button>
                   <button 
                     onClick={() => navigate('/admin/system')}
                     className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm"
                   >
-                    Health Dashboard
+                    健康儀表板
                   </button>
                 </div>
               </div>
@@ -278,25 +278,25 @@ const AdminDashboard = () => {
               <div className="flex items-center space-x-3 mb-4">
                 <Users className="h-6 w-6 text-luxury-gold" />
                 <h2 className="text-xl font-luxury font-bold text-luxury-gold">
-                  User Management
+                  使用者管理
                 </h2>
               </div>
               <p className="text-luxury-platinum/80 mb-6">
-                Manage user accounts, roles, verification status, and membership tiers.
+                管理使用者帳戶、角色、驗證狀態和會員等級。
               </p>
               <div className="space-y-3">
                 <button
                   onClick={() => navigate('/admin/users')}
                   className="w-full luxury-button text-center"
                 >
-                  Manage Users
+                  管理使用者
                 </button>
                 <div className="grid grid-cols-2 gap-3">
                   <button className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm">
-                    Pending Verifications
+                    待審核驗證
                   </button>
                   <button className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm">
-                    User Stats
+                    使用者統計
                   </button>
                 </div>
               </div>
@@ -312,31 +312,31 @@ const AdminDashboard = () => {
               <div className="flex items-center space-x-3 mb-4">
                 <Calendar className="h-6 w-6 text-luxury-gold" />
                 <h2 className="text-xl font-luxury font-bold text-luxury-gold">
-                  Event Management
+                  活動管理
                 </h2>
               </div>
               <p className="text-luxury-platinum/80 mb-6">
-                Create and manage luxury social events, venues, and categories for the platform.
+                為平台建立和管理頂級社交活動、場地和類別。
               </p>
               <div className="space-y-3">
                 <button
                   onClick={() => navigate('/events/manage')}
                   className="w-full luxury-button text-center"
                 >
-                  Manage Events
+                  管理活動
                 </button>
                 <div className="grid grid-cols-2 gap-3">
                   <button 
                     onClick={() => navigate('/events/venues')}
                     className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm"
                   >
-                    Venues
+                    場地
                   </button>
                   <button 
                     onClick={() => navigate('/events/categories')}
                     className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm"
                   >
-                    Categories
+                    類別
                   </button>
                 </div>
               </div>
@@ -354,16 +354,16 @@ const AdminDashboard = () => {
               <div className="flex items-center space-x-3 mb-4">
                 <Activity className="h-6 w-6 text-luxury-gold" />
                 <h2 className="text-xl font-luxury font-bold text-luxury-gold">
-                  Recent Backup Activity
+                  最近備份活動
                 </h2>
               </div>
               <div className="space-y-3">
                 {systemHealth.r2Sync.recentBackups.slice(0, 3).map((backup) => (
                   <div key={backup.id} className="flex items-center justify-between p-3 bg-luxury-midnight-black/50 rounded-lg">
                     <div>
-                      <p className="text-luxury-platinum font-medium">{backup.type} backup</p>
+                      <p className="text-luxury-platinum font-medium">{backup.type} 備份</p>
                       <p className="text-luxury-platinum/60 text-sm">
-                        {new Date(backup.timestamp).toLocaleString()}
+                        {new Date(backup.timestamp).toLocaleString('zh-TW')}
                       </p>
                     </div>
                     <div className="text-right">

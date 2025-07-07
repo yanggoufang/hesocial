@@ -199,10 +199,10 @@ const UserManagement: React.FC = () => {
       if (response.success) {
         fetchUsers() // Refresh the list
       } else {
-        setError(response.error || 'Failed to update user role')
+        setError(response.error || '更新使用者角色失敗')
       }
     } catch (err) {
-      setError('Network error occurred')
+      setError('發生網路錯誤')
     } finally {
       setActionLoading(null)
     }
@@ -218,10 +218,10 @@ const UserManagement: React.FC = () => {
         setShowDeleteConfirm(false)
         fetchUsers() // Refresh the list
       } else {
-        setError(response.error || 'Failed to delete user')
+        setError(response.error || '刪除使用者失敗')
       }
     } catch (err) {
-      setError('Network error occurred')
+      setError('發生網路錯誤')
     } finally {
       setActionLoading(null)
     }
@@ -243,7 +243,7 @@ const UserManagement: React.FC = () => {
     return (
       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${styles[tier as keyof typeof styles]}`}>
         {icons[tier as keyof typeof icons]}
-        {tier}
+        {tier === 'Platinum' ? '白金卡' : tier === 'Diamond' ? '鑽石卡' : tier === 'Black Card' ? '黑卡' : tier}
       </span>
     )
   }
@@ -252,18 +252,18 @@ const UserManagement: React.FC = () => {
     if (status === 'approved' && isVerified) {
       return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300">
         <CheckCircle className="w-3 h-3" />
-        Verified
+        已驗證
       </span>
     }
     if (status === 'rejected') {
       return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-300">
         <XCircle className="w-3 h-3" />
-        Rejected
+        已拒絕
       </span>
     }
     return <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">
       <AlertTriangle className="w-3 h-3" />
-      Pending
+      待審核
     </span>
   }
 
@@ -276,7 +276,7 @@ const UserManagement: React.FC = () => {
 
     return (
       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${styles[role as keyof typeof styles]}`}>
-        {role === 'super_admin' ? 'Super Admin' : role.charAt(0).toUpperCase() + role.slice(1)}
+        {role === 'super_admin' ? '超級管理員' : role === 'admin' ? '管理員' : '使用者'}
       </span>
     )
   }
@@ -295,8 +295,8 @@ const UserManagement: React.FC = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-          <p className="text-gray-600">You don't have permission to access this page.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">拒絕存取</h1>
+          <p className="text-gray-600">您沒有權限存取此頁面。</p>
         </div>
       </div>
     )
@@ -311,16 +311,16 @@ const UserManagement: React.FC = () => {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                 <Users className="w-8 h-8 text-purple-600" />
-                User Management
+                使用者管理
               </h1>
-              <p className="text-gray-600 mt-2">Manage platform members and their permissions</p>
+              <p className="text-gray-600 mt-2">管理平台會員及其權限</p>
             </div>
             <button
               onClick={fetchUsers}
               className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
-              Refresh
+              重新整理
             </button>
           </div>
 
@@ -330,7 +330,7 @@ const UserManagement: React.FC = () => {
               <div className="bg-white rounded-lg p-6 shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Total Users</p>
+                    <p className="text-sm font-medium text-gray-600">總使用者數</p>
                     <p className="text-3xl font-bold text-gray-900">{stats.totalUsers}</p>
                   </div>
                   <Users className="w-8 h-8 text-blue-600" />
@@ -339,7 +339,7 @@ const UserManagement: React.FC = () => {
               <div className="bg-white rounded-lg p-6 shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Recent Registrations</p>
+                    <p className="text-sm font-medium text-gray-600">近期註冊</p>
                     <p className="text-3xl font-bold text-gray-900">{stats.recentRegistrations}</p>
                   </div>
                   <UserCheck className="w-8 h-8 text-green-600" />
@@ -348,7 +348,7 @@ const UserManagement: React.FC = () => {
               <div className="bg-white rounded-lg p-6 shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Pending Verification</p>
+                    <p className="text-sm font-medium text-gray-600">待審核驗證</p>
                     <p className="text-3xl font-bold text-gray-900">
                       {stats.usersByVerificationStatus.find(s => s.verification_status === 'pending')?.count || 0}
                     </p>
@@ -359,7 +359,7 @@ const UserManagement: React.FC = () => {
               <div className="bg-white rounded-lg p-6 shadow-sm border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Admins</p>
+                    <p className="text-sm font-medium text-gray-600">管理員</p>
                     <p className="text-3xl font-bold text-gray-900">
                       {(stats.usersByRole.find(r => r.role === 'admin')?.count || 0) + 
                        (stats.usersByRole.find(r => r.role === 'super_admin')?.count || 0)}
@@ -392,13 +392,13 @@ const UserManagement: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm border mb-6">
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">Filters & Search</h3>
+              <h3 className="text-lg font-medium text-gray-900">篩選與搜尋</h3>
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="inline-flex items-center gap-2 px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
               >
                 <Filter className="w-4 h-4" />
-                {showFilters ? 'Hide Filters' : 'Show Filters'}
+                {showFilters ? '隱藏篩選' : '顯示篩選'}
               </button>
             </div>
           </div>
@@ -409,7 +409,7 @@ const UserManagement: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by name, email, profession..."
+                placeholder="依姓名、電子郵件、職業搜尋..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -420,33 +420,33 @@ const UserManagement: React.FC = () => {
             {showFilters && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">角色</label>
                   <select
                     value={filters.role}
                     onChange={(e) => handleFilterChange('role', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
-                    <option value="">All Roles</option>
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                    <option value="super_admin">Super Admin</option>
+                    <option value="">所有角色</option>
+                    <option value="user">使用者</option>
+                    <option value="admin">管理員</option>
+                    <option value="super_admin">超級管理員</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Membership Tier</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">會員等級</label>
                   <select
                     value={filters.membershipTier}
                     onChange={(e) => handleFilterChange('membershipTier', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   >
-                    <option value="">All Tiers</option>
-                    <option value="Platinum">Platinum</option>
-                    <option value="Diamond">Diamond</option>
-                    <option value="Black Card">Black Card</option>
+                    <option value="">所有等級</option>
+                    <option value="Platinum">白金卡</option>
+                    <option value="Diamond">鑽石卡</option>
+                    <option value="Black Card">黑卡</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Verification Status</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">驗證狀態</label>
                   <select
                     value={filters.verificationStatus}
                     onChange={(e) => handleFilterChange('verificationStatus', e.target.value)}

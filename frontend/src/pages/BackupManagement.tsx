@@ -51,10 +51,10 @@ const BackupManagement = () => {
       if (result.success && result.data) {
         setBackups(result.data)
       } else {
-        setError(result.error || 'Failed to load backups')
+        setError(result.error || '載入備份失敗')
       }
     } catch (err) {
-      setError('Failed to load backups')
+      setError('載入備份失敗')
     } finally {
       setLoading(false)
     }
@@ -69,13 +69,13 @@ const BackupManagement = () => {
       const result = await adminService.createBackup()
       
       if (result.success) {
-        setSuccess('Manual backup created successfully!')
+        setSuccess('手動備份建立成功！')
         await loadBackups() // Refresh the list
       } else {
-        setError(result.error || 'Failed to create backup')
+        setError(result.error || '建立備份失敗')
       }
     } catch (err) {
-      setError('Failed to create backup')
+      setError('建立備份失敗')
     } finally {
       setActionLoading(null)
     }
@@ -90,14 +90,14 @@ const BackupManagement = () => {
       const result = await adminService.restoreBackup(backupId, force)
       
       if (result.success) {
-        setSuccess('Database restored successfully!')
+        setSuccess('資料庫還原成功！')
         setShowRestoreConfirm(null)
         await loadBackups() // Refresh the list
       } else {
-        setError(result.error || 'Failed to restore backup')
+        setError(result.error || '還原備份失敗')
       }
     } catch (err) {
-      setError('Failed to restore backup')
+      setError('還原備份失敗')
     } finally {
       setActionLoading(null)
     }
@@ -112,13 +112,13 @@ const BackupManagement = () => {
       const result = await adminService.cleanupBackups()
       
       if (result.success) {
-        setSuccess('Old backups cleaned up successfully!')
+        setSuccess('舊備份清理成功！')
         await loadBackups() // Refresh the list
       } else {
-        setError(result.error || 'Failed to cleanup backups')
+        setError(result.error || '清理備份失敗')
       }
     } catch (err) {
-      setError('Failed to cleanup backups')
+      setError('清理備份失敗')
     } finally {
       setActionLoading(null)
     }
@@ -170,17 +170,17 @@ const BackupManagement = () => {
                 className="flex items-center space-x-2 text-luxury-platinum/60 hover:text-luxury-gold transition-colors"
               >
                 <ArrowLeft className="h-5 w-5" />
-                <span>Back to Dashboard</span>
+                <span>返回儀表板</span>
               </button>
             </div>
             <div className="flex items-center space-x-3 mb-4">
               <Database className="h-8 w-8 text-luxury-gold" />
               <h1 className="text-3xl font-luxury font-bold text-luxury-gold">
-                Backup Management
+                備份管理
               </h1>
             </div>
             <p className="text-luxury-platinum/80">
-              Create, restore, and manage database backups. Manual backups provide full control over your data.
+              建立、還原和管理資料庫備份。手動備份提供對您資料的完整控制。
             </p>
           </div>
 
@@ -198,7 +198,7 @@ const BackupManagement = () => {
               ) : (
                 <Upload className="h-5 w-5" />
               )}
-              <span>{actionLoading === 'create' ? 'Creating...' : 'Create Manual Backup'}</span>
+              <span>{actionLoading === 'create' ? '建立中...' : '建立手動備份'}</span>
             </motion.button>
 
             <motion.button
@@ -209,7 +209,7 @@ const BackupManagement = () => {
               whileTap={{ scale: loading ? 1 : 0.98 }}
             >
               <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refresh List</span>
+              <span>重新整理清單</span>
             </motion.button>
 
             <motion.button
@@ -224,7 +224,7 @@ const BackupManagement = () => {
               ) : (
                 <Trash2 className="h-5 w-5" />
               )}
-              <span>{actionLoading === 'cleanup' ? 'Cleaning...' : 'Cleanup Old Backups'}</span>
+              <span>{actionLoading === 'cleanup' ? '清理中...' : '清理舊備份'}</span>
             </motion.button>
           </div>
 
@@ -259,20 +259,20 @@ const BackupManagement = () => {
             className="luxury-glass rounded-xl p-6"
           >
             <h2 className="text-xl font-luxury font-bold text-luxury-gold mb-6">
-              Available Backups ({backups.length})
+              可用備份 ({backups.length})
             </h2>
 
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <RefreshCw className="h-8 w-8 text-luxury-gold animate-spin" />
-                <span className="ml-3 text-luxury-platinum">Loading backups...</span>
+                <span className="ml-3 text-luxury-platinum">載入備份中...</span>
               </div>
             ) : backups.length === 0 ? (
               <div className="text-center py-12">
                 <Database className="h-12 w-12 text-luxury-platinum/30 mx-auto mb-4" />
-                <p className="text-luxury-platinum/60">No backups available</p>
+                <p className="text-luxury-platinum/60">沒有可用的備份</p>
                 <p className="text-luxury-platinum/40 text-sm mt-2">
-                  Create your first backup using the button above
+                  使用上方按鈕建立您的第一個備份
                 </p>
               </div>
             ) : (
@@ -289,16 +289,16 @@ const BackupManagement = () => {
                       <div>
                         <div className="flex items-center space-x-2">
                           <h3 className="text-luxury-platinum font-medium">
-                            {backup.type.charAt(0).toUpperCase() + backup.type.slice(1)} Backup
+                            {backup.type === 'manual' ? '手動' : backup.type === 'periodic' ? '定期' : backup.type === 'shutdown' ? '關機' : backup.type} 備份
                           </h3>
                           {backup.status === 'latest_restored' && (
                             <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded">
-                              Latest Restored
+                              最新已還原
                             </span>
                           )}
                         </div>
                         <p className="text-luxury-platinum/60 text-sm">
-                          {new Date(backup.timestamp).toLocaleString()}
+                          {new Date(backup.timestamp).toLocaleString('zh-TW')}
                         </p>
                         <p className="text-luxury-platinum/40 text-xs">
                           ID: {backup.id.substring(0, 16)}...
@@ -310,7 +310,7 @@ const BackupManagement = () => {
                       <div className="text-right">
                         <p className="text-luxury-gold font-medium">{backup.size}</p>
                         <p className={`text-xs ${getBackupTypeColor(backup.type)}`}>
-                          {backup.type}
+                          {backup.type === 'manual' ? '手動' : backup.type === 'periodic' ? '定期' : backup.type === 'shutdown' ? '關機' : backup.type}
                         </p>
                       </div>
 
@@ -325,7 +325,7 @@ const BackupManagement = () => {
                           ) : (
                             <Download className="h-4 w-4" />
                           )}
-                          <span>{actionLoading === backup.id ? 'Restoring...' : 'Restore'}</span>
+                          <span>{actionLoading === backup.id ? '還原中...' : '還原'}</span>
                         </button>
                       )}
                     </div>
@@ -350,12 +350,12 @@ const BackupManagement = () => {
                 <div className="flex items-center space-x-3 mb-4">
                   <AlertTriangle className="h-6 w-6 text-yellow-400" />
                   <h3 className="text-xl font-luxury font-bold text-luxury-gold">
-                    Confirm Restore
+                    確認還原
                   </h3>
                 </div>
                 
                 <p className="text-luxury-platinum/80 mb-6">
-                  Are you sure you want to restore from this backup? This will replace the current database with the backup data.
+                  您確定要從此備份還原嗎？這將以備份資料取代目前的資料庫。
                 </p>
 
                 <div className="flex space-x-3">
@@ -364,14 +364,14 @@ const BackupManagement = () => {
                     disabled={actionLoading === showRestoreConfirm}
                     className="flex-1 luxury-button disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {actionLoading === showRestoreConfirm ? 'Restoring...' : 'Confirm Restore'}
+                    {actionLoading === showRestoreConfirm ? '還原中...' : '確認還原'}
                   </button>
                   <button
                     onClick={() => setShowRestoreConfirm(null)}
                     disabled={actionLoading === showRestoreConfirm}
                     className="flex-1 px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Cancel
+                    取消
                   </button>
                 </div>
               </motion.div>
