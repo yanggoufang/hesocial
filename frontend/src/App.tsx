@@ -1,36 +1,53 @@
 import { Routes, Route } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { Suspense, lazy } from 'react'
 import { AuthProvider } from './hooks/useAuth'
-import HomePage from './pages/HomePage'
-import EventsPage from './pages/EventsPage'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import ProfilePage from './pages/ProfilePage'
-import EventDetailPage from './pages/EventDetailPage'
-import VVIPPage from './pages/VVIPPage'
-import AdminDashboard from './pages/AdminDashboard'
-import BackupManagement from './pages/BackupManagement'
-import EventManagement from './pages/EventManagement'
-import VenueManagement from './pages/VenueManagement'
-import UserManagement from './pages/UserManagement'
-import CategoryManagement from './pages/CategoryManagement'
-import EventRegistration from './pages/EventRegistration'
-import MyRegistrations from './pages/MyRegistrations'
-import SystemHealthDashboard from './pages/SystemHealthDashboard'
-import EventMediaManagement from './pages/EventMediaManagement'
-import AccessTestPage from './pages/AccessTestPage'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import AdminIndicator from './components/AdminIndicator'
+import RouteLoader from './components/RouteLoader'
+import ErrorBoundary from './components/ErrorBoundary'
 import {
   AdminRoute,
-  SuperAdminRoute,
   UserRoute,
   VVIPRoute,
   EventManagementRoute,
   UserManagementRoute,
   BackupManagementRoute
 } from './components/RouteGuards'
+
+// Lazy load pages for better performance
+// Core pages - load immediately
+import HomePage from './pages/HomePage'
+import LoginPage from './pages/LoginPage'
+
+// Event pages - moderate priority
+const EventsPage = lazy(() => import('./pages/EventsPage'))
+const EventDetailPage = lazy(() => import('./pages/EventDetailPage'))
+const EventRegistration = lazy(() => import('./pages/EventRegistration'))
+
+// User pages - moderate priority
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const MyRegistrations = lazy(() => import('./pages/MyRegistrations'))
+const VVIPPage = lazy(() => import('./pages/VVIPPage'))
+
+// Admin pages - low priority (loaded on demand)
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const BackupManagement = lazy(() => import('./pages/BackupManagement'))
+const SystemHealthDashboard = lazy(() => import('./pages/SystemHealthDashboard'))
+
+// Event management pages - low priority
+const EventManagement = lazy(() => import('./pages/EventManagement'))
+const VenueManagement = lazy(() => import('./pages/VenueManagement'))
+const CategoryManagement = lazy(() => import('./pages/CategoryManagement'))
+const EventMediaManagement = lazy(() => import('./pages/EventMediaManagement'))
+
+// User management - low priority
+const UserManagement = lazy(() => import('./pages/UserManagement'))
+
+// Development pages
+const AccessTestPage = lazy(() => import('./pages/AccessTestPage'))
 
 function App() {
   return (
@@ -43,7 +60,9 @@ function App() {
           transition={{ duration: 0.6 }}
           className="pt-20"
         >
-          <Routes>
+          <ErrorBoundary>
+            <Suspense fallback={<RouteLoader />}>
+              <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/events/:id" element={<EventDetailPage />} />
@@ -126,7 +145,9 @@ function App() {
             
             {/* Development Route - Access Control Test */}
             <Route path="/access-test" element={<AccessTestPage />} />
-          </Routes>
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </motion.main>
         <Footer />
         
