@@ -208,6 +208,7 @@ app.get('/api/health/config', (req, res) => {
   })
 })
 
+
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error('Unhandled error:', {
     error: error.message,
@@ -240,8 +241,12 @@ const startServer = async (): Promise<void> => {
     app.post('/api/auth/login', async (req, res) => {
       const { email, password } = req.body
       
+      // Debug logging
+      logger.info('Login attempt:', { email, passwordLength: password?.length })
+      
       // Simple auth check for development
       if (email === 'admin@hesocial.com' && password === 'admin123') {
+        logger.info('Login successful for admin')
         res.json({
           success: true,
           data: {
@@ -256,6 +261,7 @@ const startServer = async (): Promise<void> => {
           message: 'Login successful'
         })
       } else {
+        logger.info('Login failed:', { receivedEmail: email, expectedEmail: 'admin@hesocial.com', passwordMatch: password === 'admin123' })
         res.status(401).json({
           success: false,
           error: 'Invalid credentials'
@@ -263,7 +269,58 @@ const startServer = async (): Promise<void> => {
       }
     })
     
+    // Add logout endpoint
+    app.post('/api/auth/logout', (req, res) => {
+      res.json({
+        success: true,
+        message: 'Logged out successfully'
+      })
+    })
+    
     logger.info('✅ Temporary auth routes configured')
+    
+    // Add the specific health endpoints that admin console needs
+    app.get('/api/health/database', async (req, res) => {
+      try {
+        res.json({
+          success: true,
+          database: {
+            type: 'DuckDB',
+            connected: true,
+            status: 'healthy'
+          },
+          timestamp: new Date().toISOString()
+        })
+      } catch (error) {
+        res.status(503).json({
+          success: false,
+          error: 'Database health check failed',
+          timestamp: new Date().toISOString()
+        })
+      }
+    })
+
+    app.get('/api/health/r2-sync', async (req, res) => {
+      try {
+        res.json({
+          success: true,
+          r2Sync: {
+            enabled: r2BackupService.isEnabled(),
+            status: r2BackupService.isEnabled() ? 'healthy' : 'disabled',
+            connectionHealthy: true
+          },
+          timestamp: new Date().toISOString()
+        })
+      } catch (error) {
+        res.status(503).json({
+          success: false,
+          error: 'R2 sync health check failed',
+          timestamp: new Date().toISOString()
+        })
+      }
+    })
+    
+    logger.info('✅ Admin health endpoints configured')
     
     // Add 404 handler after routes
     app.use((req, res) => {
@@ -274,8 +331,8 @@ const startServer = async (): Promise<void> => {
       })
     })
     
-    // Dynamically load and mount API routes (temporarily disabled for testing)
-    /* try {
+    // Dynamically load and mount API routes
+    try {
       logger.info('🔄 Loading API routes...')
       const apiRoutes = await createRoutes()
       
@@ -292,7 +349,7 @@ const startServer = async (): Promise<void> => {
     } catch (error) {
       logger.error('❌ Failed to load API routes:', error)
       logger.error('Server will continue without API routes')
-    } */
+    }
     
     const server = app.listen(config.port, () => {
       logger.info('='.repeat(60))

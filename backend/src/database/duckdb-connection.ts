@@ -3,7 +3,6 @@ import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import logger from '../utils/logger.js'
-import { r2BackupService } from '../services/R2BackupService.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -317,7 +316,15 @@ export const redisClient = {
 export const connectDatabases = async (): Promise<void> => {
   try {
     // Step 1: Try to restore from R2 backup if enabled and no local database exists
-    if (r2BackupService.isEnabled()) {
+    let r2BackupService: any = null
+    try {
+      const { r2BackupService: service } = await import('../services/R2BackupService.js')
+      r2BackupService = service
+    } catch (error) {
+      logger.warn('R2BackupService not available:', error)
+    }
+
+    if (r2BackupService?.isEnabled()) {
       logger.info('🔄 R2 backup service enabled - checking for restore...')
       const restoredBackup = await r2BackupService.restoreLatestBackup(false)
       if (restoredBackup) {
@@ -340,7 +347,7 @@ export const connectDatabases = async (): Promise<void> => {
       logger.info('✅ DuckDB setup completed - Full functionality available')
       
       // Create initial backup after setup
-      if (r2BackupService.isEnabled()) {
+      if (r2BackupService?.isEnabled()) {
         logger.info('📤 Creating initial backup after database setup...')
         await r2BackupService.createManualBackup()
       }
@@ -358,7 +365,7 @@ export const connectDatabases = async (): Promise<void> => {
     }
 
     // Step 6: Test R2 connection and display status
-    if (r2BackupService.isEnabled()) {
+    if (r2BackupService?.isEnabled()) {
       const r2Status = await r2BackupService.getStatus()
       logger.info('📦 R2 Backup Status:', r2Status)
     }
@@ -375,7 +382,15 @@ export const closeDatabases = async (): Promise<void> => {
     await duckdb.recordServerStop()
     
     // Step 2: Create shutdown backup to R2 if enabled
-    if (r2BackupService.isEnabled()) {
+    let r2BackupService: any = null
+    try {
+      const { r2BackupService: service } = await import('../services/R2BackupService.js')
+      r2BackupService = service
+    } catch (error) {
+      logger.warn('R2BackupService not available during shutdown:', error)
+    }
+
+    if (r2BackupService?.isEnabled()) {
       logger.info('📤 Creating shutdown backup to R2...')
       const backupId = await r2BackupService.backupOnShutdown()
       if (backupId) {

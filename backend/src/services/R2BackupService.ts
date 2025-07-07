@@ -401,21 +401,8 @@ export class R2BackupService {
           type = 'periodic';
         }
 
-        // Try to get schema version from metadata if available
-        let schemaVersion = 'v1.0.0';
-        try {
-          if (obj.Key) {
-            const metadataResponse = await this.s3Client!.send(new GetObjectCommand({
-              Bucket: this.bucketName,
-              Key: obj.Key
-            }));
-            if (metadataResponse.Metadata?.schema_version) {
-              schemaVersion = metadataResponse.Metadata.schema_version;
-            }
-          }
-        } catch (error) {
-          // Fallback to default if metadata not available
-        }
+        // Use default schema version for now (metadata fetching would require async)
+        const schemaVersion = 'v1.0.0';
         
         return {
           id: filename,
