@@ -66,11 +66,11 @@ const Navbar = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="absolute right-0 mt-2 w-48 luxury-glass rounded-lg shadow-xl border border-luxury-gold/20"
+                      className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-luxury-gold/20 z-[60]"
                     >
                       <Link
                         to="/profile"
-                        className="block px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                        className="block px-4 py-3 text-sm text-gray-700 hover:bg-luxury-gold/10 transition-colors"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         <User className="inline h-4 w-4 mr-2" />
@@ -78,7 +78,7 @@ const Navbar = () => {
                       </Link>
                       <Link
                         to="/profile/registrations"
-                        className="block px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                        className="block px-4 py-3 text-sm text-gray-700 hover:bg-luxury-gold/10 transition-colors"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         <Calendar className="inline h-4 w-4 mr-2" />
@@ -91,7 +91,7 @@ const Navbar = () => {
                           <div className="border-t border-luxury-gold/20 my-2"></div>
                           <Link
                             to="/admin"
-                            className="block px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                            className="block px-4 py-3 text-sm text-gray-700 hover:bg-luxury-gold/10 transition-colors"
                             onClick={() => setIsUserMenuOpen(false)}
                           >
                             <Shield className="inline h-4 w-4 mr-2" />
@@ -99,7 +99,7 @@ const Navbar = () => {
                           </Link>
                           <Link
                             to="/events/manage"
-                            className="block px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                            className="block px-4 py-3 text-sm text-gray-700 hover:bg-luxury-gold/10 transition-colors"
                             onClick={() => setIsUserMenuOpen(false)}
                           >
                             <Settings className="inline h-4 w-4 mr-2" />
@@ -107,7 +107,7 @@ const Navbar = () => {
                           </Link>
                           <Link
                             to="/admin/system"
-                            className="block px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                            className="block px-4 py-3 text-sm text-gray-700 hover:bg-luxury-gold/10 transition-colors"
                             onClick={() => setIsUserMenuOpen(false)}
                           >
                             <Activity className="inline h-4 w-4 mr-2" />
@@ -122,7 +122,7 @@ const Navbar = () => {
                           logout()
                           setIsUserMenuOpen(false)
                         }}
-                        className="block w-full text-left px-4 py-3 text-sm hover:bg-luxury-gold/10 transition-colors"
+                        className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-luxury-gold/10 transition-colors"
                       >
                         <LogOut className="inline h-4 w-4 mr-2" />
                         登出

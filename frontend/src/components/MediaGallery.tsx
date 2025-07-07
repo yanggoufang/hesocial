@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Image, File, Download, Trash2, Eye, X, 
-  ChevronLeft, ChevronRight, Calendar, User
+  ChevronLeft, ChevronRight, Calendar, User, AlertCircle
 } from 'lucide-react'
 import { mediaService, MediaFile } from '../services/mediaService'
 import { useAuth } from '../hooks/useAuth'
