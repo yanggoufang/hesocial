@@ -322,15 +322,6 @@ const startServer = async (): Promise<void> => {
     
     logger.info('✅ Admin health endpoints configured')
     
-    // Add 404 handler after routes
-    app.use((req, res) => {
-      res.status(404).json({
-        success: false,
-        error: 'Route not found',
-        message: `${req.method} ${req.path} is not a valid endpoint`
-      })
-    })
-    
     // Dynamically load and mount API routes
     try {
       logger.info('🔄 Loading API routes...')
@@ -350,6 +341,15 @@ const startServer = async (): Promise<void> => {
       logger.error('❌ Failed to load API routes:', error)
       logger.error('Server will continue without API routes')
     }
+    
+    // Add 404 handler after routes
+    app.use((req, res) => {
+      res.status(404).json({
+        success: false,
+        error: 'Route not found',
+        message: `${req.method} ${req.path} is not a valid endpoint`
+      })
+    })
     
     const server = app.listen(config.port, () => {
       logger.info('='.repeat(60))

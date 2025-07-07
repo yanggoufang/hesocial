@@ -35,6 +35,12 @@ router.use('/health', healthRoutes)
 // router.use('/media', mediaRoutes)
 // router.use('/system', systemHealthRoutes)
 
+// Basic API routes for frontend functionality
+router.get('/events', getEvents)
+router.get('/events/:id', getEventById)
+router.get('/categories', getEventCategories)
+router.get('/venues', getVenues)
+
 // Legacy event routes (for backwards compatibility during transition)
 router.get('/legacy/events', getEvents)
 router.get('/legacy/events/categories', getEventCategories)

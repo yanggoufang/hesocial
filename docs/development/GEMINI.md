@@ -78,7 +78,6 @@ npm run test:coverage # Run tests with coverage
 ### Backend Commands (cd backend/)
 ```bash
 npm run dev          # Start with DuckDB (tsx watch)
-npm run dev:demo     # Start demo server with mock data
 npm run dev:duckdb   # Start with DuckDB embedded database
 npm run build        # Compile TypeScript
 npm run start        # Start production server
@@ -111,8 +110,7 @@ hesocial/
 │   │   ├── types/         # Shared TypeScript types
 │   │   └── utils/         # Configuration and logging
 │   ├── server.ts          # Main PostgreSQL server
-│   ├── server-duckdb.ts   # DuckDB embedded server
-│   └── server-demo.ts     # Demo server with mock data
+│   └── server-duckdb.ts   # DuckDB embedded server
 ├── database/          # SQL schemas and seed data
 │   ├── schema.sql         # PostgreSQL schema
 │   ├── duckdb-schema.sql  # DuckDB schema
@@ -121,10 +119,9 @@ hesocial/
 ```
 
 ### Backend Server Variants
-The backend supports three different server configurations:
+The backend supports two different server configurations:
 1. **Production Server** (`server.ts`): DuckDB with Cloudflare R2 persistence
 2. **DuckDB Server** (`server-duckdb.ts`): Local DuckDB file for development
-3. **Demo Server** (`server-demo.ts`): Mock data for quick prototyping
 
 ### Database Architecture
 - **User Management**: Multi-tier membership system (Platinum, Diamond, Black Card)
@@ -158,7 +155,6 @@ The backend supports three different server configurations:
 - Strict TypeScript configuration with no implicit any
 
 ### Database Development Modes
-- **Demo Mode**: `npm run dev:demo` - uses mock data, no database required
 - **DuckDB Mode**: `npm run dev:duckdb` - local DuckDB file for development
 - **Full Mode**: `npm run dev` - DuckDB with Cloudflare R2 for production
 
