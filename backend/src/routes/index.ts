@@ -116,6 +116,77 @@ router.post('/debug/seed', async (req, res) => {
   }
 })
 
+// Simple manual seeding endpoint
+router.post('/debug/manual-seed', async (req, res) => {
+  try {
+    const { pool } = await import('../database/duckdb-pool.js')
+    
+    // Insert basic categories
+    await pool.query(`INSERT OR IGNORE INTO event_categories (id, name, description, icon) VALUES 
+      (1, '私人晚宴', '頂級餐廳私人用餐體驗', 'utensils'),
+      (2, '遊艇派對', '豪華遊艇社交聚會', 'anchor'),
+      (3, '藝術鑑賞', '高端藝術品展覽與收藏', 'palette')`)
+    
+    // Insert basic venues
+    await pool.query(`INSERT OR IGNORE INTO venues (id, name, address, city, latitude, longitude, rating, amenities, images) VALUES 
+      (1, '台北君悅酒店', '台北市信義區松壽路2號', '台北', 25.0330, 121.5654, 5, '["停車場","無線網路"]', '[]'),
+      (2, '大倉久和大飯店', '台北市中山區南京東路一段9號', '台北', 25.0518, 121.5228, 5, '["日式庭園","高級餐廳"]', '[]')`)
+    
+    // Insert basic users if not exist
+    await pool.query(`INSERT OR IGNORE INTO users (id, email, password_hash, first_name, last_name, age, profession, annual_income, net_worth, membership_tier, is_verified, verification_status) VALUES 
+      (1, 'admin@hesocial.com', '$2b$10$hash', 'Admin', 'User', 35, 'Administrator', 5000000, 30000000, 'Black Card', true, 'approved')`)
+    
+    // Insert basic events with future dates
+    await pool.query(`INSERT OR IGNORE INTO events (id, name, description, date_time, registration_deadline, venue_id, category_id, organizer_id, pricing, exclusivity_level, dress_code, capacity, current_attendees, is_active) VALUES 
+      (1, '頂級威士忌品鑑晚宴', '邀請威士忌專家分享珍稀威士忌，搭配精緻法式料理', '2025-08-15 19:00:00', '2025-08-10 18:00:00', 1, 1, 1, '{"platinum": 15000, "diamond": 12000, "black_card": 8000}', 'VIP', 4, 20, 8, true),
+      (2, '私人遊艇星空派對', '在豪華遊艇上享受星空下的奢華體驗', '2025-08-20 20:00:00', '2025-08-18 12:00:00', 2, 2, 1, '{"platinum": 25000, "diamond": 20000, "black_card": 15000}', 'VVIP', 5, 30, 15, true),
+      (3, '藝術收藏家私享會', '與知名藝術收藏家交流，欣賞珍貴藝術品', '2025-08-25 15:00:00', '2025-08-22 17:00:00', 2, 3, 1, '{"platinum": 18000, "diamond": 15000, "black_card": 12000}', 'Invitation Only', 3, 25, 12, true)`)
+    
+    res.json({
+      success: true,
+      message: 'Manual seeding completed successfully'
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Manual seeding failed'
+    })
+  }
+})
+
+// Update events to future dates
+router.post('/debug/update-dates', async (req, res) => {
+  try {
+    const { pool } = await import('../database/duckdb-pool.js')
+    
+    // Update existing events to future dates
+    await pool.query(`UPDATE events SET 
+      date_time = '2025-08-15 19:00:00', 
+      registration_deadline = '2025-08-10 18:00:00' 
+      WHERE id = 1`)
+    
+    await pool.query(`UPDATE events SET 
+      date_time = '2025-08-20 20:00:00', 
+      registration_deadline = '2025-08-18 12:00:00' 
+      WHERE id = 2`)
+    
+    await pool.query(`UPDATE events SET 
+      date_time = '2025-08-25 15:00:00', 
+      registration_deadline = '2025-08-22 17:00:00' 
+      WHERE id = 3`)
+    
+    res.json({
+      success: true,
+      message: 'Event dates updated to future'
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Update failed'
+    })
+  }
+})
+
 // Debug route to check all table counts
 router.get('/debug/counts', async (req, res) => {
   try {
