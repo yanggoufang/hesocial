@@ -457,13 +457,23 @@ const EventDetailPage = () => {
                 </div>
 
                 {isAuthenticated ? (
-                  <button
-                    onClick={() => navigate(`/events/${id}/register`)}
-                    className="w-full luxury-button py-3 mb-4"
-                    disabled={event.currentAttendees >= event.capacity}
-                  >
-                    {event.currentAttendees >= event.capacity ? '已額滿' : '立即報名'}
-                  </button>
+                  <div className="space-y-3 mb-4">
+                    <button
+                      onClick={() => navigate(`/events/${id}/register`)}
+                      className="w-full luxury-button py-3"
+                      disabled={event.currentAttendees >= event.capacity}
+                    >
+                      {event.currentAttendees >= event.capacity ? '已額滿' : '立即報名'}
+                    </button>
+                    
+                    <button
+                      onClick={() => navigate(`/events/${id}/participants`)}
+                      className="w-full px-4 py-3 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Users className="w-4 h-4" />
+                      查看參與者
+                    </button>
+                  </div>
                 ) : (
                   <div className="space-y-2 mb-4">
                     <button

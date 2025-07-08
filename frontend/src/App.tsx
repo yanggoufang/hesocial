@@ -35,6 +35,8 @@ const CategoryManagement = lazy(() => import('./pages/CategoryManagement'));
 const EventMediaManagement = lazy(() => import('./pages/EventMediaManagement'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
 const SalesManagement = lazy(() => import('./pages/SalesManagement'));
+const EventParticipants = lazy(() => import('./pages/EventParticipants'));
+const EventPrivacySettings = lazy(() => import('./pages/EventPrivacySettings'));
 const AccessTestPage = lazy(() => import('./pages/AccessTestPage'));
 
 function App() {
@@ -62,6 +64,8 @@ function App() {
                 <Route path="/profile" element={<UserRoute><ProfilePage /></UserRoute>} />
                 <Route path="/profile/registrations" element={<UserRoute><MyRegistrations /></UserRoute>} />
                 <Route path="/events/:eventId/register" element={<UserRoute><EventRegistration /></UserRoute>} />
+                <Route path="/events/:eventId/participants" element={<UserRoute><EventParticipants /></UserRoute>} />
+                <Route path="/events/:eventId/privacy-settings" element={<UserRoute><EventPrivacySettings /></UserRoute>} />
                 <Route path="/vvip" element={<VVIPRoute><VVIPPage /></VVIPRoute>} />
 
                 {/* Event Management Module */}

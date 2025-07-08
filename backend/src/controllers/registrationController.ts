@@ -138,6 +138,23 @@ export const registerForEvent = async (req: AuthenticatedRequest, res: Response)
       WHERE id = ?
     `, [new Date().toISOString(), eventId])
 
+    // Create initial participant access record
+    try {
+      const { getDb } = await import('../config/database.js')
+      const ParticipantAccessService = (await import('../services/participantAccessService.js')).default
+      const participantService = new ParticipantAccessService(getDb())
+      
+      participantService.updateParticipantAccess(
+        userId,
+        eventId,
+        'pending', // Initial payment status is pending
+        registrationId.toString()
+      )
+    } catch (accessError) {
+      logger.error('Error creating participant access record:', accessError)
+      // Don't fail the main operation if participant access creation fails
+    }
+
     logger.info(`User ${userId} registered for event ${eventId}`)
 
     return res.status(201).json({
@@ -607,6 +624,23 @@ export const updatePaymentStatus = async (req: Request, res: Response): Promise<
     const { id } = req.params
     const { paymentStatus, paymentIntentId } = req.body
 
+    // First get the registration details to update participant access
+    const registrationQuery = `
+      SELECT user_id, event_id 
+      FROM registrations 
+      WHERE id = ?
+    `
+    const registrationResult = await pool.query(registrationQuery, [id])
+    
+    if (registrationResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Registration not found'
+      })
+    }
+
+    const registration = registrationResult.rows[0]
+
     const updateQuery = `
       UPDATE registrations 
       SET payment_status = ?, payment_intent_id = ?, updated_at = ?
@@ -625,6 +659,23 @@ export const updatePaymentStatus = async (req: Request, res: Response): Promise<
         success: false,
         error: 'Registration not found'
       })
+    }
+
+    // Update participant access when payment status changes
+    try {
+      const { getDb } = await import('../config/database.js')
+      const ParticipantAccessService = (await import('../services/participantAccessService.js')).default
+      const participantService = new ParticipantAccessService(getDb())
+      
+      participantService.updateParticipantAccess(
+        registration.user_id,
+        registration.event_id,
+        paymentStatus,
+        id
+      )
+    } catch (accessError) {
+      logger.error('Error updating participant access:', accessError)
+      // Don't fail the main operation if participant access update fails
     }
 
     logger.info(`Registration ${id} payment status updated to ${paymentStatus}`)

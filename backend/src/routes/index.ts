@@ -15,6 +15,7 @@ import placeholderRoutes from './placeholderRoutes.js';
 // import venueManagementRoutes from './venueManagement.js'
 // import categoryManagementRoutes from './categoryManagement.js'
 import salesManagementRoutes from './salesManagement.js'
+import participantRoutes from './participants.js'
 // import registrationRoutes from './registrationRoutes.js'
 // import mediaRoutes from './mediaRoutes.js'
 // import systemHealthRoutes from './systemHealthRoutes.js'
@@ -33,6 +34,7 @@ router.use('/placeholder', placeholderRoutes);
 // router.use('/venues', venueManagementRoutes)
 // router.use('/categories', categoryManagementRoutes)
 router.use('/sales', salesManagementRoutes)
+router.use('/', participantRoutes)
 // router.use('/registrations', registrationRoutes)
 // router.use('/media', mediaRoutes)
 // router.use('/system', systemHealthRoutes)

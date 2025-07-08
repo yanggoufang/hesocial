@@ -378,3 +378,87 @@ export interface PaymentStatusUpdate {
   paymentStatus: Registration['paymentStatus']
   paymentIntentId?: string
 }
+
+// Participant Access Control System Types
+export interface ParticipantViewAccess {
+  canViewParticipants: boolean
+  maxPrivacyLevelVisible: number
+  canSeeContactInfo: boolean
+  canInitiateContact: boolean
+  participantCountVisible: boolean
+  accessLevel: number
+}
+
+export interface EventParticipantAccess {
+  id: string
+  eventId: string
+  userId: string
+  paymentStatus: 'pending' | 'paid' | 'refunded'
+  accessLevel: number
+  registrationId?: string
+  grantedAt: Date
+  expiresAt?: Date
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ParticipantViewLog {
+  id: string
+  viewerId: string
+  viewedParticipantId: string
+  eventId: string
+  viewTimestamp: Date
+  viewType: 'list' | 'profile' | 'contact'
+  ipAddress?: string
+  userAgent?: string
+}
+
+export interface EventPrivacyOverride {
+  id: string
+  userId: string
+  eventId: string
+  privacyLevel: number
+  allowContact: boolean
+  showInList: boolean
+  validUntil?: Date
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface FilteredParticipantInfo {
+  id: string
+  displayName: string
+  profession?: string
+  company?: string
+  membershipTier: 'Platinum' | 'Diamond' | 'Black Card'
+  interests?: string[]
+  profilePicture?: string
+  ageRange?: string
+  city?: string
+  bio?: string
+  privacyLevel: number
+  canContact: boolean
+  contactInfo?: {
+    email?: string
+    phone?: string
+    linkedIn?: string
+    personalSocial?: Record<string, string>
+  }
+}
+
+export interface ParticipantListResponse {
+  participants: FilteredParticipantInfo[]
+  totalCount: number
+  paidParticipantCount: number
+  unpaidParticipantCount: number
+  viewerAccess: ParticipantViewAccess
+  participantCountByTier: Record<string, number>
+}
+
+export interface ParticipantAccessCheckResponse {
+  hasAccess: boolean
+  accessLevel: ParticipantViewAccess
+  paymentRequired: boolean
+  paymentStatus: string
+  registrationStatus?: string
+}
