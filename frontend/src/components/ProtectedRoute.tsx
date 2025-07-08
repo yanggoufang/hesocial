@@ -2,7 +2,7 @@ import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { motion } from 'framer-motion'
-import { Shield, User, Crown, AlertTriangle } from 'lucide-react'
+import { Shield, User, Crown, MessageCircle } from 'lucide-react'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -145,7 +145,7 @@ const UnauthorizedAccess: React.FC<UnauthorizedAccessProps> = ({
       case 'insufficient_membership':
         return <Crown className="h-16 w-16 text-luxury-gold" />
       case 'unverified_account':
-        return <AlertTriangle className="h-16 w-16 text-yellow-400" />
+        return <MessageCircle className="h-16 w-16 text-luxury-gold" />
       default:
         return <User className="h-16 w-16 text-luxury-platinum" />
     }
