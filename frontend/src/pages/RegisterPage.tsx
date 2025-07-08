@@ -107,12 +107,12 @@ const RegisterPage = () => {
       setError('請填寫收入與資產資訊')
       return false
     }
-    if (parseInt(formData.annualIncome) < 5000000) {
-      setError('年收入需達500萬以上才符合申請資格')
+    if (parseInt(formData.annualIncome) < 500) {
+      setError('年收入需達500萬元以上才符合申請資格')
       return false
     }
-    if (parseInt(formData.netWorth) < 30000000) {
-      setError('淨資產需達3000萬以上才符合申請資格')
+    if (parseInt(formData.netWorth) < 3000) {
+      setError('淨資產需達3000萬元以上才符合申請資格')
       return false
     }
     if (formData.interests.length === 0) {
@@ -155,8 +155,8 @@ const RegisterPage = () => {
         lastName: formData.lastName,
         age: parseInt(formData.age),
         profession: formData.profession,
-        annualIncome: parseInt(formData.annualIncome),
-        netWorth: parseInt(formData.netWorth),
+        annualIncome: parseInt(formData.annualIncome) * 10000,
+        netWorth: parseInt(formData.netWorth) * 10000,
         bio: formData.bio,
         interests: formData.interests
       }
@@ -346,12 +346,12 @@ const RegisterPage = () => {
             value={formData.annualIncome}
             onChange={handleChange}
             required
-            min="5000000"
+            min="500"
             className="w-full bg-luxury-midnight-black/50 border border-luxury-gold/30 rounded-lg px-10 py-3 text-luxury-platinum placeholder-luxury-platinum/50 focus:outline-none focus:border-luxury-gold transition-colors"
-            placeholder="最低500萬"
+            placeholder="請輸入年收入 (萬元)"
           />
         </div>
-        <p className="text-luxury-platinum/60 text-xs mt-1">申請資格：年收入需達新台幣500萬以上</p>
+        <p className="text-luxury-platinum/60 text-xs mt-1">申請資格：年收入需達新台幣500萬元以上</p>
       </div>
 
       <div>
@@ -367,12 +367,12 @@ const RegisterPage = () => {
             value={formData.netWorth}
             onChange={handleChange}
             required
-            min="30000000"
+            min="3000"
             className="w-full bg-luxury-midnight-black/50 border border-luxury-gold/30 rounded-lg px-10 py-3 text-luxury-platinum placeholder-luxury-platinum/50 focus:outline-none focus:border-luxury-gold transition-colors"
-            placeholder="最低3000萬"
+            placeholder="請輸入淨資產 (萬元)"
           />
         </div>
-        <p className="text-luxury-platinum/60 text-xs mt-1">申請資格：淨資產需達新台幣3000萬以上</p>
+        <p className="text-luxury-platinum/60 text-xs mt-1">申請資格：淨資產需達新台幣3000萬元以上</p>
       </div>
 
       <div>
