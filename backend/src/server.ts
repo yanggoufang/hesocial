@@ -4,11 +4,13 @@ import helmet from 'helmet'
 import compression from 'compression'
 import rateLimit from 'express-rate-limit'
 import morgan from 'morgan'
+import cookieParser from 'cookie-parser'
 import { connectDatabases, closeDatabases } from './database/duckdb-connection.js'
 import config from './utils/config.js'
 import logger from './utils/logger.js'
 import createRoutes from './routes/main.js'
 import { r2BackupService } from './services/R2BackupService.js'
+import { visitorTracking } from './middleware/visitorTracking.js'
 
 const app = express()
 
@@ -80,6 +82,10 @@ app.use(morgan('combined', {
 
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+app.use(cookieParser())
+
+// Visitor tracking middleware (before routes)
+app.use(visitorTracking)
 
 // Health check endpoints
 app.get('/health', (req, res) => {

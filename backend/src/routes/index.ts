@@ -19,6 +19,7 @@ import participantRoutes from './participants.js'
 import registrationRoutes from './registrationRoutes.js'
 // import mediaRoutes from './mediaRoutes.js'
 import systemHealthRoutes from './systemHealthRoutes.js'
+import analyticsRoutes from './analyticsRoutes.js'
 
 const router = Router()
 
@@ -38,6 +39,7 @@ router.use('/', participantRoutes)
 router.use('/registrations', registrationRoutes)
 // router.use('/media', mediaRoutes)
 router.use('/system', systemHealthRoutes)
+router.use('/analytics', analyticsRoutes)
 
 // Basic API routes for frontend functionality
 router.get('/events', getEvents)

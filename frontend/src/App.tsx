@@ -7,6 +7,7 @@ import Footer from './components/Footer';
 import AdminIndicator from './components/AdminIndicator';
 import RouteLoader from './components/RouteLoader';
 import ErrorBoundary from './components/ErrorBoundary';
+import VisitorTracker from './components/VisitorTracker';
 import {
   AdminRoute,
   UserRoute,
@@ -89,6 +90,7 @@ function App() {
         </motion.main>
         <Footer />
         <AdminIndicator position="bottom-right" compact={false} />
+        <VisitorTracker showVisitorId={process.env.NODE_ENV === 'development'} />
       </div>
     </AuthProvider>
   );
