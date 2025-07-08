@@ -8,7 +8,7 @@ High-end social event platform for affluent individuals (NT$5M+ income, NT$30M+ 
 
 **Status**: Phase 1-3 Complete ✅ - 15/15 major system components production ready  
 **Current Phase**: Phase 4 - Build System Fixes & TypeScript Optimization ✅ Major Progress
-**Latest Update**: Critical Build Issues Resolved - DuckDB connection, TypeScript errors, Express routes fixed
+**Latest Update**: Sales Management System Fixed - Backend routes enabled, comprehensive CRM API now accessible
 
 📖 **[Full Project Overview](docs/PROJECT_OVERVIEW.md)**
 
@@ -45,11 +45,12 @@ npm run test     # Run tests
 - **Event Data Seeding System (12 Luxury Events)**
 - **Frontend UI Bug Fixes (Dropdown Menu Visibility)**
 
-### ✅ Recently Completed - Phase 4 Build System Fixes
-- **Backend Build Issues** - Fixed DuckDB connection methods, controller return types, Express route handlers
-- **TypeScript Configuration** - Optimized strict mode settings for faster development builds  
-- **Frontend Type Declarations** - Added lucide-react type definitions for icon library
-- **Migration System** - Fixed logger imports and database initialization
+### ✅ Recently Completed - Sales Management System Fix
+- **Sales Backend Routes** - Enabled comprehensive CRM API endpoints (leads, opportunities, activities, metrics)
+- **Lead Management API** - Automatic scoring, status tracking, assignment system
+- **Opportunity Management API** - Pipeline stages, probability tracking, value management
+- **Sales Analytics API** - Comprehensive metrics, conversion rates, team performance
+- **Previous Fixes** - Backend build issues, TypeScript configuration, frontend type declarations
 
 📖 **[Detailed System Status](docs/systems/COMPLETED_SYSTEMS.md)**  
 📖 **[Current Development Status](docs/systems/DEVELOPMENT_STATUS.md)**
@@ -129,6 +130,14 @@ npm run test     # Run tests
 - `GET /api/events` - List events
 - `POST /api/events` - Create event (Admin+)
 - `GET /api/events/:id` - Event details
+
+### Sales Management
+- `GET /api/sales/leads` - Lead management with automatic scoring
+- `GET /api/sales/opportunities` - Opportunity pipeline tracking
+- `GET /api/sales/activities` - Activity and interaction logging
+- `GET /api/sales/metrics` - Sales analytics and reporting
+- `GET /api/sales/pipeline/stages` - Pipeline configuration
+- `GET /api/sales/team` - Sales team management
 
 ### Admin
 - `GET /api/admin/users` - User management (Admin+)
