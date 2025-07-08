@@ -335,7 +335,7 @@ const RegisterPage = () => {
     <div className="space-y-6">
       <div>
         <label htmlFor="annualIncome" className="block text-luxury-platinum text-sm font-medium mb-2">
-          年收入 (新台幣) *
+          年收入 (新台幣萬元) *
         </label>
         <div className="relative">
           <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-luxury-gold" />
@@ -356,7 +356,7 @@ const RegisterPage = () => {
 
       <div>
         <label htmlFor="netWorth" className="block text-luxury-platinum text-sm font-medium mb-2">
-          淨資產 (新台幣) *
+          淨資產 (新台幣萬元) *
         </label>
         <div className="relative">
           <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-luxury-gold" />
