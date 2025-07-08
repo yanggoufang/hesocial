@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { 
   TrendingUp, 
   Users, 
-  Target,
+  Crosshair,
   Activity,
   DollarSign,
   Phone,
@@ -430,7 +430,7 @@ const SalesManagement: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <Target className="w-4 h-4" />
+                    <Crosshair className="w-4 h-4" />
                     銷售商機
                   </div>
                 </button>
@@ -699,7 +699,7 @@ const SalesManagement: React.FC = () => {
                     <p className="text-sm font-medium text-luxury-platinum/70">總商機數</p>
                     <p className="text-3xl font-bold text-luxury-platinum">{metrics.totalOpportunities}</p>
                   </div>
-                  <Target className="w-8 h-8 text-luxury-gold" />
+                  <Crosshair className="w-8 h-8 text-luxury-gold" />
                 </div>
               </div>
               
@@ -812,7 +812,6 @@ const SalesManagement: React.FC = () => {
           </div>
         )}
         </motion.div>
-      </div>
       </div>
     </div>
   )
