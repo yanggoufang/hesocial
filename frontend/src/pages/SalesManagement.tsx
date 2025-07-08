@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
 import { 
   TrendingUp, 
@@ -340,207 +341,217 @@ const SalesManagement: React.FC = () => {
 
   if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">存取被拒</h1>
-          <p className="text-gray-600">您沒有權限存取銷售管理系統。</p>
-        </div>
+      <div className="min-h-screen bg-luxury-midnight-black flex items-center justify-center">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="text-center"
+        >
+          <Shield className="w-16 h-16 text-luxury-gold mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-luxury-platinum mb-2">存取被拒</h1>
+          <p className="text-luxury-platinum/70">您沒有權限存取銷售管理系統。</p>
+        </motion.div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <TrendingUp className="w-8 h-8 text-purple-600" />
-                銷售管理系統
-              </h1>
-              <p className="text-gray-600 mt-2">管理銷售線索、商機與績效分析</p>
-            </div>
-            <button
-              onClick={() => {
-                if (activeTab === 'leads') fetchLeads()
-                else if (activeTab === 'opportunities') fetchOpportunities()
-                else fetchMetrics()
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-              重新整理
-            </button>
-          </div>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <XCircle className="w-5 h-5 text-red-600 mr-2" />
-              <p className="text-red-800">{error}</p>
+    <div className="min-h-screen bg-luxury-midnight-black py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-luxury-platinum flex items-center gap-3">
+                  <TrendingUp className="w-8 h-8 text-luxury-gold" />
+                  銷售管理系統
+                </h1>
+                <p className="text-luxury-platinum/70 mt-2">管理銷售線索、商機與績效分析</p>
+              </div>
               <button
-                onClick={() => setError(null)}
-                className="ml-auto text-red-600 hover:text-red-800"
+                onClick={() => {
+                  if (activeTab === 'leads') fetchLeads()
+                  else if (activeTab === 'opportunities') fetchOpportunities()
+                  else fetchMetrics()
+                }}
+                className="luxury-button"
               >
-                <XCircle className="w-4 h-4" />
+                <RefreshCw className="w-4 h-4" />
+                重新整理
               </button>
             </div>
           </div>
-        )}
 
-        {/* Tabs */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab('leads')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'leads'
-                    ? 'border-purple-500 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  銷售線索
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('opportunities')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'opportunities'
-                    ? 'border-purple-500 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4" />
-                  銷售商機
-                </div>
-              </button>
-              <button
-                onClick={() => setActiveTab('metrics')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'metrics'
-                    ? 'border-purple-500 text-purple-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  績效分析
-                </div>
-              </button>
-            </nav>
-          </div>
-        </div>
-
-        {/* Content */}
-        {activeTab === 'leads' && (
-          <div>
-            {/* Leads Search & Filters */}
-            <div className="bg-white rounded-lg shadow-sm border mb-6 p-4">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="搜尋線索..."
-                    value={leadFilters.search}
-                    onChange={(e) => setLeadFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-                <select
-                  value={leadFilters.status}
-                  onChange={(e) => setLeadFilters(prev => ({ ...prev, status: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 luxury-glass border border-red-500/20 rounded-lg p-4">
+              <div className="flex items-center">
+                <XCircle className="w-5 h-5 text-red-400 mr-2" />
+                <p className="text-red-300">{error}</p>
+                <button
+                  onClick={() => setError(null)}
+                  className="ml-auto text-red-400 hover:text-red-300"
                 >
-                  <option value="">所有狀態</option>
-                  <option value="new">新線索</option>
-                  <option value="qualified">已審核</option>
-                  <option value="contacted">已聯繫</option>
-                  <option value="nurturing">培養中</option>
-                </select>
-                <button className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                  <Plus className="w-4 h-4" />
-                  新增線索
+                  <XCircle className="w-4 h-4" />
                 </button>
               </div>
             </div>
+          )}
 
-            {/* Leads Table */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
-                  <span className="ml-2 text-gray-600">載入中...</span>
+          {/* Tabs */}
+          <div className="mb-6">
+            <div className="border-b border-luxury-gold/20">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('leads')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === 'leads'
+                      ? 'border-luxury-gold text-luxury-gold'
+                      : 'border-transparent text-luxury-platinum/70 hover:text-luxury-platinum hover:border-luxury-gold/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    銷售線索
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('opportunities')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === 'opportunities'
+                      ? 'border-luxury-gold text-luxury-gold'
+                      : 'border-transparent text-luxury-platinum/70 hover:text-luxury-platinum hover:border-luxury-gold/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4" />
+                    銷售商機
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('metrics')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === 'metrics'
+                      ? 'border-luxury-gold text-luxury-gold'
+                      : 'border-transparent text-luxury-platinum/70 hover:text-luxury-platinum hover:border-luxury-gold/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4" />
+                    績效分析
+                  </div>
+                </button>
+              </nav>
+            </div>
+          </div>
+
+          {/* Content */}
+          {activeTab === 'leads' && (
+            <div>
+              {/* Leads Search & Filters */}
+              <div className="luxury-glass rounded-lg border border-luxury-gold/20 mb-6 p-4">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-luxury-platinum/50" />
+                    <input
+                      type="text"
+                      placeholder="搜尋線索..."
+                      value={leadFilters.search}
+                      onChange={(e) => setLeadFilters(prev => ({ ...prev, search: e.target.value }))}
+                      className="w-full pl-10 pr-4 py-2 bg-luxury-midnight-black/50 border border-luxury-gold/20 rounded-lg text-luxury-platinum placeholder-luxury-platinum/50 focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold"
+                    />
+                  </div>
+                  <select
+                    value={leadFilters.status}
+                    onChange={(e) => setLeadFilters(prev => ({ ...prev, status: e.target.value }))}
+                    className="px-3 py-2 bg-luxury-midnight-black/50 border border-luxury-gold/20 rounded-lg text-luxury-platinum focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold"
+                  >
+                    <option value="">所有狀態</option>
+                    <option value="new">新線索</option>
+                    <option value="qualified">已審核</option>
+                    <option value="contacted">已聯繫</option>
+                    <option value="nurturing">培養中</option>
+                  </select>
+                  <button className="luxury-button">
+                    <Plus className="w-4 h-4" />
+                    新增線索
+                  </button>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">線索資訊</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分數</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">狀態</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">財務資訊</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">下次跟進</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {leads.map((lead) => (
-                        <tr key={lead.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{lead.firstName} {lead.lastName}</div>
-                              <div className="text-sm text-gray-500">{lead.email}</div>
-                              <div className="text-xs text-gray-400">{lead.company} - {lead.position}</div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="text-sm font-medium text-gray-900">{lead.leadScore}</div>
-                              <div className="ml-2 w-16 bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className="bg-purple-600 h-2 rounded-full" 
-                                  style={{ width: `${lead.leadScore}%` }}
-                                ></div>
+              </div>
+
+              {/* Leads Table */}
+              <div className="luxury-glass rounded-lg border border-luxury-gold/20 overflow-hidden">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="w-6 h-6 text-luxury-gold animate-spin" />
+                    <span className="ml-2 text-luxury-platinum">載入中...</span>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-luxury-midnight-black/30">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-luxury-gold uppercase tracking-wider">線索資訊</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-luxury-gold uppercase tracking-wider">分數</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-luxury-gold uppercase tracking-wider">狀態</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-luxury-gold uppercase tracking-wider">財務資訊</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-luxury-gold uppercase tracking-wider">下次跟進</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-luxury-gold uppercase tracking-wider">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-luxury-gold/10">
+                        {leads.map((lead) => (
+                          <tr key={lead.id} className="hover:bg-luxury-gold/5 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div>
+                                <div className="text-sm font-medium text-luxury-platinum">{lead.firstName} {lead.lastName}</div>
+                                <div className="text-sm text-luxury-platinum/70">{lead.email}</div>
+                                <div className="text-xs text-luxury-platinum/50">{lead.company} - {lead.position}</div>
                               </div>
-                            </div>
-                          </td>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="text-sm font-medium text-luxury-gold">{lead.leadScore}</div>
+                                <div className="ml-2 w-16 bg-luxury-midnight-black/50 rounded-full h-2">
+                                  <div 
+                                    className="bg-luxury-gold h-2 rounded-full" 
+                                    style={{ width: `${lead.leadScore}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {getLeadStatusBadge(lead.status)}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <div>年收: {formatCurrency(lead.annualIncome)}</div>
-                            <div className="text-gray-500">淨值: {formatCurrency(lead.netWorth)}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {lead.nextFollowUpDate ? new Date(lead.nextFollowUpDate).toLocaleDateString() : '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex items-center justify-end gap-2">
-                              <button className="text-gray-600 hover:text-gray-900">
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button className="text-blue-600 hover:text-blue-900">
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button className="text-green-600 hover:text-green-900">
-                                <Phone className="w-4 h-4" />
-                              </button>
-                              <button className="text-purple-600 hover:text-purple-900">
-                                <Mail className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-luxury-platinum">
+                              <div>年收: {formatCurrency(lead.annualIncome)}</div>
+                              <div className="text-luxury-platinum/70">淨值: {formatCurrency(lead.netWorth)}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-luxury-platinum/70">
+                              {lead.nextFollowUpDate ? new Date(lead.nextFollowUpDate).toLocaleDateString() : '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex items-center justify-end gap-2">
+                                <button className="text-luxury-platinum/70 hover:text-luxury-platinum transition-colors">
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button className="text-luxury-gold/70 hover:text-luxury-gold transition-colors">
+                                  <Edit className="w-4 h-4" />
+                                </button>
+                                <button className="text-green-400/70 hover:text-green-400 transition-colors">
+                                  <Phone className="w-4 h-4" />
+                                </button>
+                                <button className="text-blue-400/70 hover:text-blue-400 transition-colors">
+                                  <Mail className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
                         </tr>
                       ))}
                     </tbody>
@@ -551,38 +562,38 @@ const SalesManagement: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'opportunities' && (
-          <div>
-            {/* Opportunities Filters */}
-            <div className="bg-white rounded-lg shadow-sm border mb-6 p-4">
-              <div className="flex items-center gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="搜尋商機..."
-                    value={oppFilters.search}
-                    onChange={(e) => setOppFilters(prev => ({ ...prev, search: e.target.value }))}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
+          {activeTab === 'opportunities' && (
+            <div>
+              {/* Opportunities Filters */}
+              <div className="luxury-glass rounded-lg border border-luxury-gold/20 mb-6 p-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-luxury-platinum/50" />
+                    <input
+                      type="text"
+                      placeholder="搜尋商機..."
+                      value={oppFilters.search}
+                      onChange={(e) => setOppFilters(prev => ({ ...prev, search: e.target.value }))}
+                      className="w-full pl-10 pr-4 py-2 bg-luxury-midnight-black/50 border border-luxury-gold/20 rounded-lg text-luxury-platinum placeholder-luxury-platinum/50 focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold"
+                    />
+                  </div>
+                  <select
+                    value={oppFilters.stage}
+                    onChange={(e) => setOppFilters(prev => ({ ...prev, stage: e.target.value }))}
+                    className="px-3 py-2 bg-luxury-midnight-black/50 border border-luxury-gold/20 rounded-lg text-luxury-platinum focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold"
+                  >
+                    <option value="">所有階段</option>
+                    <option value="qualification">資格審核</option>
+                    <option value="needs_analysis">需求分析</option>
+                    <option value="proposal">提案階段</option>
+                    <option value="negotiation">談判中</option>
+                  </select>
+                  <button className="luxury-button">
+                    <Plus className="w-4 h-4" />
+                    新增商機
+                  </button>
                 </div>
-                <select
-                  value={oppFilters.stage}
-                  onChange={(e) => setOppFilters(prev => ({ ...prev, stage: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="">所有階段</option>
-                  <option value="qualification">資格審核</option>
-                  <option value="needs_analysis">需求分析</option>
-                  <option value="proposal">提案階段</option>
-                  <option value="negotiation">談判中</option>
-                </select>
-                <button className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                  <Plus className="w-4 h-4" />
-                  新增商機
-                </button>
               </div>
-            </div>
 
             {/* Opportunities Table */}
             <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
@@ -662,144 +673,146 @@ const SalesManagement: React.FC = () => {
           <div>
             {/* Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">總線索數</p>
-                    <p className="text-3xl font-bold text-gray-900">{metrics.totalLeads}</p>
+                    <p className="text-sm font-medium text-luxury-platinum/70">總線索數</p>
+                    <p className="text-3xl font-bold text-luxury-platinum">{metrics.totalLeads}</p>
                   </div>
-                  <Users className="w-8 h-8 text-blue-600" />
+                  <Users className="w-8 h-8 text-luxury-gold" />
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">合格線索</p>
-                    <p className="text-3xl font-bold text-gray-900">{metrics.qualifiedLeads}</p>
+                    <p className="text-sm font-medium text-luxury-platinum/70">合格線索</p>
+                    <p className="text-3xl font-bold text-luxury-platinum">{metrics.qualifiedLeads}</p>
                   </div>
-                  <CheckCircle className="w-8 h-8 text-green-600" />
+                  <CheckCircle className="w-8 h-8 text-green-400" />
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">總商機數</p>
-                    <p className="text-3xl font-bold text-gray-900">{metrics.totalOpportunities}</p>
+                    <p className="text-sm font-medium text-luxury-platinum/70">總商機數</p>
+                    <p className="text-3xl font-bold text-luxury-platinum">{metrics.totalOpportunities}</p>
                   </div>
-                  <Target className="w-8 h-8 text-purple-600" />
+                  <Target className="w-8 h-8 text-luxury-gold" />
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">管道總值</p>
-                    <p className="text-3xl font-bold text-gray-900">{formatCurrency(metrics.totalPipelineValue)}</p>
+                    <p className="text-sm font-medium text-luxury-platinum/70">管道總值</p>
+                    <p className="text-3xl font-bold text-luxury-platinum">{formatCurrency(metrics.totalPipelineValue)}</p>
                   </div>
-                  <DollarSign className="w-8 h-8 text-yellow-600" />
+                  <DollarSign className="w-8 h-8 text-yellow-400" />
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">成交數</p>
-                    <p className="text-3xl font-bold text-gray-900">{metrics.wonDeals}</p>
+                    <p className="text-sm font-medium text-luxury-platinum/70">成交數</p>
+                    <p className="text-3xl font-bold text-luxury-platinum">{metrics.wonDeals}</p>
                   </div>
-                  <CheckCircle className="w-8 h-8 text-emerald-600" />
+                  <CheckCircle className="w-8 h-8 text-emerald-400" />
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">轉換率</p>
-                    <p className="text-3xl font-bold text-gray-900">{metrics.conversionRate}%</p>
+                    <p className="text-sm font-medium text-luxury-platinum/70">轉換率</p>
+                    <p className="text-3xl font-bold text-luxury-platinum">{metrics.conversionRate}%</p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-indigo-600" />
+                  <TrendingUp className="w-8 h-8 text-luxury-gold" />
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">平均成交金額</p>
-                    <p className="text-3xl font-bold text-gray-900">{formatCurrency(metrics.averageDealSize)}</p>
+                    <p className="text-sm font-medium text-luxury-platinum/70">平均成交金額</p>
+                    <p className="text-3xl font-bold text-luxury-platinum">{formatCurrency(metrics.averageDealSize)}</p>
                   </div>
-                  <DollarSign className="w-8 h-8 text-orange-600" />
+                  <DollarSign className="w-8 h-8 text-orange-400" />
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
+              <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">銷售週期</p>
-                    <p className="text-3xl font-bold text-gray-900">{metrics.salesCycleLength} 天</p>
+                    <p className="text-sm font-medium text-luxury-platinum/70">銷售週期</p>
+                    <p className="text-3xl font-bold text-luxury-platinum">{metrics.salesCycleLength} 天</p>
                   </div>
-                  <Calendar className="w-8 h-8 text-red-600" />
+                  <Calendar className="w-8 h-8 text-red-400" />
                 </div>
               </div>
             </div>
 
             {/* Additional Analytics */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">銷售漏斗</h3>
+              <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
+                <h3 className="text-lg font-medium text-luxury-platinum mb-4">銷售漏斗</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">新線索</span>
-                    <span className="text-sm font-medium">67</span>
+                    <span className="text-sm text-luxury-platinum/70">新線索</span>
+                    <span className="text-sm font-medium text-luxury-gold">67</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">合格線索</span>
-                    <span className="text-sm font-medium">89</span>
+                    <span className="text-sm text-luxury-platinum/70">合格線索</span>
+                    <span className="text-sm font-medium text-luxury-gold">89</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">提案階段</span>
-                    <span className="text-sm font-medium">34</span>
+                    <span className="text-sm text-luxury-platinum/70">提案階段</span>
+                    <span className="text-sm font-medium text-luxury-gold">34</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">談判中</span>
-                    <span className="text-sm font-medium">18</span>
+                    <span className="text-sm text-luxury-platinum/70">談判中</span>
+                    <span className="text-sm font-medium text-luxury-gold">18</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">成交</span>
-                    <span className="text-sm font-medium">18</span>
+                    <span className="text-sm text-luxury-platinum/70">成交</span>
+                    <span className="text-sm font-medium text-luxury-gold">18</span>
                   </div>
                 </div>
               </div>
               
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">會員等級分布</h3>
+              <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
+                <h3 className="text-lg font-medium text-luxury-platinum mb-4">會員等級分布</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm text-gray-600">Platinum</span>
+                      <Star className="w-4 h-4 text-luxury-platinum/70" />
+                      <span className="text-sm text-luxury-platinum/70">Platinum</span>
                     </div>
-                    <span className="text-sm font-medium">12</span>
+                    <span className="text-sm font-medium text-luxury-gold">12</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Crown className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm text-gray-600">Diamond</span>
+                      <Crown className="w-4 h-4 text-blue-400" />
+                      <span className="text-sm text-luxury-platinum/70">Diamond</span>
                     </div>
-                    <span className="text-sm font-medium">15</span>
+                    <span className="text-sm font-medium text-luxury-gold">15</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-black" />
-                      <span className="text-sm text-gray-600">Black Card</span>
+                      <Shield className="w-4 h-4 text-luxury-gold" />
+                      <span className="text-sm text-luxury-platinum/70">Black Card</span>
                     </div>
-                    <span className="text-sm font-medium">7</span>
+                    <span className="text-sm font-medium text-luxury-gold">7</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         )}
+        </motion.div>
+      </div>
       </div>
     </div>
   )
