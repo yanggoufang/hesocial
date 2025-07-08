@@ -4,7 +4,7 @@ import { Registration, ApiResponse, AuthenticatedRequest } from '../types/index.
 import logger from '../utils/logger.js'
 
 // Event Registration Management
-export const registerForEvent = async (req: AuthenticatedRequest, res: Response) => {
+export const registerForEvent = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
     const { eventId } = req.params
     const { specialRequests } = req.body
@@ -140,7 +140,7 @@ export const registerForEvent = async (req: AuthenticatedRequest, res: Response)
 
     logger.info(`User ${userId} registered for event ${eventId}`)
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: {
         registrationId,
@@ -150,14 +150,14 @@ export const registerForEvent = async (req: AuthenticatedRequest, res: Response)
     })
   } catch (error) {
     logger.error('Error registering for event:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to register for event'
     })
   }
 }
 
-export const getUserRegistrations = async (req: AuthenticatedRequest, res: Response) => {
+export const getUserRegistrations = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
     const userId = req.user?.id
     const { page = 1, limit = 20, status } = req.query
@@ -219,17 +219,17 @@ export const getUserRegistrations = async (req: AuthenticatedRequest, res: Respo
       }
     }
 
-    res.json(response)
+    return res.json(response)
   } catch (error) {
     logger.error('Error fetching user registrations:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch registrations'
     })
   }
 }
 
-export const getRegistrationById = async (req: AuthenticatedRequest, res: Response) => {
+export const getRegistrationById = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
     const { id } = req.params
     const userId = req.user?.id
@@ -281,20 +281,20 @@ export const getRegistrationById = async (req: AuthenticatedRequest, res: Respon
       })
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: result.rows[0]
     })
   } catch (error) {
     logger.error('Error fetching registration details:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch registration details'
     })
   }
 }
 
-export const updateRegistration = async (req: AuthenticatedRequest, res: Response) => {
+export const updateRegistration = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
     const { id } = req.params
     const { specialRequests } = req.body
@@ -359,20 +359,20 @@ export const updateRegistration = async (req: AuthenticatedRequest, res: Respons
 
     logger.info(`Registration ${id} updated by user ${userId}`)
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Registration updated successfully'
     })
   } catch (error) {
     logger.error('Error updating registration:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to update registration'
     })
   }
 }
 
-export const cancelRegistration = async (req: AuthenticatedRequest, res: Response) => {
+export const cancelRegistration = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
     const { id } = req.params
     const userId = req.user?.id
@@ -446,13 +446,13 @@ export const cancelRegistration = async (req: AuthenticatedRequest, res: Respons
 
     logger.info(`Registration ${id} cancelled by user ${userId}`)
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Registration cancelled successfully'
     })
   } catch (error) {
     logger.error('Error cancelling registration:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to cancel registration'
     })
@@ -460,7 +460,7 @@ export const cancelRegistration = async (req: AuthenticatedRequest, res: Respons
 }
 
 // Admin functions for registration management
-export const getAllRegistrations = async (req: Request, res: Response) => {
+export const getAllRegistrations = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { 
       page = 1, 
@@ -550,17 +550,17 @@ export const getAllRegistrations = async (req: Request, res: Response) => {
       }
     }
 
-    res.json(response)
+    return res.json(response)
   } catch (error) {
     logger.error('Error fetching all registrations:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch registrations'
     })
   }
 }
 
-export const approveRegistration = async (req: Request, res: Response) => {
+export const approveRegistration = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id } = req.params
     const { approved, notes } = req.body
@@ -589,20 +589,20 @@ export const approveRegistration = async (req: Request, res: Response) => {
 
     logger.info(`Registration ${id} ${status} by admin`)
 
-    res.json({
+    return res.json({
       success: true,
       message: `Registration ${status} successfully`
     })
   } catch (error) {
     logger.error('Error approving registration:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to update registration status'
     })
   }
 }
 
-export const updatePaymentStatus = async (req: Request, res: Response) => {
+export const updatePaymentStatus = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id } = req.params
     const { paymentStatus, paymentIntentId } = req.body
@@ -629,13 +629,13 @@ export const updatePaymentStatus = async (req: Request, res: Response) => {
 
     logger.info(`Registration ${id} payment status updated to ${paymentStatus}`)
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Payment status updated successfully'
     })
   } catch (error) {
     logger.error('Error updating payment status:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to update payment status'
     })

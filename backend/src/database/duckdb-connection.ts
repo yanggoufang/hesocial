@@ -45,6 +45,51 @@ class DuckDBConnection {
     })
   }
 
+  prepare(sql: string) {
+    if (!this.connection) {
+      throw new Error('Database not connected')
+    }
+    
+    return {
+      run: async (...params: any[]) => {
+        return new Promise((resolve, reject) => {
+          this.connection!.run(sql, ...params, (err: Error | null, result: any) => {
+            if (err) {
+              logger.error('DuckDB prepare run error:', { sql, params, error: err.message })
+              reject(err)
+            } else {
+              resolve(result)
+            }
+          })
+        })
+      },
+      get: async (...params: any[]) => {
+        return new Promise((resolve, reject) => {
+          this.connection!.all(sql, ...params, (err: Error | null, result: any) => {
+            if (err) {
+              logger.error('DuckDB prepare get error:', { sql, params, error: err.message })
+              reject(err)
+            } else {
+              resolve(result && result.length > 0 ? result[0] : null)
+            }
+          })
+        })
+      },
+      all: async (...params: any[]) => {
+        return new Promise((resolve, reject) => {
+          this.connection!.all(sql, ...params, (err: Error | null, result: any) => {
+            if (err) {
+              logger.error('DuckDB prepare all error:', { sql, params, error: err.message })
+              reject(err)
+            } else {
+              resolve(result || [])
+            }
+          })
+        })
+      }
+    }
+  }
+
   async close(): Promise<void> {
     try {
       if (this.connection) {

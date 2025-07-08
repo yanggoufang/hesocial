@@ -13,7 +13,7 @@ import {
 import logger from '../utils/logger.js'
 
 // Sales Leads Management
-export const getLeads = async (req: Request, res: Response) => {
+export const getLeads = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { 
       page = 1, 
@@ -86,17 +86,17 @@ export const getLeads = async (req: Request, res: Response) => {
       }
     }
 
-    res.json(response)
+    return res.json(response)
   } catch (error) {
     logger.error('Error fetching sales leads:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch sales leads'
     })
   }
 }
 
-export const getLeadById = async (req: Request, res: Response) => {
+export const getLeadById = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id } = req.params
     
@@ -118,13 +118,13 @@ export const getLeadById = async (req: Request, res: Response) => {
       })
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: result.rows[0]
     })
   } catch (error) {
     logger.error('Error fetching lead by ID:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch lead'
     })
@@ -192,7 +192,7 @@ export const createLead = async (req: AuthenticatedRequest, res: Response) => {
   }
 }
 
-export const updateLead = async (req: AuthenticatedRequest, res: Response) => {
+export const updateLead = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
     const { id } = req.params
     const updates = req.body
@@ -227,21 +227,21 @@ export const updateLead = async (req: AuthenticatedRequest, res: Response) => {
       })
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: result.rows[0],
       message: 'Lead updated successfully'
     })
   } catch (error) {
     logger.error('Error updating lead:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to update lead'
     })
   }
 }
 
-export const deleteLead = async (req: Request, res: Response) => {
+export const deleteLead = async (req: Request, res: Response): Promise<Response> => {
   try {
     const { id } = req.params
     
@@ -255,13 +255,13 @@ export const deleteLead = async (req: Request, res: Response) => {
       })
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Lead deleted successfully'
     })
   } catch (error) {
     logger.error('Error deleting lead:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to delete lead'
     })
@@ -385,7 +385,7 @@ export const createOpportunity = async (req: AuthenticatedRequest, res: Response
   }
 }
 
-export const updateOpportunity = async (req: AuthenticatedRequest, res: Response) => {
+export const updateOpportunity = async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
   try {
     const { id } = req.params
     const updates = req.body
@@ -420,14 +420,14 @@ export const updateOpportunity = async (req: AuthenticatedRequest, res: Response
       })
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: result.rows[0],
       message: 'Opportunity updated successfully'
     })
   } catch (error) {
     logger.error('Error updating opportunity:', error)
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to update opportunity'
     })
