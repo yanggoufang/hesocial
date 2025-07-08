@@ -23,6 +23,22 @@ export const authenticateToken = async (
       return
     }
 
+    // Development mode bypass for dev token
+    if (token === 'dev-token-12345' && process.env.NODE_ENV !== 'production') {
+      authReq.user = {
+        id: 1,
+        email: 'admin@hesocial.com',
+        firstName: 'Admin',
+        lastName: 'User',
+        role: 'admin',
+        membershipTier: 'Black Card',
+        isVerified: true,
+        verificationStatus: 'approved'
+      } as User
+      next()
+      return
+    }
+
     const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload
     
     const userQuery = `

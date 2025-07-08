@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { requireAdmin } from '../middleware/auth.js'
+import { authenticateToken, requireAdmin } from '../middleware/auth.js'
 import {
   getSystemHealth,
   getDetailedHealthCheck,
@@ -9,7 +9,8 @@ import {
 
 const router = Router()
 
-// All system health routes require admin access
+// All system health routes require authentication and admin access
+router.use(authenticateToken)
 router.use(requireAdmin)
 
 /**

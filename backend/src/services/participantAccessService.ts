@@ -1,4 +1,4 @@
-import { Database } from 'better-sqlite3'
+import { getDuckDBConnection } from '../database/duckdb-connection.js'
 import { 
   ParticipantViewAccess, 
   FilteredParticipantInfo, 
@@ -10,23 +10,24 @@ import {
 import logger from '../utils/logger.js'
 
 export class ParticipantAccessService {
-  constructor(private db: Database) {}
+  constructor(private db: any) {}
 
   /**
    * Get participant view access level for a user
    */
-  getParticipantViewAccess(
+  async getParticipantViewAccess(
     userId: string,
     eventId: string,
     membershipTier: string
-  ): ParticipantViewAccess {
+  ): Promise<ParticipantViewAccess> {
     try {
       // Check if user has paid access to this event
-      const accessRecord = this.db.prepare(`
+      const result = await this.db.query(`
         SELECT payment_status, access_level, created_at
         FROM event_participant_access 
         WHERE user_id = ? AND event_id = ?
-      `).get(userId, eventId) as any
+      `, [userId, eventId])
+      const accessRecord = result.rows[0]
 
       // Default no access
       if (!accessRecord || accessRecord.payment_status !== 'paid') {
@@ -74,23 +75,25 @@ export class ParticipantAccessService {
   /**
    * Check if user has access to view participants for an event
    */
-  checkParticipantAccess(userId: string, eventId: string): ParticipantAccessCheckResponse {
+  async checkParticipantAccess(userId: string, eventId: string): Promise<ParticipantAccessCheckResponse> {
     try {
       // Get user's membership tier
-      const user = this.db.prepare('SELECT membership_tier FROM users WHERE id = ?').get(userId) as any
+      const userResult = await this.db.query('SELECT membership_tier FROM users WHERE id = ?', [userId])
+      const user = userResult.rows[0]
       if (!user) {
         throw new Error('User not found')
       }
 
       // Get registration and access status
-      const registration = this.db.prepare(`
+      const registrationResult = await this.db.query(`
         SELECT r.status, r.payment_status, epa.access_level
         FROM registrations r
         LEFT JOIN event_participant_access epa ON r.id = epa.registration_id
         WHERE r.user_id = ? AND r.event_id = ?
-      `).get(userId, eventId) as any
+      `, [userId, eventId])
+      const registration = registrationResult.rows[0]
 
-      const accessLevel = this.getParticipantViewAccess(userId, eventId, user.membership_tier)
+      const accessLevel = await this.getParticipantViewAccess(userId, eventId, user.membership_tier)
 
       return {
         hasAccess: accessLevel.canViewParticipants,
@@ -120,7 +123,7 @@ export class ParticipantAccessService {
   /**
    * Get filtered participant information based on privacy levels and viewer access
    */
-  getEventParticipants(
+  async getEventParticipants(
     eventId: string,
     viewerId: string,
     page: number = 1,
@@ -130,19 +133,20 @@ export class ParticipantAccessService {
       profession?: string
       minPrivacyLevel?: number
     } = {}
-  ): ParticipantListResponse {
+  ): Promise<ParticipantListResponse> {
     try {
       // Get viewer's access level
-      const viewer = this.db.prepare('SELECT membership_tier FROM users WHERE id = ?').get(viewerId) as any
+      const viewerResult = await this.db.query('SELECT membership_tier FROM users WHERE id = ?', [viewerId])
+      const viewer = viewerResult.rows[0]
       if (!viewer) {
         throw new Error('Viewer not found')
       }
 
-      const viewerAccess = this.getParticipantViewAccess(viewerId, eventId, viewer.membership_tier)
+      const viewerAccess = await this.getParticipantViewAccess(viewerId, eventId, viewer.membership_tier)
 
       // If no access, return limited information
       if (!viewerAccess.canViewParticipants) {
-        const totalCount = this.getParticipantCounts(eventId)
+        const totalCount = await this.getParticipantCounts(eventId)
         return {
           participants: [],
           totalCount: totalCount.total,
@@ -201,7 +205,8 @@ export class ParticipantAccessService {
         WHERE ${whereClause}
       `
       
-      const totalCount = this.db.prepare(countQuery).get(eventId, ...queryParams) as any
+      const totalCountResult = await this.db.query(countQuery, [eventId, ...queryParams])
+      const totalCount = totalCountResult.rows[0]
 
       // Get participants with pagination
       const offset = (page - 1) * limit
@@ -422,17 +427,18 @@ export class ParticipantAccessService {
   /**
    * Get participant counts and statistics
    */
-  private getParticipantCounts(eventId: string) {
-    const counts = this.db.prepare(`
+  private async getParticipantCounts(eventId: string) {
+    const countsResult = await this.db.query(`
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN epa.payment_status = 'paid' THEN 1 ELSE 0 END) as paid,
         SUM(CASE WHEN epa.payment_status != 'paid' THEN 1 ELSE 0 END) as unpaid
       FROM event_participant_access epa
       WHERE epa.event_id = ?
-    `).get(eventId) as any
+    `, [eventId])
+    const counts = countsResult.rows[0]
 
-    const byTier = this.db.prepare(`
+    const byTierResult = await this.db.query(`
       SELECT 
         u.membership_tier,
         COUNT(*) as count
@@ -440,7 +446,8 @@ export class ParticipantAccessService {
       JOIN event_participant_access epa ON u.id = epa.user_id
       WHERE epa.event_id = ? AND epa.payment_status = 'paid'
       GROUP BY u.membership_tier
-    `).all(eventId) as any[]
+    `, [eventId])
+    const byTier = byTierResult.rows
 
     const tierCounts: Record<string, number> = {}
     byTier.forEach(tier => {

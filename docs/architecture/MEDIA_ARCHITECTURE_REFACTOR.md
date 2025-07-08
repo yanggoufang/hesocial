@@ -16,17 +16,47 @@ We will refactor the architecture to achieve a clear Separation of Concerns and 
 
 ### 2.1. Database Schema Redesign
 
--   **Create a New `event_media` Table:** This table will store each media item as its own record, providing a flexible "media pack" for each event.
-    -   `id` (Primary Key)
-    -   `event_id` (A foreign key linking back to the `events` table)
-    -   `source_type` (An enum: `'upload'` or `'url'` to support both uploaded files and external links)
-    -   `file_path_or_url` (A text field to store either the R2 file path or the external image URL)
-    -   `type` (An enum: `'image'` or `'document'`)
-    -   `mime_type` (e.g., `'image/jpeg'`)
-    -   `uploaded_by` (A foreign key to the `users` table, nullable for URL-based images)
-    -   `sort_order` (To allow for custom ordering in a gallery)
-    -   `created_at`, `updated_at`
--   **Remove `images` from the `events` Table:** The `images` column will be completely removed from the `events` table.
+**Target Schema (Final):**
+```sql
+event_media (
+    id VARCHAR PRIMARY KEY,
+    event_id VARCHAR NOT NULL,
+    source_type VARCHAR(10) CHECK (source_type IN ('upload', 'url')),
+    file_path_or_url TEXT NOT NULL,
+    type VARCHAR(20) CHECK (type IN ('image', 'document')),
+    mime_type VARCHAR(100),
+    original_filename VARCHAR,
+    file_size BIGINT,
+    thumbnail_path TEXT,
+    sort_order INTEGER DEFAULT 0,
+    uploaded_by VARCHAR,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+**Current Schema (Migration 004):**
+```sql
+event_media (
+    id VARCHAR PRIMARY KEY,
+    event_id VARCHAR NOT NULL,
+    type VARCHAR(20) CHECK (type IN ('image', 'document')), ✅
+    file_path VARCHAR NOT NULL,                              ❌ → file_path_or_url
+    thumbnail_path TEXT,                                     ✅ Extra
+    original_filename VARCHAR NOT NULL,                      ✅ Extra  
+    file_size BIGINT NOT NULL,                              ✅ Extra
+    mime_type VARCHAR(100) NOT NULL,                        ✅
+    uploaded_by VARCHAR NOT NULL,                           ✅
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,         ✅
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP          ✅
+    -- MISSING: source_type, sort_order
+)
+```
+
+**Rolling Plan:**
+-   **Phase 1:** Add missing columns via Migration 005 (additive only)
+-   **Phase 2-3:** Gradually migrate from `events.images` to `event_media` 
+-   **Phase 4:** Remove `events.images` column completely
 
 ### 2.2. `eventController` Responsibilities:
 
@@ -47,34 +77,55 @@ We will refactor the architecture to achieve a clear Separation of Concerns and 
 
 To ensure the application remains available and consistent throughout the refactoring, we will follow a professional, multi-phase rolling deployment strategy.
 
-### Phase 1: Additive & Backward-Compatible Changes
+### Phase 1: Additive & Backward-Compatible Changes ✅ **IN PROGRESS**
 
-1.  **Create an Additive Migration:** Create a new database migration that *only adds* the new `event_media` table. It will **not** drop the old `images` column.
-2.  **Update Application Code (`v2`):**
-    *   **Write to Both:** When creating or updating an event's media, the new code will write to *both* the new `event_media` table *and* the old `events.images` column.
-    *   **Read from New, Fallback to Old:** When reading event media, the new code will prioritize the `event_media` table but will fall back to reading from `events.images` if the new table has no data for that event.
-3.  **Deploy `v2` Code:** Deploy this new version of the application. At this point, both the old code (`v1`) and new code (`v2`) can run simultaneously against the same database without errors.
+**Current Status: 60% Complete**
 
----
+✅ **Completed:**
+1.  **Create Basic `event_media` Table:** Migration 004 created initial `event_media` table with core fields
+2.  **Basic Media Upload:** File upload functionality working through MediaService + R2 storage
+3.  **Permission System:** Admin/organizer authorization partially implemented
 
-### Phase 2: Data Migration (Backfill)
-
-1.  **Run a Data Migration Script:** After `v2` is fully deployed and stable, run a one-time script. This script will read all the data from the old `events.images` column and populate the new `event_media` table for all existing events.
-2.  **Verify Data:** Once this is complete, all data will exist in both the old and new locations, ensuring consistency.
-
----
-
-### Phase 3: Deprecate the Old Column
-
-1.  **Update Application Code (`v3`):** Create a new version of the code that *only* reads from and writes to the new `event_media` table. All logic related to the old `events.images` column will be removed.
-2.  **Deploy `v3` Code:** Deploy this new version, which replaces all `v2` instances. The application now exclusively uses the new, superior schema.
+❌ **Still Required:**
+1.  **Add Missing Columns:** Create migration 005 to add `source_type` and `sort_order` columns
+2.  **Implement Dual-Write Logic:** Update MediaService to write to *both* `event_media` table *and* `events.images` column
+3.  **Implement Dual-Read Logic:** Update controllers to read from `event_media` with fallback to `events.images`
+4.  **Add URL Media Support:** Extend media endpoints to handle external URLs alongside file uploads
+5.  **Deploy v2 Code:** Once dual-read/write implemented, both old and new code can coexist
 
 ---
 
-### Phase 4: Final Cleanup
+### Phase 2: Data Migration (Backfill) ⏳ **PLANNED**
 
-1.  **Create a Final, Destructive Migration:** Now that no running code depends on the old `events.images` column, it is finally safe to drop it. Create a new, simple migration that just contains `ALTER TABLE events DROP COLUMN images;`.
-2.  **Run the Final Migration:** This cleans up the database schema, completing the process with zero downtime.
+**Target: After Phase 1 Complete**
+
+1.  **Create Backfill Script:** Build data migration utility to read from `events.images` array and populate `event_media` table
+2.  **Run Migration:** Execute backfill for all existing events with `images` data  
+3.  **Verify Consistency:** Ensure all data exists in both locations with matching counts
+4.  **Performance Check:** Validate system performance with dual-storage approach
+
+---
+
+### Phase 3: Deprecate the Old Column ⏳ **FUTURE**
+
+**Target: After Phase 2 Complete + 2 weeks stability**
+
+1.  **Update Application Code (`v3`):** Remove all `events.images` read/write logic, use only `event_media` table
+2.  **Update Controllers:** Simplify event controllers to only query `event_media` 
+3.  **Update MediaService:** Remove dual-write logic, write only to `event_media`
+4.  **Deploy `v3` Code:** Replace all instances with new single-source logic
+5.  **Monitor:** Ensure no errors or missing data after deployment
+
+---
+
+### Phase 4: Final Cleanup ⏳ **FINAL**
+
+**Target: After Phase 3 + 1 month production stability**
+
+1.  **Create Migration 006:** `ALTER TABLE events DROP COLUMN images`
+2.  **Final Cleanup:** Remove any remaining legacy code references
+3.  **Documentation Update:** Update API docs and schema documentation
+4.  **Performance Baseline:** Establish new performance metrics without legacy column
 
 ## 4. Benefits
 

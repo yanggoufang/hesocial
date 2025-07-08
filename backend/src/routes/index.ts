@@ -9,16 +9,16 @@ import healthRoutes from './health.js'
 import placeholderRoutes from './placeholderRoutes.js';
 // Temporarily disable other routes that may have import issues
 // import adminRoutes from './admin.js'
-// import authRoutes from './authRoutes.js'
+import authRoutes from './authRoutes.js'
 // import userManagementRoutes from './userManagement.js'
 // import eventManagementRoutes from './eventManagement.js'
 // import venueManagementRoutes from './venueManagement.js'
 // import categoryManagementRoutes from './categoryManagement.js'
 import salesManagementRoutes from './salesManagement.js'
 import participantRoutes from './participants.js'
-// import registrationRoutes from './registrationRoutes.js'
+import registrationRoutes from './registrationRoutes.js'
 // import mediaRoutes from './mediaRoutes.js'
-// import systemHealthRoutes from './systemHealthRoutes.js'
+import systemHealthRoutes from './systemHealthRoutes.js'
 
 const router = Router()
 
@@ -27,7 +27,7 @@ router.use('/health', healthRoutes)
 router.use('/placeholder', placeholderRoutes);
 
 // Temporarily disable other routes that may have import issues
-// router.use('/auth', authRoutes)
+router.use('/auth', authRoutes)
 // router.use('/admin', adminRoutes)
 // router.use('/users', userManagementRoutes)
 // router.use('/events', eventManagementRoutes)
@@ -35,9 +35,9 @@ router.use('/placeholder', placeholderRoutes);
 // router.use('/categories', categoryManagementRoutes)
 router.use('/sales', salesManagementRoutes)
 router.use('/', participantRoutes)
-// router.use('/registrations', registrationRoutes)
+router.use('/registrations', registrationRoutes)
 // router.use('/media', mediaRoutes)
-// router.use('/system', systemHealthRoutes)
+router.use('/system', systemHealthRoutes)
 
 // Basic API routes for frontend functionality
 router.get('/events', getEvents)

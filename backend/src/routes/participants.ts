@@ -1,12 +1,12 @@
 import { Router } from 'express'
 import { AuthenticatedRequest, ApiResponse } from '../types/index.js'
-import { auth } from '../middleware/auth.js'
+import { authenticateToken as auth } from '../middleware/auth.js'
 import ParticipantAccessService from '../services/participantAccessService.js'
-import { getDb } from '../config/database.js'
+import { duckdb } from '../database/duckdb-connection.js'
 import logger from '../utils/logger.js'
 
 const router = Router()
-const participantService = new ParticipantAccessService(getDb())
+const participantService = new ParticipantAccessService(duckdb)
 
 /**
  * GET /api/events/:eventId/participants
@@ -221,7 +221,7 @@ router.put('/events/:eventId/privacy-settings', auth, async (req: AuthenticatedR
       return res.status(400).json(response)
     }
 
-    const db = getDb()
+    const db = duckdb
     
     // Update or insert privacy override
     const stmt = db.prepare(`
@@ -261,7 +261,7 @@ router.get('/events/:eventId/privacy-settings', auth, async (req: AuthenticatedR
     const { eventId } = req.params
     const userId = req.user!.userId
 
-    const db = getDb()
+    const db = duckdb
     
     const settings = db.prepare(`
       SELECT 

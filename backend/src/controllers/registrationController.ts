@@ -140,9 +140,9 @@ export const registerForEvent = async (req: AuthenticatedRequest, res: Response)
 
     // Create initial participant access record
     try {
-      const { getDb } = await import('../config/database.js')
+      const { pool } = await import('../database/duckdb-pool.js')
       const ParticipantAccessService = (await import('../services/participantAccessService.js')).default
-      const participantService = new ParticipantAccessService(getDb())
+      const participantService = new ParticipantAccessService(pool)
       
       participantService.updateParticipantAccess(
         userId,
@@ -663,9 +663,9 @@ export const updatePaymentStatus = async (req: Request, res: Response): Promise<
 
     // Update participant access when payment status changes
     try {
-      const { getDb } = await import('../config/database.js')
+      const { pool } = await import('../database/duckdb-pool.js')
       const ParticipantAccessService = (await import('../services/participantAccessService.js')).default
-      const participantService = new ParticipantAccessService(getDb())
+      const participantService = new ParticipantAccessService(pool)
       
       participantService.updateParticipantAccess(
         registration.user_id,
