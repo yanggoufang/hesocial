@@ -1,23 +1,200 @@
-# API Reference
+# API Reference - HeSocial Platform
 
-## API Design Principles
+**Last Updated**: July 8, 2025  
+**Base URL**: `http://localhost:3001/api` (Development)
 
-- RESTful API endpoints under `/api` prefix
-- Health check endpoints for monitoring
-- Structured error responses with success/error flags
-- Request/response logging for debugging
-- Role-based access control for all protected endpoints
+## 🔐 **Authentication**
 
-## Authentication Endpoints
+All API endpoints require authentication unless specified as **Public**.
 
-### User Authentication
-```bash
-POST /api/auth/register    # User registration with automatic membership tier assignment
-POST /api/auth/login       # Email/password authentication with JWT token generation
-POST /api/auth/refresh     # Refresh JWT token
-POST /api/auth/logout      # Logout (client-side token removal)
-GET  /api/auth/validate    # Validate JWT token and return user data
-GET  /api/auth/profile     # Get authenticated user profile
+### **Authentication Methods**
+- **JWT Token**: Include in `Authorization: Bearer <token>` header
+- **Development Token**: Use `dev-token-12345` for development testing
+- **Cookie Authentication**: Automatic for browser requests
+
+### **Role-Based Access**
+- **Public**: No authentication required
+- **User**: Authenticated user access
+- **Admin**: Admin role required
+- **Super Admin**: Super admin role required
+
+---
+
+## 📊 **VISITOR ANALYTICS** ✅ **NEW - July 8, 2025**
+
+### **GET /api/analytics/visitors**
+**Access**: Admin+  
+**Description**: Get visitor analytics overview
+
+**Query Parameters**:
+- `days` (optional): Number of days to analyze (default: 30)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "period_days": 30,
+    "unique_visitors": 1250,
+    "total_page_views": 4800,
+    "converted_visitors": 85,
+    "avg_pages_per_visitor": 3.84,
+    "new_visitors": 320
+  }
+}
+```
+
+### **GET /api/analytics/visitors/daily**
+**Access**: Admin+  
+**Description**: Get daily visitor analytics breakdown
+
+### **GET /api/analytics/pages/popular**
+**Access**: Admin+  
+**Description**: Get popular pages with conversion rates
+
+### **GET /api/analytics/conversion**
+**Access**: Admin+  
+**Description**: Get conversion funnel analytics
+
+### **GET /api/analytics/visitors/:visitorId**
+**Access**: Admin+  
+**Description**: Get detailed visitor journey
+
+### **POST /api/analytics/events/track**
+**Access**: Admin+  
+**Description**: Track custom visitor events for Google Analytics integration
+
+---
+
+## 🔐 **AUTHENTICATION**
+
+### **POST /api/auth/register** ✅ **WORKING**
+**Access**: Public  
+**Description**: Register new user account
+
+### **POST /api/auth/login** ✅ **WORKING**
+**Access**: Public  
+**Description**: User login
+
+### **GET /api/auth/profile** ✅ **WORKING**
+**Access**: User+  
+**Description**: Get current user profile
+
+### **PUT /api/auth/profile** ✅ **WORKING**
+**Access**: User+  
+**Description**: Update user profile
+
+### **GET /api/auth/google** ✅ **WORKING**
+**Access**: Public  
+**Description**: Google OAuth authentication
+
+---
+
+## 🎫 **EVENTS**
+
+### **GET /api/events** ✅ **WORKING**
+**Access**: Public  
+**Description**: List all events with filtering and pagination
+
+### **GET /api/events/:id** ✅ **WORKING**
+**Access**: Public  
+**Description**: Get specific event details
+
+### **POST /api/events** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Create new event
+
+### **PUT /api/events/:id** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Update event
+
+### **DELETE /api/events/:id** ✅ **WORKING**
+**Access**: Super Admin  
+**Description**: Delete event
+
+---
+
+## 📝 **REGISTRATIONS**
+
+### **GET /api/registrations/user** ✅ **WORKING**
+**Access**: User+  
+**Description**: Get current user's registration history
+
+### **POST /api/registrations/events/:eventId** ✅ **WORKING**
+**Access**: User+  
+**Description**: Register for an event
+
+### **GET /api/registrations/:id** ✅ **WORKING**
+**Access**: User+  
+**Description**: Get registration details
+
+---
+
+## 💼 **SALES MANAGEMENT**
+
+### **GET /api/sales/leads** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Get leads with automatic scoring
+
+### **GET /api/sales/opportunities** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Get opportunity pipeline tracking
+
+### **GET /api/sales/metrics** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Get sales analytics and reporting
+
+---
+
+## 👥 **USER MANAGEMENT**
+
+### **GET /api/users** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Get users with pagination and filtering
+
+### **POST /api/users/:id/verify** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Verify user account
+
+### **POST /api/users/:id/role** ✅ **WORKING**
+**Access**: Super Admin  
+**Description**: Update user role
+
+---
+
+## 🔧 **SYSTEM HEALTH**
+
+### **GET /api/system/health** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Overall system status monitoring
+
+### **GET /api/system/health/detailed** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Component-level health checks
+
+### **GET /api/system/metrics** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Real-time system performance data
+
+---
+
+## 🛡️ **ADMIN OPERATIONS**
+
+### **POST /api/admin/backup** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: Create manual backup to R2
+
+### **GET /api/admin/backups** ✅ **WORKING**
+**Access**: Admin+  
+**Description**: List available R2 backups
+
+### **POST /api/admin/restore** ✅ **WORKING**
+**Access**: Super Admin  
+**Description**: Restore database from R2 backup
+
+---
+
+**Note**: All endpoints marked with ✅ **WORKING** are fully functional and tested. New visitor analytics endpoints added July 8, 2025.
 PUT  /api/auth/profile     # Update user profile information
 ```
 
