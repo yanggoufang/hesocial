@@ -177,6 +177,155 @@ router.get('/visitors/:visitorId', async (req, res) => {
 })
 
 /**
+ * GET /api/analytics/events/overview
+ * Get event analytics overview
+ */
+router.get('/events/overview', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days as string) || 30
+    
+    // Get event statistics
+    const eventStats = await pool.query(`
+      SELECT 
+        COUNT(*) as total_events,
+        COUNT(CASE WHEN date_time >= DATE('now', '-${days} days') THEN 1 END) as recent_events,
+        COUNT(CASE WHEN date_time >= DATE('now') THEN 1 END) as upcoming_events,
+        COUNT(CASE WHEN date_time < DATE('now') THEN 1 END) as past_events,
+        AVG(CASE WHEN capacity > 0 THEN (current_attendees * 100.0 / capacity) END) as avg_occupancy_rate
+      FROM events
+    `)
+
+    // Get registration statistics
+    const registrationStats = await pool.query(`
+      SELECT 
+        COUNT(*) as total_registrations,
+        COUNT(CASE WHEN created_at >= DATE('now', '-${days} days') THEN 1 END) as recent_registrations,
+        COUNT(DISTINCT user_id) as unique_attendees
+      FROM registrations
+      WHERE status = 'confirmed'
+    `)
+
+    // Get popular events
+    const popularEvents = await pool.query(`
+      SELECT 
+        e.id,
+        e.name,
+        e.date_time,
+        e.capacity,
+        e.current_attendees,
+        ROUND((e.current_attendees * 100.0 / e.capacity), 2) as occupancy_rate
+      FROM events e
+      WHERE e.date_time >= DATE('now', '-${days} days')
+      ORDER BY e.current_attendees DESC
+      LIMIT 10
+    `)
+
+    res.json({
+      success: true,
+      data: {
+        period_days: days,
+        event_stats: eventStats.rows[0],
+        registration_stats: registrationStats.rows[0],
+        popular_events: popularEvents.rows
+      }
+    })
+  } catch (error) {
+    logger.error('Event analytics overview error:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve event analytics overview'
+    })
+  }
+})
+
+/**
+ * GET /api/analytics/events/performance
+ * Get event performance metrics
+ */
+router.get('/events/performance', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days as string) || 30
+    
+    // Get event performance metrics
+    const performance = await pool.query(`
+      SELECT 
+        e.id,
+        e.name,
+        e.date_time,
+        e.capacity,
+        e.current_attendees,
+        e.pricing_vip,
+        e.pricing_vvip,
+        ROUND((e.current_attendees * 100.0 / e.capacity), 2) as occupancy_rate,
+        COUNT(r.id) as total_registrations,
+        COUNT(CASE WHEN r.status = 'confirmed' THEN 1 END) as confirmed_registrations,
+        COUNT(CASE WHEN r.status = 'pending' THEN 1 END) as pending_registrations,
+        COUNT(CASE WHEN r.status = 'cancelled' THEN 1 END) as cancelled_registrations,
+        AVG(CASE WHEN r.tier = 'vip' THEN e.pricing_vip WHEN r.tier = 'vvip' THEN e.pricing_vvip END) as avg_revenue_per_attendee
+      FROM events e
+      LEFT JOIN registrations r ON e.id = r.event_id
+      WHERE e.date_time >= DATE('now', '-${days} days')
+      GROUP BY e.id, e.name, e.date_time, e.capacity, e.current_attendees, e.pricing_vip, e.pricing_vvip
+      ORDER BY occupancy_rate DESC
+    `)
+
+    res.json({
+      success: true,
+      data: {
+        period_days: days,
+        events: performance.rows
+      }
+    })
+  } catch (error) {
+    logger.error('Event performance analytics error:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve event performance analytics'
+    })
+  }
+})
+
+/**
+ * GET /api/analytics/events/engagement
+ * Get event engagement metrics
+ */
+router.get('/events/engagement', async (req, res) => {
+  try {
+    const days = parseInt(req.query.days as string) || 30
+    
+    // Get engagement metrics
+    const engagement = await pool.query(`
+      SELECT 
+        DATE(vpv.timestamp) as date,
+        COUNT(DISTINCT vpv.visitor_id) as unique_visitors,
+        COUNT(vpv.id) as total_page_views,
+        COUNT(CASE WHEN vpv.path LIKE '/events/%' THEN 1 END) as event_page_views,
+        COUNT(CASE WHEN vpv.path LIKE '/events/%/register' THEN 1 END) as registration_page_views,
+        AVG(vpv.time_spent) as avg_time_spent
+      FROM visitor_page_views vpv
+      WHERE vpv.timestamp >= DATE('now', '-${days} days')
+        AND vpv.path LIKE '/events%'
+      GROUP BY DATE(vpv.timestamp)
+      ORDER BY date DESC
+    `)
+
+    res.json({
+      success: true,
+      data: {
+        period_days: days,
+        engagement: engagement.rows
+      }
+    })
+  } catch (error) {
+    logger.error('Event engagement analytics error:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve event engagement analytics'
+    })
+  }
+})
+
+/**
  * POST /api/analytics/events/track
  * Track custom visitor events (for future Google Analytics integration)
  */

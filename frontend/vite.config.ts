@@ -24,34 +24,45 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
+        manualChunks: (id) => {
           // Vendor chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['framer-motion', 'lucide-react'],
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'react-vendor';
+            }
+            if (id.includes('framer-motion') || id.includes('lucide-react')) {
+              return 'ui-vendor';
+            }
+            return 'vendor';
+          }
           
           // Admin chunks (only loaded for admin users)
-          'admin-pages': [
-            './src/pages/AdminDashboard.tsx',
-            './src/pages/BackupManagement.tsx',
-            './src/pages/SystemHealthDashboard.tsx',
-            './src/pages/UserManagement.tsx'
-          ],
+          if (id.includes('pages/Admin') || id.includes('pages/Backup') || 
+              id.includes('pages/SystemHealth') || id.includes('pages/UserManagement') ||
+              id.includes('pages/SalesManagement')) {
+            return 'admin-pages';
+          }
           
           // Event management chunks
-          'event-management': [
-            './src/pages/EventManagement.tsx',
-            './src/pages/VenueManagement.tsx',
-            './src/pages/CategoryManagement.tsx',
-            './src/pages/EventMediaManagement.tsx'
-          ],
+          if (id.includes('pages/Event') && id.includes('Management')) {
+            return 'event-management';
+          }
+          
+          // Social features chunks
+          if (id.includes('pages/EventParticipants') || id.includes('pages/EventPrivacy')) {
+            return 'social-features';
+          }
           
           // User-facing chunks
-          'user-pages': [
-            './src/pages/EventsPage.tsx',
-            './src/pages/EventDetailPage.tsx',
-            './src/pages/ProfilePage.tsx',
-            './src/pages/MyRegistrations.tsx'
-          ]
+          if (id.includes('pages/Events') || id.includes('pages/Profile') || 
+              id.includes('pages/MyRegistrations')) {
+            return 'user-pages';
+          }
+          
+          // Auth chunks
+          if (id.includes('pages/Login') || id.includes('pages/Register')) {
+            return 'auth-pages';
+          }
         }
       }
     },
