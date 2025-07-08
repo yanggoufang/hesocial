@@ -34,6 +34,7 @@ const VenueManagement = lazy(() => import('./pages/VenueManagement'));
 const CategoryManagement = lazy(() => import('./pages/CategoryManagement'));
 const EventMediaManagement = lazy(() => import('./pages/EventMediaManagement'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
+const SalesManagement = lazy(() => import('./pages/SalesManagement'));
 const AccessTestPage = lazy(() => import('./pages/AccessTestPage'));
 
 function App() {
@@ -73,6 +74,7 @@ function App() {
                 <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
                 <Route path="/admin/backups" element={<BackupManagementRoute><BackupManagement /></BackupManagementRoute>} />
                 <Route path="/admin/users" element={<UserManagementRoute><UserManagement /></UserManagementRoute>} />
+                <Route path="/admin/sales" element={<AdminRoute><SalesManagement /></AdminRoute>} />
                 <Route path="/admin/system" element={<AdminRoute><SystemHealthDashboard /></AdminRoute>} />
 
                 {/* Development Route */}

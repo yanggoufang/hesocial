@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, Crown, User, LogOut, Calendar, Settings, Shield, Activity } from 'lucide-react'
+import { Menu, X, Crown, User, LogOut, Calendar, Settings, Shield, Activity, TrendingUp } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { usePermissions } from '../hooks/useRoleAccess'
 
@@ -104,6 +104,14 @@ const Navbar = () => {
                           >
                             <Settings className="inline h-4 w-4 mr-2" />
                             活動管理
+                          </Link>
+                          <Link
+                            to="/admin/sales"
+                            className="block px-4 py-3 text-sm text-gray-700 hover:bg-luxury-gold/10 transition-colors"
+                            onClick={() => setIsUserMenuOpen(false)}
+                          >
+                            <TrendingUp className="inline h-4 w-4 mr-2" />
+                            銷售管理
                           </Link>
                           <Link
                             to="/admin/system"
