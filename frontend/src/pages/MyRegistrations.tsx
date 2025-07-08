@@ -206,12 +206,12 @@ const MyRegistrations: React.FC = () => {
         <div className="mb-10">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-luxury-platinum tracking-wider font-luxury">我的活動報名</h1>
-              <p className="text-gray-300 mt-3 text-lg">管理您的活動報名與申請狀態</p>
+              <h1 className="text-4xl font-luxury font-bold text-luxury-gold tracking-wider">我的活動報名</h1>
+              <p className="text-luxury-platinum/80 mt-3 text-lg">管理您的活動報名與申請狀態</p>
             </div>
             <button
               onClick={() => navigate('/events')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-800 text-gray-100 rounded-lg hover:bg-gray-700 transition-all duration-300 shadow-md"
+              className="luxury-button-outline inline-flex items-center gap-2"
             >
               <ExternalLink className="w-4 h-4" />
               探索更多活動
@@ -220,10 +220,10 @@ const MyRegistrations: React.FC = () => {
         </div>
 
         {successMessage && (
-          <div className="mb-6 bg-green-900/50 border border-green-700 rounded-lg p-4 flex items-center justify-between">
+          <div className="mb-6 bg-green-900/30 border border-green-600/50 rounded-lg p-4 flex items-center justify-between backdrop-blur-sm">
             <div className="flex items-center gap-3">
               <Check className="w-5 h-5 text-green-400" />
-              <p className="text-green-300">{successMessage}</p>
+              <p className="text-green-200">{successMessage}</p>
             </div>
             <button onClick={() => setSuccessMessage(null)} className="text-green-400 hover:text-green-200">
               <X className="w-4 h-4" />
@@ -232,10 +232,10 @@ const MyRegistrations: React.FC = () => {
         )}
 
         {error && (
-          <div className="mb-6 bg-red-900/50 border border-red-700 rounded-lg p-4 flex items-center justify-between">
+          <div className="mb-6 bg-red-900/30 border border-red-600/50 rounded-lg p-4 flex items-center justify-between backdrop-blur-sm">
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-red-400" />
-              <p className="text-red-300">{error}</p>
+              <p className="text-red-200">{error}</p>
             </div>
             <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200">
               <X className="w-4 h-4" />
@@ -243,13 +243,13 @@ const MyRegistrations: React.FC = () => {
           </div>
         )}
 
-        <div className="bg-luxury-deep-blue/30 backdrop-blur-luxury rounded-xl shadow-2xl border border-luxury-gold/20 mb-8 p-6">
+        <div className="luxury-glass rounded-xl shadow-2xl mb-8 p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-xl font-semibold text-luxury-platinum flex items-center gap-2 font-luxury">
-              <Filter className="w-5 h-5 text-luxury-gold" />
+            <h3 className="text-xl font-luxury font-semibold text-luxury-gold flex items-center gap-2">
+              <Filter className="w-5 h-5" />
               篩選器
             </h3>
-            <button onClick={fetchRegistrations} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-luxury-platinum hover:text-luxury-gold hover:bg-luxury-deep-blue/50 rounded-md transition-colors border border-luxury-gold/20">
+            <button onClick={fetchRegistrations} className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-luxury-platinum/80 hover:text-luxury-gold hover:bg-white/10 rounded-md transition-colors">
               <RefreshCw className="w-4 h-4" />
               刷新
             </button>
@@ -257,18 +257,18 @@ const MyRegistrations: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="relative">
               <label className="block text-sm font-medium text-luxury-platinum mb-2">關鍵字搜尋</label>
-              <Search className="absolute left-3 top-10 w-4 h-4 text-luxury-gold" />
+              <Search className="absolute left-3 top-10 w-4 h-4 text-luxury-gold/60" />
               <input
                 type="text"
                 placeholder="搜尋活動名稱..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-luxury-deep-blue/50 border border-luxury-gold/30 rounded-lg focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold transition-colors text-luxury-platinum placeholder-gray-400"
+                className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold transition-colors text-luxury-platinum placeholder-luxury-platinum/50"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-luxury-platinum mb-2">報名狀態</label>
-              <select value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className="w-full px-3 py-2 bg-luxury-deep-blue/50 border border-luxury-gold/30 rounded-lg focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold transition-colors text-luxury-platinum">
+              <select value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold transition-colors text-luxury-platinum">
                 <option value="">所有狀態</option>
                 <option value="pending">審核中</option>
                 <option value="approved">已核准</option>
@@ -278,7 +278,7 @@ const MyRegistrations: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-luxury-platinum mb-2">付款狀態</label>
-              <select value={filters.paymentStatus} onChange={(e) => handleFilterChange('paymentStatus', e.target.value)} className="w-full px-3 py-2 bg-luxury-deep-blue/50 border border-luxury-gold/30 rounded-lg focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold transition-colors text-luxury-platinum">
+              <select value={filters.paymentStatus} onChange={(e) => handleFilterChange('paymentStatus', e.target.value)} className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold transition-colors text-luxury-platinum">
                 <option value="">所有狀態</option>
                 <option value="pending">待付款</option>
                 <option value="paid">已付款</option>
@@ -286,17 +286,17 @@ const MyRegistrations: React.FC = () => {
               </select>
             </div>
             <div className="flex items-end">
-              <button onClick={clearFilters} className="w-full px-4 py-2 text-luxury-platinum bg-luxury-deep-blue/50 border border-luxury-gold/30 rounded-lg hover:bg-luxury-deep-blue/70 hover:border-luxury-gold/50 transition-colors">
+              <button onClick={clearFilters} className="w-full px-4 py-2 text-luxury-platinum bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 transition-colors">
                 清除篩選
               </button>
             </div>
           </div>
         </div>
 
-        <div className="bg-luxury-deep-blue/30 backdrop-blur-luxury rounded-xl shadow-2xl border border-luxury-gold/20 overflow-hidden">
-          <div className="px-6 py-5 border-b border-luxury-gold/20 bg-luxury-deep-blue/20">
-            <h3 className="text-xl font-semibold text-luxury-platinum font-luxury">
-              報名總覽 <span className="text-luxury-gold">({totalRegistrations} 筆記錄)</span>
+        <div className="luxury-glass rounded-xl shadow-2xl overflow-hidden">
+          <div className="px-6 py-5 border-b border-white/20 bg-white/5">
+            <h3 className="text-xl font-luxury font-semibold text-luxury-gold">
+              報名總覽 <span className="text-luxury-platinum/80">({totalRegistrations} 筆記錄)</span>
             </h3>
           </div>
 
@@ -308,20 +308,20 @@ const MyRegistrations: React.FC = () => {
           ) : registrations.length === 0 ? (
             <div className="text-center py-20">
               <Ticket className="w-20 h-20 text-luxury-gold/50 mx-auto mb-6" />
-              <h3 className="text-2xl font-semibold text-luxury-platinum mb-3 font-luxury">尚無報名記錄</h3>
-              <p className="text-gray-300 mb-6">您尚未報名任何活動，立即探索我們的精選活動吧！</p>
-              <button onClick={() => navigate('/events')} className="inline-flex items-center gap-2 px-6 py-3 bg-luxury-gold text-luxury-midnight-black rounded-lg hover:bg-luxury-gold/90 transition-colors shadow-lg font-medium">
+              <h3 className="text-2xl font-luxury font-semibold text-luxury-gold mb-3">尚無報名記錄</h3>
+              <p className="text-luxury-platinum/80 mb-6">您尚未報名任何活動，立即探索我們的精選活動吧！</p>
+              <button onClick={() => navigate('/events')} className="luxury-button inline-flex items-center gap-2">
                 <ExternalLink className="w-5 h-5" />
                 探索活動
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-luxury-gold/20">
+            <div className="divide-y divide-white/20">
               {registrations.map((reg) => (
-                <div key={reg.id} className="p-6 hover:bg-luxury-deep-blue/20 transition-colors duration-300">
+                <div key={reg.id} className="p-6 hover:bg-white/5 transition-colors duration-300">
                   <div className="flex flex-col md:flex-row items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h4 className="text-xl font-bold text-luxury-gold mb-3 font-luxury">{reg.eventName}</h4>
+                      <h4 className="text-xl font-luxury font-bold text-luxury-gold mb-3">{reg.eventName}</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-4 text-luxury-platinum">
                         <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-luxury-gold" /><span>{formatDateTime(reg.eventDateTime)}</span></div>
                         <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-luxury-gold" /><span>{reg.venueName}</span></div>
@@ -332,14 +332,14 @@ const MyRegistrations: React.FC = () => {
                         {getPaymentBadge(reg.paymentStatus)}
                       </div>
                       {reg.specialRequests && (
-                        <div className="bg-luxury-deep-blue/50 rounded-lg p-3 border border-luxury-gold/20">
+                        <div className="luxury-glass rounded-lg p-3">
                           <p className="text-sm font-medium text-luxury-platinum mb-1">特別要求:</p>
-                          <p className="text-sm text-gray-300 whitespace-pre-wrap">{reg.specialRequests}</p>
+                          <p className="text-sm text-luxury-platinum/80 whitespace-pre-wrap">{reg.specialRequests}</p>
                         </div>
                       )}
                     </div>
                     <div className="flex items-center gap-2 self-start md:self-center mt-4 md:mt-0">
-                      <button onClick={() => navigate(`/events/${reg.eventId}`)} className="p-2 text-gray-400 hover:text-gray-100 hover:bg-gray-700 rounded-full transition-colors" title="查看活動詳情"><Eye className="w-5 h-5" /></button>
+                      <button onClick={() => navigate(`/events/${reg.eventId}`)} className="p-2 text-luxury-platinum/60 hover:text-luxury-gold hover:bg-white/10 rounded-full transition-colors" title="查看活動詳情"><Eye className="w-5 h-5" /></button>
                       {canEdit(reg) && <button onClick={() => openEditModal(reg)} className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/50 rounded-full transition-colors" title="編輯報名"><Edit className="w-5 h-5" /></button>}
                       {canCancel(reg) && <button onClick={() => handleCancelRegistration(reg.id)} disabled={actionLoading === `cancel-${reg.id}`} className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/50 rounded-full transition-colors disabled:opacity-50" title="取消報名"><X className="w-5 h-5" /></button>}
                     </div>
@@ -350,19 +350,19 @@ const MyRegistrations: React.FC = () => {
           )}
 
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-luxury-gold/20 bg-luxury-deep-blue/10 flex items-center justify-between">
-              <div className="text-sm text-luxury-platinum">
+            <div className="px-6 py-4 border-t border-white/20 bg-white/5 flex items-center justify-between">
+              <div className="text-sm text-luxury-platinum/80">
                 顯示第 {((currentPage - 1) * pageSize) + 1} 至 {Math.min(currentPage * pageSize, totalRegistrations)} 項，共 {totalRegistrations} 項結果
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="inline-flex items-center px-3 py-2 bg-luxury-deep-blue/50 border border-luxury-gold/30 rounded-lg text-sm font-medium text-luxury-platinum hover:bg-luxury-deep-blue/70 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="inline-flex items-center px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm font-medium text-luxury-platinum hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed">
                   <ChevronLeft className="w-4 h-4" />
                   上一頁
                 </button>
                 <span className="text-sm text-luxury-platinum">
                   第 {currentPage} / {totalPages} 頁
                 </span>
-                <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="inline-flex items-center px-3 py-2 bg-luxury-deep-blue/50 border border-luxury-gold/30 rounded-lg text-sm font-medium text-luxury-platinum hover:bg-luxury-deep-blue/70 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="inline-flex items-center px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm font-medium text-luxury-platinum hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed">
                   下一頁
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -373,30 +373,30 @@ const MyRegistrations: React.FC = () => {
       </div>
 
       {showEditModal && selectedRegistration && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-7 w-full max-w-md shadow-2xl">
+        <div className="fixed inset-0 bg-luxury-midnight-black/90 backdrop-blur-luxury flex items-center justify-center z-50">
+          <div className="luxury-glass rounded-xl p-7 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-2xl font-bold text-gray-100">編輯報名資訊</h3>
-              <button onClick={() => setShowEditModal(false)} className="text-gray-500 hover:text-gray-100 transition-colors"><X className="w-7 h-7" /></button>
+              <h3 className="text-2xl font-luxury font-bold text-luxury-gold">編輯報名資訊</h3>
+              <button onClick={() => setShowEditModal(false)} className="text-luxury-platinum/60 hover:text-luxury-gold transition-colors"><X className="w-7 h-7" /></button>
             </div>
             <div className="mb-6">
-              <p className="text-gray-400 mb-4">
-                活動: <strong className="text-purple-300">{selectedRegistration.eventName}</strong>
+              <p className="text-luxury-platinum mb-4">
+                活動: <strong className="text-luxury-gold">{selectedRegistration.eventName}</strong>
               </p>
-              <label className="block text-sm font-medium text-gray-300 mb-2">特別要求</label>
+              <label className="block text-sm font-medium text-luxury-platinum mb-2">特別要求</label>
               <textarea
                 value={editRequests}
                 onChange={(e) => setEditRequests(e.target.value)}
                 rows={5}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors text-gray-200"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-luxury-gold focus:border-luxury-gold transition-colors text-luxury-platinum placeholder-luxury-platinum/50"
                 placeholder="請輸入您的飲食限制、過敏資訊或任何特殊需求..."
               />
             </div>
             <div className="flex justify-end gap-4">
-              <button onClick={() => setShowEditModal(false)} className="px-5 py-2.5 text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 transition-colors">
+              <button onClick={() => setShowEditModal(false)} className="px-5 py-2.5 text-luxury-platinum bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 transition-colors">
                 取消
               </button>
-              <button onClick={handleEditRegistration} disabled={actionLoading === 'edit'} className="px-5 py-2.5 bg-purple-600 text-gray-100 rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2 transition-colors">
+              <button onClick={handleEditRegistration} disabled={actionLoading === 'edit'} className="luxury-button px-5 py-2.5 flex items-center gap-2 disabled:opacity-50">
                 {actionLoading === 'edit' ? <Loader2 className="w-5 h-5 animate-spin" /> : '儲存變更'}
               </button>
             </div>
