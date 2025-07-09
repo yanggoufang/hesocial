@@ -374,8 +374,6 @@ router.use('*', (req, res) => {
   })
 })
 
-export default router
-
 // Debug route to check all events regardless of date
 router.get('/debug/events-all', async (req, res) => {
   try {
