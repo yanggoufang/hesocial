@@ -45,58 +45,6 @@ const EventDetailPage = () => {
     fetchEvent()
   }, [id])
 
-  // Fallback mock data for development
-  const mockEvent = {
-        id: id,
-        name: '星空下的法式晚宴',
-        description: '與米其林三星主廚共享精緻法式料理，在台北101頂樓欣賞城市夜景。這是一場結合美食、藝術與社交的頂級體驗，限量20位貴賓參與。在這個特別的夜晚，您將享受到：\n\n• 米其林三星主廚親自設計的8道式法式料理\n• 精選法國香檳與頂級紅酒配對\n• 台北101頂樓360度城市夜景\n• 現場小提琴演奏營造浪漫氛圍\n• 與其他成功人士的深度社交機會\n\n本活動採用最高規格的隱私保護措施，確保每位參與者都能在安全、私密的環境中享受愉快的社交時光。',
-        dateTime: '2024-12-27T19:00:00',
-        registrationDeadline: '2024-12-25T23:59:59',
-        venue: {
-          name: '台北文華東方酒店',
-          address: '台北市松山區敦化北路166號',
-          rating: 5,
-          amenities: ['米其林餐廳', '頂樓露台', '私人包廂', '代客泊車']
-        },
-        category: {
-          name: '私人晚宴',
-          icon: 'utensils'
-        },
-        organizer: '志明 陳',
-        pricing: {
-          vvip: 15000,
-          vip: 10000,
-          currency: 'TWD'
-        },
-        exclusivityLevel: 'VVIP',
-        dressCode: 5,
-        capacity: 20,
-        currentAttendees: 12,
-        amenities: ['米其林主廚', '專屬侍酒師', '現場音樂', '城市夜景', '禮賓服務'],
-        privacyGuarantees: ['匿名參與選項', '禁止攝影', '機密協議', '專屬入口'],
-        images: [
-          '/api/placeholder/800/600',
-          '/api/placeholder/800/600',
-          '/api/placeholder/800/600',
-          '/api/placeholder/800/600'
-        ],
-        videoUrl: '/api/placeholder/video',
-        requirements: [
-          { type: 'age', value: '35-70', description: '年齡限制35-70歲' },
-          { type: 'membership', value: 'Diamond', description: '需要Diamond會員資格' }
-        ],
-        tags: ['米其林', '頂樓', '限量', '法式料理', '夜景']
-      }
-      
-      // Use mock data if API fails or returns no data
-      if (!event) {
-        setEvent(mockEvent)
-      }
-    }
-
-    fetchEvent()
-  }, [id])
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('zh-TW', {

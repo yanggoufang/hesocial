@@ -210,3 +210,6 @@ export const requireSuperAdmin = (req: Request, res: Response, next: NextFunctio
 
   next()
 }
+
+// Alias for backward compatibility
+export const protect = authenticateToken
