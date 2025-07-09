@@ -238,9 +238,9 @@ export class ParticipantAccessService {
         LIMIT ? OFFSET ?
       `
 
-      const participants = this.db.prepare(participantsQuery).all(
+      const participants = await this.db.query(participantsQuery, [
         eventId, ...queryParams, limit, offset
-      ) as any[]
+      ])
 
       // Filter and format participant information
       const filteredParticipants = participants
@@ -248,7 +248,7 @@ export class ParticipantAccessService {
         .filter(p => p !== null) as FilteredParticipantInfo[]
 
       // Log the view activity
-      this.logParticipantView(
+      await this.logParticipantView(
         viewerId, 
         filteredParticipants.map(p => p.id), 
         eventId, 
@@ -256,7 +256,7 @@ export class ParticipantAccessService {
       )
 
       // Get additional counts
-      const counts = this.getParticipantCounts(eventId)
+      const counts = await this.getParticipantCounts(eventId)
 
       return {
         participants: filteredParticipants,
@@ -465,7 +465,7 @@ export class ParticipantAccessService {
   /**
    * Log participant viewing activity
    */
-  private logParticipantView(
+  private async logParticipantView(
     viewerId: string,
     viewedParticipantIds: string[],
     eventId: string,
@@ -474,13 +474,13 @@ export class ParticipantAccessService {
     userAgent?: string
   ) {
     try {
-      const stmt = this.db.prepare(`
+      const query = `
         INSERT INTO participant_view_logs (viewer_id, viewed_participant_id, event_id, view_type, ip_address, user_agent)
         VALUES (?, ?, ?, ?, ?, ?)
-      `)
+      `
 
       for (const participantId of viewedParticipantIds) {
-        stmt.run(viewerId, participantId, eventId, viewType, ipAddress, userAgent)
+        await this.db.query(query, [viewerId, participantId, eventId, viewType, ipAddress, userAgent])
       }
     } catch (error) {
       logger.error('Error logging participant view:', error)

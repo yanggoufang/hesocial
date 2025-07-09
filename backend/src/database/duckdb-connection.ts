@@ -1,4 +1,4 @@
-import Database from 'duckdb'
+import duckdbModule from 'duckdb'
 import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -8,8 +8,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 class DuckDBConnection {
-  private db: Database.Database | null = null
-  private connection: Database.Connection | null = null
+  private db: duckdbModule.Database | null = null
+  private connection: duckdbModule.Connection | null = null
 
   async connect(): Promise<void> {
     try {
@@ -18,8 +18,11 @@ class DuckDBConnection {
       logger.info(`Connecting to DuckDB at: ${dbPath}`)
       
       // Force persistent mode by explicitly setting file path
-      this.db = new Database.Database(dbPath)
+      this.db = new duckdbModule.Database(dbPath)
       this.connection = this.db.connect()
+      
+      // Test the connection with a simple query
+      await this.query('SELECT 1 as test')
       
       logger.info('Connected to DuckDB database')
     } catch (error) {

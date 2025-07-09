@@ -15,7 +15,7 @@ const participantService = new ParticipantAccessService(duckdb)
 router.get('/events/:eventId/participants', auth, async (req: AuthenticatedRequest, res) => {
   try {
     const { eventId } = req.params
-    const userId = req.user!.userId
+    const userId = req.user!.id
     
     // Query parameters for filtering and pagination
     const page = parseInt(req.query.page as string) || 1
@@ -31,7 +31,7 @@ router.get('/events/:eventId/participants', auth, async (req: AuthenticatedReque
     const ipAddress = req.ip || req.connection.remoteAddress
     const userAgent = req.get('User-Agent')
 
-    const result = participantService.getEventParticipants(
+    const result = await participantService.getEventParticipants(
       eventId, 
       userId, 
       page, 
@@ -68,9 +68,9 @@ router.get('/events/:eventId/participants', auth, async (req: AuthenticatedReque
 router.get('/events/:eventId/participant-access', auth, async (req: AuthenticatedRequest, res) => {
   try {
     const { eventId } = req.params
-    const userId = req.user!.userId
+    const userId = req.user!.id
 
-    const accessCheck = participantService.checkParticipantAccess(userId, eventId)
+    const accessCheck = await participantService.checkParticipantAccess(userId, eventId)
 
     const response: ApiResponse = {
       success: true,
@@ -95,10 +95,10 @@ router.get('/events/:eventId/participant-access', auth, async (req: Authenticate
 router.get('/events/:eventId/participants/:participantId', auth, async (req: AuthenticatedRequest, res) => {
   try {
     const { eventId, participantId } = req.params
-    const userId = req.user!.userId
+    const userId = req.user!.id
 
     // Check if viewer has access
-    const accessCheck = participantService.checkParticipantAccess(userId, eventId)
+    const accessCheck = await participantService.checkParticipantAccess(userId, eventId)
     
     if (!accessCheck.hasAccess) {
       const response: ApiResponse = {
@@ -109,7 +109,7 @@ router.get('/events/:eventId/participants/:participantId', auth, async (req: Aut
     }
 
     // Get the specific participant with privacy filtering
-    const result = participantService.getEventParticipants(
+    const result = await participantService.getEventParticipants(
       eventId,
       userId,
       1,
@@ -157,11 +157,11 @@ router.get('/events/:eventId/participants/:participantId', auth, async (req: Aut
 router.post('/events/:eventId/participants/:participantId/contact', auth, async (req: AuthenticatedRequest, res) => {
   try {
     const { eventId, participantId } = req.params
-    const userId = req.user!.userId
+    const userId = req.user!.id
     const { message } = req.body
 
     // Check if viewer has access and can initiate contact
-    const accessCheck = participantService.checkParticipantAccess(userId, eventId)
+    const accessCheck = await participantService.checkParticipantAccess(userId, eventId)
     
     if (!accessCheck.hasAccess || !accessCheck.accessLevel.canInitiateContact) {
       const response: ApiResponse = {
@@ -209,7 +209,7 @@ router.post('/events/:eventId/participants/:participantId/contact', auth, async 
 router.put('/events/:eventId/privacy-settings', auth, async (req: AuthenticatedRequest, res) => {
   try {
     const { eventId } = req.params
-    const userId = req.user!.userId
+    const userId = req.user!.id
     const { privacyLevel, allowContact, showInList } = req.body
 
     // Validate privacy level
@@ -224,7 +224,7 @@ router.put('/events/:eventId/privacy-settings', auth, async (req: AuthenticatedR
     const db = duckdb
     
     // Update or insert privacy override
-    const stmt = db.prepare(`
+    await db.query(`
       INSERT INTO event_privacy_overrides (user_id, event_id, privacy_level, allow_contact, show_in_list)
       VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(user_id, event_id) DO UPDATE SET
@@ -232,9 +232,7 @@ router.put('/events/:eventId/privacy-settings', auth, async (req: AuthenticatedR
       allow_contact = COALESCE(excluded.allow_contact, allow_contact),
       show_in_list = COALESCE(excluded.show_in_list, show_in_list),
       updated_at = CURRENT_TIMESTAMP
-    `)
-
-    stmt.run(userId, eventId, privacyLevel, allowContact, showInList)
+    `, [userId, eventId, privacyLevel, allowContact, showInList])
 
     const response: ApiResponse = {
       success: true,
@@ -259,11 +257,11 @@ router.put('/events/:eventId/privacy-settings', auth, async (req: AuthenticatedR
 router.get('/events/:eventId/privacy-settings', auth, async (req: AuthenticatedRequest, res) => {
   try {
     const { eventId } = req.params
-    const userId = req.user!.userId
+    const userId = req.user!.id
 
     const db = duckdb
     
-    const settings = db.prepare(`
+    const settingsResult = await db.query(`
       SELECT 
         COALESCE(epo.privacy_level, u.default_privacy_level, 2) as privacy_level,
         COALESCE(epo.allow_contact, u.allow_contact_requests, true) as allow_contact,
@@ -271,7 +269,9 @@ router.get('/events/:eventId/privacy-settings', auth, async (req: AuthenticatedR
       FROM users u
       LEFT JOIN event_privacy_overrides epo ON u.id = epo.user_id AND epo.event_id = ?
       WHERE u.id = ?
-    `).get(eventId, userId)
+    `, [eventId, userId])
+    
+    const settings = settingsResult.rows[0]
 
     const response: ApiResponse = {
       success: true,
