@@ -252,7 +252,7 @@ router.get('/database/stats', async (req, res) => {
  * Start periodic backups
  * Requires admin authentication
  */
-router.post('/periodic-backup/start', authenticateToken, requireAdmin, (req, res) => {
+router.post('/periodic-backup/start', authenticateToken, requireAdmin, async (req, res): Promise<Response> => {
   try {
     if (!r2BackupService.isEnabled()) {
       return res.status(503).json({

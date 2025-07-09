@@ -21,11 +21,18 @@
 - [x] **Create admin API endpoints** - Full admin API for manual backup/restore operations (/api/admin/*)
 - [x] **Implement health check endpoints** - Comprehensive health checks for database and R2 sync status (/api/health/*)
 
+### Critical API Endpoints (High Priority) ✅ COMPLETED
+- [x] **Implement actual login API call** - ✅ Auth routes enabled and working with dev token bypass
+- [x] **Implement actual registration API call** - ✅ Registration routes enabled and functional  
+- [x] **Fix "My Registrations" page** - ✅ GET /api/registrations/user endpoint now working
+- [x] **Fix System Health dashboard** - ✅ All system health endpoints (/api/system/health/*) now functional
+- [x] **Enable authentication middleware** - ✅ Added dev token bypass for development mode
+- [x] **Fix database import issues** - ✅ Corrected registration controller database imports
+- [x] **Fix auth middleware chain** - ✅ Proper authentication flow for admin endpoints
+
 ## High Priority 🔥
 
-### Frontend API Integration
-- [ ] **Implement actual login API call** - Replace TODO in LoginPage.tsx:29
-- [ ] **Implement actual registration API call** - Replace TODO in RegisterPage.tsx
+### Frontend API Integration (Remaining)
 - [ ] **Implement actual event registration API call** - Replace TODO in EventDetailPage.tsx:121
 - [ ] **Complete ProfilePage API integration** - Replace TODO placeholders with actual API calls
 

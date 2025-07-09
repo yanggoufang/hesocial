@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Mail, Briefcase, 
@@ -6,29 +6,39 @@ import {
   Award, TrendingUp, Users
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { authService } from '../services/authService'
 
 const ProfilePage = () => {
   const { updateProfile } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [profileData, setProfileData] = useState({
-    firstName: '志明',
-    lastName: '陳',
-    email: 'chen.executive@example.com',
-    phone: '+886-912-345-678',
-    age: 52,
-    profession: '科技公司CEO',
-    annualIncome: 25000000,
-    netWorth: 180000000,
-    membershipTier: 'Diamond',
-    privacyLevel: 3,
-    bio: '專注於科技創新與社會責任的企業家，熱愛藝術收藏與高爾夫運動。',
-    interests: ['科技創新', '藝術收藏', '高爾夫', '紅酒品鑑', '慈善事業'],
-    profilePicture: '/api/placeholder/150/150'
-  })
-
-  const [editData, setEditData] = useState(profileData)
+  const [loading, setLoading] = useState(true)
+  const [profileData, setProfileData] = useState<any>(null)
+  const [editData, setEditData] = useState<any>(null)
   const [newInterest, setNewInterest] = useState('')
+
+  useEffect(() => {
+    fetchProfileData()
+  }, [])
+
+  const fetchProfileData = async () => {
+    try {
+      setLoading(true)
+      const response = await authService.getProfile()
+      
+      if (response.success && response.data) {
+        const userData = response.data.user
+        setProfileData(userData)
+        setEditData(userData)
+      } else {
+        console.error('Failed to fetch profile:', response.error)
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const membershipBenefits = {
     Platinum: ['參與精選社交活動', '基本身份驗證', '標準客服支援'],
@@ -73,10 +83,11 @@ const ProfilePage = () => {
     setIsSaving(true)
     
     try {
-      const result = await updateProfile(editData)
+      const result = await authService.updateProfile(editData)
       
-      if (result.success) {
-        setProfileData(editData)
+      if (result.success && result.data) {
+        setProfileData(result.data.user)
+        setEditData(result.data.user)
         setIsEditing(false)
       } else {
         console.error('Profile update failed:', result.error)
@@ -141,6 +152,27 @@ const ProfilePage = () => {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-luxury-midnight-black flex items-center justify-center">
+        <div className="luxury-glass p-8 rounded-2xl text-center">
+          <div className="w-12 h-12 border-4 border-luxury-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-luxury-platinum">載入個人資料中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!profileData) {
+    return (
+      <div className="min-h-screen bg-luxury-midnight-black flex items-center justify-center">
+        <div className="luxury-glass p-8 rounded-2xl text-center">
+          <p className="text-luxury-platinum">無法載入個人資料</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-luxury-midnight-black py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -156,7 +188,7 @@ const ProfilePage = () => {
               <div className="text-center">
                 <div className="relative inline-block mb-4">
                   <img
-                    src={profileData.profilePicture}
+                    src={profileData.profilePicture || '/api/placeholder/150/150'}
                     alt="Profile"
                     className="w-24 h-24 rounded-full border-4 border-luxury-gold"
                   />

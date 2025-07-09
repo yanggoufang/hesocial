@@ -6,6 +6,7 @@ import { duckdb } from '../database/duckdb-connection.js'
 import { User, AuthenticatedRequest } from '../types/index.js'
 import config from '../utils/config.js'
 import logger from '../utils/logger.js'
+import { linkVisitorToUser, VisitorRequest } from '../middleware/visitorTracking.js'
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -100,6 +101,14 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     
     const userResult = await duckdb.query(userQuery, [userId])
     const user = userResult.rows[0] as User
+
+    // Link visitor to user if visitor ID exists
+    const visitorReq = req as VisitorRequest
+    if (visitorReq.visitorId) {
+      linkVisitorToUser(visitorReq.visitorId, userId).catch(error => {
+        logger.warn('Failed to link visitor to user:', error)
+      })
+    }
 
     logger.info(`User registered successfully: ${email}`)
 

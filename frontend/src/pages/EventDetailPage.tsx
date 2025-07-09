@@ -19,15 +19,34 @@ const EventDetailPage = () => {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
   const [isRegistering, setIsRegistering] = useState(false)
 
-  // Mock event data (replace with actual API call)
   useEffect(() => {
     const fetchEvent = async () => {
       setLoading(true)
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const mockEvent = {
+      try {
+        if (!id) {
+          throw new Error('Event ID is required')
+        }
+        
+        const response = await eventService.getEvent(id)
+        
+        if (response.success && response.data) {
+          setEvent(response.data)
+        } else {
+          console.error('Failed to fetch event:', response.error)
+        }
+      } catch (error) {
+        console.error('Error fetching event:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchEvent()
+  }, [id])
+
+  // Fallback mock data for development
+  const mockEvent = {
         id: id,
         name: '星空下的法式晚宴',
         description: '與米其林三星主廚共享精緻法式料理，在台北101頂樓欣賞城市夜景。這是一場結合美食、藝術與社交的頂級體驗，限量20位貴賓參與。在這個特別的夜晚，您將享受到：\n\n• 米其林三星主廚親自設計的8道式法式料理\n• 精選法國香檳與頂級紅酒配對\n• 台北101頂樓360度城市夜景\n• 現場小提琴演奏營造浪漫氛圍\n• 與其他成功人士的深度社交機會\n\n本活動採用最高規格的隱私保護措施，確保每位參與者都能在安全、私密的環境中享受愉快的社交時光。',
@@ -69,8 +88,10 @@ const EventDetailPage = () => {
         tags: ['米其林', '頂樓', '限量', '法式料理', '夜景']
       }
       
-      setEvent(mockEvent)
-      setLoading(false)
+      // Use mock data if API fails or returns no data
+      if (!event) {
+        setEvent(mockEvent)
+      }
     }
 
     fetchEvent()
@@ -126,12 +147,18 @@ const EventDetailPage = () => {
         throw new Error('Event ID is required')
       }
       
-      await eventService.registerForEvent(id)
+      const response = await eventService.registerForEvent(id)
       
-      setShowRegistrationModal(false)
-      // Show success message or redirect
+      if (response.success) {
+        setShowRegistrationModal(false)
+        // Show success message
+        alert('報名成功！您已成功報名此活動。')
+      } else {
+        throw new Error(response.error || 'Registration failed')
+      }
     } catch (error) {
       console.error('Registration failed:', error)
+      alert('報名失敗，請稍後再試。')
     } finally {
       setIsRegistering(false)
     }
@@ -457,13 +484,23 @@ const EventDetailPage = () => {
                 </div>
 
                 {isAuthenticated ? (
-                  <button
-                    onClick={() => navigate(`/events/${id}/register`)}
-                    className="w-full luxury-button py-3 mb-4"
-                    disabled={event.currentAttendees >= event.capacity}
-                  >
-                    {event.currentAttendees >= event.capacity ? '已額滿' : '立即報名'}
-                  </button>
+                  <div className="space-y-3 mb-4">
+                    <button
+                      onClick={() => navigate(`/events/${id}/register`)}
+                      className="w-full luxury-button py-3"
+                      disabled={event.currentAttendees >= event.capacity}
+                    >
+                      {event.currentAttendees >= event.capacity ? '已額滿' : '立即報名'}
+                    </button>
+                    
+                    <button
+                      onClick={() => navigate(`/events/${id}/participants`)}
+                      className="w-full px-4 py-3 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Users className="w-4 h-4" />
+                      查看參與者
+                    </button>
+                  </div>
                 ) : (
                   <div className="space-y-2 mb-4">
                     <button

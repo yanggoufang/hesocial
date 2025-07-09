@@ -1,4 +1,5 @@
 import { BaseMigration } from './Migration.js'
+import logger from '../../utils/logger.js'
 
 export default class AddMediaManagementSystem extends BaseMigration {
   id = '004_add_media_management_system'
@@ -98,7 +99,7 @@ export default class AddMediaManagementSystem extends BaseMigration {
       ALTER TABLE venues ADD COLUMN IF NOT EXISTS image_count INTEGER DEFAULT 0
     `)
 
-    this.logger.info('✅ Created media management system tables and indexes')
+    logger.info('✅ Created media management system tables and indexes')
   }
 
   async down(): Promise<void> {
@@ -125,6 +126,6 @@ export default class AddMediaManagementSystem extends BaseMigration {
     await this.executeSQL(`DROP TABLE IF EXISTS venue_media`)
     await this.executeSQL(`DROP TABLE IF EXISTS event_media`)
 
-    this.logger.info('✅ Removed media management system tables and indexes')
+    logger.info('✅ Removed media management system tables and indexes')
   }
 }

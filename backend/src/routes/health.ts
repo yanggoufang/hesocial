@@ -40,10 +40,10 @@ router.get('/database', async (req, res) => {
  * GET /api/health/r2-sync
  * R2 backup service health check and status
  */
-router.get('/r2-sync', async (req, res) => {
+router.get('/r2-sync', async (req, res): Promise<Response> => {
   try {
     // Simplified R2 sync health check
-    res.json({
+    return res.json({
       success: true,
       r2Sync: {
         enabled: r2BackupService.isEnabled(),

@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(npm init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run setup:*)",
+      "Bash(ls:*)",
+      "Bash(npm run dev:*)",
+      "Bash(pkill:*)",
+      "Bash(docker:*)",
+      "Bash(sudo service:*)",
+      "Bash(npm install:*)",
+      "Bash(curl:*)",
+      "Bash(find:*)",
+      "Bash(npm run build:*)",
+      "Bash(grep:*)",
+      "Bash(git push:*)",
+      "Bash(git remote add:*)",
+      "Bash(git config:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(gh auth:*)",
+      "Bash(git fetch:*)",
+      "Bash(git pull:*)"
+    ],
+    "deny": []
+  }
+}

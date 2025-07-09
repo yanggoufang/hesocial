@@ -2,7 +2,7 @@ import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { motion } from 'framer-motion'
-import { Shield, User, Crown, AlertTriangle } from 'lucide-react'
+import { Shield, User, Crown, MessageCircle } from 'lucide-react'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -34,7 +34,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           className="luxury-glass p-8 rounded-2xl text-center"
         >
           <div className="w-12 h-12 border-4 border-luxury-gold border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-luxury-platinum">Verifying access...</p>
+          <p className="text-luxury-platinum">驗證存取權限中...</p>
         </motion.div>
       </div>
     )
@@ -145,7 +145,7 @@ const UnauthorizedAccess: React.FC<UnauthorizedAccessProps> = ({
       case 'insufficient_membership':
         return <Crown className="h-16 w-16 text-luxury-gold" />
       case 'unverified_account':
-        return <AlertTriangle className="h-16 w-16 text-yellow-400" />
+        return <MessageCircle className="h-16 w-16 text-luxury-gold" />
       default:
         return <User className="h-16 w-16 text-luxury-platinum" />
     }
@@ -155,27 +155,27 @@ const UnauthorizedAccess: React.FC<UnauthorizedAccessProps> = ({
     switch (reason) {
       case 'insufficient_role':
         return {
-          title: 'Access Denied',
-          description: `This area requires ${requiredRole} access. Your current role: ${userRole || 'user'}`,
-          suggestion: 'Contact an administrator to request elevated permissions.'
+          title: '存取被拒',
+          description: `此區域需要 ${requiredRole === 'admin' ? '管理員' : requiredRole === 'super_admin' ? '超級管理員' : requiredRole} 權限。您目前的角色：${userRole === 'admin' ? '管理員' : userRole === 'super_admin' ? '超級管理員' : userRole === 'user' ? '使用者' : userRole || '使用者'}`,
+          suggestion: '請聯繫管理員申請更高權限。'
         }
       case 'insufficient_membership':
         return {
-          title: 'Membership Upgrade Required',
-          description: `This feature is exclusive to ${requiredMembership} members. Your current tier: ${userMembership || 'None'}`,
-          suggestion: 'Upgrade your membership to access premium features.'
+          title: '需要升級會員',
+          description: `此功能僅限 ${requiredMembership === 'Platinum' ? '白金卡' : requiredMembership === 'Diamond' ? '鑽石卡' : requiredMembership === 'Black Card' ? '黑卡' : requiredMembership} 會員使用。您目前的等級：${userMembership === 'Platinum' ? '白金卡' : userMembership === 'Diamond' ? '鑽石卡' : userMembership === 'Black Card' ? '黑卡' : userMembership || '無'}`,
+          suggestion: '請升級您的會員資格以使用高級功能。'
         }
       case 'unverified_account':
         return {
-          title: 'Account Verification Required',
-          description: `Your account must be verified to access this feature. Status: ${verificationStatus || 'pending'}`,
-          suggestion: 'Complete your profile verification or contact support for assistance.'
+          title: '需要帳戶驗證',
+          description: `您的帳戶必須經過驗證才能使用此功能。狀態：${verificationStatus === 'pending' ? '待審核' : verificationStatus === 'approved' ? '已通過' : verificationStatus === 'rejected' ? '已拒絕' : verificationStatus || '待審核'}`,
+          suggestion: '請完成您的個人資料驗證，或聯繫客服尋求協助。'
         }
       default:
         return {
-          title: 'Access Restricted',
-          description: 'You do not have permission to access this area.',
-          suggestion: 'Please contact support if you believe this is an error.'
+          title: '存取受限',
+          description: '您沒有權限存取此區域。',
+          suggestion: '如果您認為這是錯誤，請聯繫客服。'
         }
     }
   }
@@ -211,13 +211,13 @@ const UnauthorizedAccess: React.FC<UnauthorizedAccessProps> = ({
               onClick={() => window.history.back()}
               className="flex-1 px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors"
             >
-              Go Back
+              返回
             </button>
             <button
               onClick={() => window.location.href = '/'}
               className="flex-1 luxury-button py-2"
             >
-              Home
+              首頁
             </button>
           </div>
         </div>
