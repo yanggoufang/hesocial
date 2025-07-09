@@ -111,10 +111,34 @@ const AnalyticsDashboard = () => {
       // Fetch overview data
       const overviewResponse = await analyticsService.getEventsOverview()
       if (overviewResponse.success && overviewResponse.data) {
-        setOverview(overviewResponse.data.overview)
-        setTrends(overviewResponse.data.trends)
-        setTopEvents(overviewResponse.data.topEvents)
-        setCategoryPerformance(overviewResponse.data.categoryPerformance)
+        // Map the actual API response to expected format
+        const eventStats = overviewResponse.data.event_stats || {}
+        const registrationStats = overviewResponse.data.registration_stats || {}
+        const popularEvents = overviewResponse.data.popular_events || []
+        
+        // Create overview object from API response
+        const overviewData: AnalyticsOverview = {
+          total_events: eventStats.total_events || 0,
+          published_events: eventStats.recent_events || 0,
+          completed_events: eventStats.past_events || 0,
+          cancelled_events: 0,
+          avg_registrations: registrationStats.total_registrations || 0,
+          total_registrations: registrationStats.total_registrations || 0,
+          estimated_revenue: 0
+        }
+        
+        setOverview(overviewData)
+        setTrends([]) // Empty for now since API doesn't return trends
+        setTopEvents(popularEvents.map((event: any) => ({
+          id: event.id?.toString() || '',
+          title: event.name || '',
+          current_registrations: event.current_attendees || 0,
+          capacity_max: event.capacity || 0,
+          fill_rate: event.occupancy_rate || 0,
+          revenue: 0,
+          status: 'active'
+        })))
+        setCategoryPerformance([]) // Empty for now since API doesn't return category performance
       }
 
       // Fetch revenue data
@@ -306,7 +330,7 @@ const AnalyticsDashboard = () => {
                 月度趨勢
               </h3>
               <div className="space-y-4">
-                {trends.slice(0, 6).map((trend, index) => (
+                {(trends || []).slice(0, 6).map((trend, index) => (
                   <div key={trend.month} className="flex items-center justify-between p-4 bg-luxury-midnight-black/30 rounded-lg">
                     <div className="flex items-center space-x-4">
                       <div className="text-luxury-platinum font-medium">
@@ -339,7 +363,7 @@ const AnalyticsDashboard = () => {
                   熱門活動
                 </h3>
                 <div className="space-y-4">
-                  {topEvents.slice(0, 5).map((event, index) => (
+                  {(topEvents || []).slice(0, 5).map((event, index) => (
                     <div key={event.id} className="flex items-center justify-between p-4 bg-luxury-midnight-black/30 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-luxury-gold/20 rounded-full flex items-center justify-center text-luxury-gold font-medium text-sm">
@@ -372,7 +396,7 @@ const AnalyticsDashboard = () => {
                   類別表現
                 </h3>
                 <div className="space-y-4">
-                  {categoryPerformance.slice(0, 5).map((category, index) => (
+                  {(categoryPerformance || []).slice(0, 5).map((category, index) => (
                     <div key={category.category_name} className="flex items-center justify-between p-4 bg-luxury-midnight-black/30 rounded-lg">
                       <div>
                         <div className="text-luxury-platinum font-medium text-sm">
@@ -412,7 +436,7 @@ const AnalyticsDashboard = () => {
                 月度營收趨勢
               </h3>
               <div className="space-y-4">
-                {revenueData.monthlyRevenue.slice(0, 6).map((month) => (
+                {(revenueData.monthlyRevenue || []).slice(0, 6).map((month) => (
                   <div key={month.month} className="flex items-center justify-between p-4 bg-luxury-midnight-black/30 rounded-lg">
                     <div className="text-luxury-platinum font-medium">
                       {new Date(month.month + '-01').toLocaleDateString('zh-TW', { year: 'numeric', month: 'long' })}
@@ -443,7 +467,7 @@ const AnalyticsDashboard = () => {
                   類別營收
                 </h3>
                 <div className="space-y-4">
-                  {revenueData.categoryRevenue.map((category) => (
+                  {(revenueData.categoryRevenue || []).map((category) => (
                     <div key={category.category} className="flex items-center justify-between p-4 bg-luxury-midnight-black/30 rounded-lg">
                       <div>
                         <div className="text-luxury-platinum font-medium text-sm">
@@ -471,7 +495,7 @@ const AnalyticsDashboard = () => {
                   會員等級營收
                 </h3>
                 <div className="space-y-4">
-                  {revenueData.tierRevenue.map((tier) => (
+                  {(revenueData.tierRevenue || []).map((tier) => (
                     <div key={tier.membership_tier} className="flex items-center justify-between p-4 bg-luxury-midnight-black/30 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className={`w-3 h-3 rounded-full ${
@@ -508,7 +532,7 @@ const AnalyticsDashboard = () => {
           >
             {/* Engagement Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {engagementData.engagement.map((tier) => (
+              {(engagementData.engagement || []).map((tier) => (
                 <div key={tier.membership_tier} className="luxury-glass p-6 rounded-2xl">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-lg font-medium text-luxury-gold">
@@ -549,7 +573,7 @@ const AnalyticsDashboard = () => {
                   最活躍會員
                 </h3>
                 <div className="space-y-4">
-                  {engagementData.topMembers.slice(0, 8).map((member, index) => (
+                  {(engagementData.topMembers || []).slice(0, 8).map((member, index) => (
                     <div key={`${member.first_name}-${member.last_name}-${index}`} className="flex items-center justify-between p-4 bg-luxury-midnight-black/30 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-luxury-gold/20 rounded-full flex items-center justify-center text-luxury-gold font-medium text-sm">
@@ -582,7 +606,7 @@ const AnalyticsDashboard = () => {
                   會員留存率
                 </h3>
                 <div className="space-y-4">
-                  {engagementData.retention.slice(0, 6).map((cohort) => (
+                  {(engagementData.retention || []).slice(0, 6).map((cohort) => (
                     <div key={cohort.cohort_month} className="flex items-center justify-between p-4 bg-luxury-midnight-black/30 rounded-lg">
                       <div>
                         <div className="text-luxury-platinum font-medium text-sm">

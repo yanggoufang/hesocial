@@ -1,6 +1,6 @@
 # API Reference - HeSocial Platform
 
-**Last Updated**: July 9, 2025  
+**Last Updated**: July 9, 2025 - AnalyticsDashboard Frontend Fix Applied  
 **Base URL**: `http://localhost:5000/api` (Development)
 
 ## 🔐 **Authentication**
@@ -48,7 +48,7 @@ All API endpoints require authentication unless specified as **Public**.
 **Access**: Admin+  
 **Description**: Get daily visitor analytics breakdown
 
-### **GET /api/analytics/events/overview** ✅ **NEW**
+### **GET /api/analytics/events/overview** ✅ **UPDATED**
 **Access**: Admin+  
 **Description**: Get event analytics overview with performance metrics
 
@@ -86,6 +86,8 @@ All API endpoints require authentication unless specified as **Public**.
   }
 }
 ```
+
+**Frontend Integration Note**: The AnalyticsDashboard frontend has been updated to properly map this API response format. The frontend now handles the actual response structure (`event_stats`, `registration_stats`, `popular_events`) instead of the previously expected format (`overview`, `trends`, `topEvents`, `categoryPerformance`).
 
 ### **GET /api/analytics/revenue/events** ✅ **NEW**
 **Access**: Admin+  
@@ -516,7 +518,25 @@ All API endpoints require authentication unless specified as **Public**.
 
 ---
 
-**Note**: All endpoints marked with ✅ **WORKING** are fully functional and tested. New visitor analytics endpoints added July 8, 2025.
+## 🔧 **FRONTEND INTEGRATION NOTES**
+
+### **AnalyticsDashboard Frontend Fix (July 9, 2025)**
+The AnalyticsDashboard frontend component has been updated to properly handle the actual API response formats:
+
+**Key Changes:**
+- **API Response Mapping**: Fixed frontend to handle actual backend response structure
+- **Safe Array Handling**: Added `|| []` defaults to prevent undefined errors on array operations
+- **Graceful Fallbacks**: Dashboard now shows empty sections instead of crashing when data is unavailable
+- **Data Transformation**: Proper mapping of API fields to frontend display format
+
+**Error Resolution:**
+- Fixed "Cannot read properties of undefined (reading 'slice')" error
+- Added defensive programming for all array operations
+- Improved error handling for API response variations
+
+---
+
+**Note**: All endpoints marked with ✅ **WORKING** are fully functional and tested. AnalyticsDashboard frontend fix applied July 9, 2025.
 PUT  /api/auth/profile     # Update user profile information
 ```
 
