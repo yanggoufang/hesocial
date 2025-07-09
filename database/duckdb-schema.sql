@@ -150,3 +150,44 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     user_agent TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Visitor sessions table - tracks unique visitors and their sessions
+CREATE TABLE IF NOT EXISTS visitor_sessions (
+  id INTEGER PRIMARY KEY,
+  visitor_id VARCHAR(50) UNIQUE NOT NULL,
+  user_id INTEGER NULL, -- Links to users table when visitor converts
+  ip_address VARCHAR(45) NOT NULL,
+  user_agent TEXT NOT NULL,
+  referer TEXT NULL,
+  first_seen TIMESTAMP NOT NULL,
+  last_seen TIMESTAMP NOT NULL,
+  page_views INTEGER DEFAULT 1,
+  session_count INTEGER DEFAULT 1,
+  converted_at TIMESTAMP NULL, -- When visitor became registered user
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Individual page views table - detailed tracking for analytics
+CREATE TABLE IF NOT EXISTS visitor_page_views (
+  id INTEGER PRIMARY KEY,
+  visitor_id VARCHAR(50) NOT NULL,
+  path VARCHAR(500) NOT NULL,
+  method VARCHAR(10) NOT NULL DEFAULT 'GET',
+  query_params TEXT NULL,
+  referer TEXT NULL,
+  timestamp TIMESTAMP NOT NULL,
+  ip_address VARCHAR(45) NOT NULL,
+  user_agent TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Visitor events table - track specific actions (future use)
+CREATE TABLE IF NOT EXISTS visitor_events (
+  id INTEGER PRIMARY KEY,
+  visitor_id VARCHAR(50) NOT NULL,
+  event_type VARCHAR(50) NOT NULL, -- 'page_view', 'event_view', 'registration_attempt', etc.
+  event_data TEXT NULL, -- JSON data for event details
+  timestamp TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -30,6 +30,7 @@
 - **Registrations**: Member participation tracking
 - **Financial verification**: Automated tier assignment
 - **Server state tracking**: Operational metrics
+- **Visitor tracking**: Anonymous visitor analytics and conversion tracking (visitor_sessions, visitor_page_views, visitor_events)
 
 ## Enhanced Server Features
 

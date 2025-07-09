@@ -205,4 +205,7 @@ When working on complex tasks:
 3. Mark tasks complete as you finish
 4. Reference documentation for context
 
+## Deployment Reminders
+- When start or restart server just ask me to do it.
+
 **Remember**: This is a production-ready system with complete social networking functionality. All 17 major system components are operational including participant discovery, privacy management, and payment-gated social features. Focus on advanced features and polish for Phase 14.
