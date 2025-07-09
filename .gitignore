@@ -1,3 +1,21 @@
 
 # Local settings for Claude
 .claude/
+node_modules
+
+# Database files
+*.duckdb
+*.duckdb.wal
+
+# Build outputs
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Log files
+logs/
+*.log
