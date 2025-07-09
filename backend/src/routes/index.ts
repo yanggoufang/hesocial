@@ -21,6 +21,8 @@ import registrationRoutes from './registrationRoutes.js'
 // import mediaRoutes from './mediaRoutes.js'
 import systemHealthRoutes from './systemHealthRoutes.js'
 import analyticsRoutes from './analyticsRoutes.js'
+import deploymentRoutes from './deploymentRoutes.js'
+import emergencyRoutes from './emergencyRoutes.js'
 
 const router = Router()
 
@@ -122,6 +124,12 @@ router.use('/system', systemHealthRoutes)
 
 // Analytics (requires authentication + admin role)
 router.use('/analytics', analyticsRoutes)
+
+// Blue-Green Deployment Management (requires authentication + admin role)
+router.use('/deployment', deploymentRoutes)
+
+// Emergency Database Operations (requires authentication + admin role)
+router.use('/emergency', emergencyRoutes)
 
 // Temporarily disable other routes that may have import issues
 // router.use('/admin', adminRoutes)

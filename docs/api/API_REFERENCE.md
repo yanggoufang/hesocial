@@ -1,7 +1,7 @@
 # API Reference - HeSocial Platform
 
-**Last Updated**: July 8, 2025  
-**Base URL**: `http://localhost:3001/api` (Development)
+**Last Updated**: July 9, 2025  
+**Base URL**: `http://localhost:5000/api` (Development)
 
 ## 🔐 **Authentication**
 
@@ -20,7 +20,7 @@ All API endpoints require authentication unless specified as **Public**.
 
 ---
 
-## 📊 **VISITOR ANALYTICS** ✅ **NEW - July 8, 2025**
+## 📊 **BUSINESS INTELLIGENCE & ANALYTICS** ✅ **UPDATED - July 9, 2025**
 
 ### **GET /api/analytics/visitors**
 **Access**: Admin+  
@@ -47,6 +47,328 @@ All API endpoints require authentication unless specified as **Public**.
 ### **GET /api/analytics/visitors/daily**
 **Access**: Admin+  
 **Description**: Get daily visitor analytics breakdown
+
+### **GET /api/analytics/events/overview** ✅ **NEW**
+**Access**: Admin+  
+**Description**: Get event analytics overview with performance metrics
+
+**Query Parameters**:
+- `days` (optional): Number of days to analyze (default: 30)
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "period_days": 30,
+    "event_stats": {
+      "total_events": 12,
+      "recent_events": 12,
+      "upcoming_events": 12,
+      "past_events": 0,
+      "avg_occupancy_rate": 50.99
+    },
+    "registration_stats": {
+      "total_registrations": 0,
+      "recent_registrations": 0,
+      "unique_attendees": 0
+    },
+    "popular_events": [
+      {
+        "id": 8,
+        "name": "企業家論壇峰會",
+        "date_time": "2025-09-25T14:00:00.000Z",
+        "capacity": 80,
+        "current_attendees": 47,
+        "occupancy_rate": 58.75
+      }
+    ]
+  }
+}
+```
+
+### **GET /api/analytics/revenue/events** ✅ **NEW**
+**Access**: Admin+  
+**Description**: Get revenue analytics by month, category, and membership tier
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "monthlyRevenue": [
+      {
+        "month": "2025-07",
+        "event_count": 12,
+        "total_registrations": 221,
+        "revenue": 3315000
+      }
+    ],
+    "categoryRevenue": [
+      {
+        "category": "商務論壇",
+        "revenue": 1125000,
+        "event_count": 2,
+        "avg_revenue_per_event": 562500
+      }
+    ],
+    "tierRevenue": [
+      {
+        "membership_tier": "Black Card",
+        "registration_count": 1,
+        "total_revenue": 15000
+      }
+    ]
+  }
+}
+```
+
+### **GET /api/analytics/engagement/members** ✅ **NEW**
+**Access**: Admin+  
+**Description**: Get member engagement analytics with retention metrics
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "engagement": [
+      {
+        "membership_tier": "Black Card",
+        "total_members": 1,
+        "active_members": 0,
+        "engagement_rate": 0,
+        "avg_events_per_member": 0
+      }
+    ],
+    "topMembers": [
+      {
+        "first_name": "Admin",
+        "last_name": "User",
+        "membership_tier": "Black Card",
+        "events_attended": 0,
+        "total_spent": 15000
+      }
+    ],
+    "retention": [
+      {
+        "cohort_month": "2025-07",
+        "cohort_size": 1,
+        "active_this_month": 1,
+        "retention_rate": 100
+      }
+    ]
+  }
+}
+```
+
+### **GET /api/analytics/events/:id/performance** ✅ **NEW**
+**Access**: Admin+  
+**Description**: Get individual event performance metrics
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "event": {
+      "id": 1,
+      "name": "頂級威士忌品鑑晚宴",
+      "fill_rate": 40.0,
+      "current_revenue": 120000,
+      "potential_revenue": 300000
+    },
+    "registrationTimeline": [
+      {
+        "date": "2025-07-08",
+        "registrations": 5,
+        "cumulative_registrations": 5
+      }
+    ],
+    "membershipBreakdown": [
+      {
+        "membership_tier": "Platinum",
+        "count": 3,
+        "percentage": 60
+      }
+    ],
+    "statusBreakdown": [
+      {
+        "status": "confirmed",
+        "count": 5
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 🚀 **BLUE-GREEN DEPLOYMENT MANAGEMENT** ✅ **NEW - July 9, 2025**
+
+### **GET /api/deployment/status**
+**Access**: Admin+  
+**Description**: Get current deployment system status
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "schemaVersion": 3,
+    "blueGreenStatus": {
+      "blue": {
+        "name": "blue",
+        "healthStatus": "healthy",
+        "schemaVersion": 2,
+        "isActive": false
+      },
+      "green": {
+        "name": "green", 
+        "healthStatus": "healthy",
+        "schemaVersion": 3,
+        "isActive": true
+      },
+      "active": "green",
+      "rollbackAvailable": true,
+      "deploymentInProgress": false
+    },
+    "canDeploy": true,
+    "timestamp": "2025-07-09T17:00:00.000Z"
+  }
+}
+```
+
+### **GET /api/deployment/health**
+**Access**: Admin+  
+**Description**: Get health status of all database environments
+
+### **POST /api/deployment/deploy-visitor-tracking**
+**Access**: Admin+  
+**Description**: Deploy visitor tracking tables with zero downtime
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Visitor tracking tables deployed successfully",
+    "deployment": {
+      "success": true,
+      "activeEnvironment": "green",
+      "previousEnvironment": "blue",
+      "schemaVersion": 2,
+      "duration": 5000,
+      "rollbackAvailable": true
+    }
+  }
+}
+```
+
+### **POST /api/deployment/rollback**
+**Access**: Admin+  
+**Description**: Perform instant rollback to previous environment
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Rollback completed successfully",
+    "rollback": {
+      "success": true,
+      "activeEnvironment": "blue",
+      "previousEnvironment": "green",
+      "schemaVersion": 1,
+      "duration": 500,
+      "rollbackAvailable": false
+    }
+  }
+}
+```
+
+### **GET /api/deployment/migration-plans**
+**Access**: Admin+  
+**Description**: Get available migration plans
+
+### **POST /api/deployment/test-connection**
+**Access**: Admin+  
+**Description**: Test database connections for both environments
+
+---
+
+## 🚨 **EMERGENCY DATABASE OPERATIONS** ✅ **NEW - July 9, 2025**
+
+### **POST /api/emergency/apply-visitor-tracking**
+**Access**: Admin+  
+**Description**: Emergency application of visitor tracking schema (bypasses blue-green)
+
+**Request Body**:
+```json
+{
+  "confirm": true
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Emergency visitor tracking schema applied successfully",
+    "warning": "This operation bypassed the blue-green deployment system",
+    "tablesCreated": [
+      "visitor_sessions",
+      "visitor_page_views",
+      "visitor_events"
+    ],
+    "indexesCreated": 9
+  }
+}
+```
+
+### **POST /api/emergency/fix-analytics-queries**
+**Access**: Admin+  
+**Description**: Emergency fix for analytics queries (DuckDB compatibility)
+
+**Request Body**:
+```json
+{
+  "confirm": true
+}
+```
+
+### **GET /api/emergency/test-visitor-tracking**
+**Access**: Admin+  
+**Description**: Test if visitor tracking tables exist and are working
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Visitor tracking table test completed",
+    "results": {
+      "visitor_sessions": {
+        "exists": true,
+        "count": 0
+      },
+      "visitor_page_views": {
+        "exists": true,
+        "count": 0
+      },
+      "visitor_events": {
+        "exists": true,
+        "count": 0
+      }
+    }
+  }
+}
+```
+
+### **GET /api/emergency/test-analytics**
+**Access**: Admin+  
+**Description**: Test basic analytics queries for debugging
 
 ### **GET /api/analytics/pages/popular**
 **Access**: Admin+  

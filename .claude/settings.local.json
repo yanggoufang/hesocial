@@ -22,7 +22,10 @@
       "Bash(git remote set-url:*)",
       "Bash(gh auth:*)",
       "Bash(git fetch:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(npm run migrate:status:*)",
+      "Bash(npm run:*)",
+      "Bash(sqlite3:*)"
     ],
     "deny": []
   }

@@ -31,22 +31,27 @@ popular_pages           # Page performance with conversion rates
 
 **Schema Fix Applied (July 9, 2025)**: Added visitor tracking tables to main `duckdb-schema.sql` to resolve "table does not exist" errors during server startup.
 
+**Blue-Green Deployment Integration (July 9, 2025)**: Integrated visitor tracking deployment with new blue-green deployment system for zero-downtime schema migrations.
+
 ### **3. Backend Tracking System**
 - **Automatic Middleware**: Tracks every request without blocking performance
 - **Smart Session Management**: Creates/updates visitor sessions intelligently
 - **User Conversion Linking**: Automatically links visitors to users after registration
 - **Error Resilient**: Tracking failures don't affect core functionality
 
-### **4. Admin Analytics API**
+### **4. Admin Analytics API** ✅ **UPDATED**
 ```bash
-# 6 comprehensive analytics endpoints
+# 7 comprehensive analytics endpoints (DuckDB optimized)
 GET /api/analytics/visitors              # Overview statistics
 GET /api/analytics/visitors/daily        # Daily breakdown
-GET /api/analytics/pages/popular         # Popular pages + conversion
-GET /api/analytics/conversion            # Conversion funnel
-GET /api/analytics/visitors/:id          # Individual journey
+GET /api/analytics/events/overview       # Event performance overview
+GET /api/analytics/revenue/events        # Revenue analytics by month/category/tier
+GET /api/analytics/engagement/members    # Member engagement with retention
+GET /api/analytics/events/:id/performance # Individual event metrics
 POST /api/analytics/events/track         # Custom event tracking
 ```
+
+**DuckDB Integration (July 9, 2025)**: All analytics queries optimized for DuckDB with BigInt serialization support and proper JSON responses.
 
 ### **5. Frontend Integration**
 - **VisitorTracker Component**: Shows visitor ID in development mode

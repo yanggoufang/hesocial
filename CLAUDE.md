@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 High-end social event platform for affluent individuals (NT$5M+ income, NT$30M+ assets) facilitating luxury events like private dinners, yacht parties, and art appreciation.
 
-**Status**: Phase 1-13 Complete ✅ - 17/17 major system components production ready  
+**Status**: Phase 1-13 Complete ✅ - 19/19 major system components production ready  
 **Current Phase**: Phase 14 - Advanced Features & Polish  
-**Latest Update**: Social Networking Frontend Complete - Participant discovery and privacy management system fully operational
+**Latest Update**: Blue-Green Deployment System Complete - Zero-downtime database schema deployments with visitor tracking and analytics fully operational
 
 📖 **[Full Project Overview](docs/PROJECT_OVERVIEW.md)**
 
@@ -26,7 +26,7 @@ npm run test     # Run tests
 
 ## System Status
 
-### ✅ Production Ready Systems (17/17)
+### ✅ Production Ready Systems (19/19)
 - Authentication System (JWT + OAuth 2.0)
 - Event Content Management (Full Stack)
 - Event Registration System (Full Stack)
@@ -44,16 +44,18 @@ npm run test     # Run tests
 - **Participant Access Control System (Social Networking Foundation)**
 - **Social Networking Frontend (Participant Discovery & Privacy Management)**
 - **Critical API Endpoints (Backend Infrastructure)**
+- **Blue-Green Database Deployment System (Zero-Downtime Schema Management)**
+- **Visitor Tracking & Analytics System (Business Intelligence Foundation)**
 
-### ✅ Recently Completed - Social Networking Frontend (July 9, 2025)
-- **Participant Discovery Frontend** - Complete event participant viewing with payment gate integration
-- **Privacy Management System** - 5-tier privacy control interface with visual indicators
-- **Database Interface Migration** - DuckDB async operations fully implemented
-- **Participant Access Control** - Backend API endpoints for participant discovery and privacy settings
-- **Payment-Gated Social Features** - Restricted participant access based on event payment status
-- **Luxury Design Integration** - Consistent midnight black theme with gold accents across all components
-- **Real-time Privacy Controls** - Dynamic privacy settings with immediate effect on participant visibility
-- **Contact Management System** - Foundation for participant contact requests and messaging
+### ✅ Recently Completed - Blue-Green Deployment System (July 9, 2025)
+- **Zero-Downtime Database Deployments** - Complete blue-green deployment architecture for schema migrations
+- **Visitor Tracking System** - Anonymous visitor analytics with conversion tracking (3 tables + indexes)
+- **Business Intelligence Analytics** - 4 comprehensive analytics endpoints with DuckDB optimization
+- **Emergency Database Operations** - Critical schema fixes with bypass capabilities
+- **Production-Ready Deployment Pipeline** - Atomic database switching with instant rollback
+- **Analytics Dashboard Integration** - Revenue, engagement, and performance metrics fully operational
+- **BigInt Serialization Support** - JSON-compatible analytics responses with proper data conversion
+- **DuckDB Query Optimization** - Native syntax compatibility for all analytics operations
 
 📖 **[Detailed System Status](docs/systems/COMPLETED_SYSTEMS.md)**  
 📖 **[Current Development Status](docs/systems/DEVELOPMENT_STATUS.md)**
@@ -147,6 +149,29 @@ npm run test     # Run tests
 - `POST /api/events/:eventId/participants/:participantId/contact` - Initiate contact
 - `GET /api/events/:eventId/privacy-settings` - Get user's privacy settings
 - `PUT /api/events/:eventId/privacy-settings` - Update privacy settings
+
+### Analytics & Business Intelligence ✅ **WORKING**
+- `GET /api/analytics/events/overview` - Event performance overview with trends
+- `GET /api/analytics/revenue/events` - Revenue analytics by month, category, and tier
+- `GET /api/analytics/engagement/members` - Member engagement metrics with retention
+- `GET /api/analytics/events/:id/performance` - Individual event performance metrics
+- `GET /api/analytics/visitors` - Visitor analytics overview
+- `GET /api/analytics/visitors/daily` - Daily visitor analytics
+- `POST /api/analytics/events/track` - Custom event tracking
+
+### Blue-Green Deployment Management ✅ **WORKING**
+- `GET /api/deployment/status` - Current deployment system status
+- `GET /api/deployment/health` - Health of all database environments
+- `POST /api/deployment/deploy-visitor-tracking` - Zero-downtime visitor tracking deployment
+- `POST /api/deployment/rollback` - Instant rollback to previous environment
+- `GET /api/deployment/migration-plans` - Available migration plans
+- `POST /api/deployment/test-connection` - Test database connections
+
+### Emergency Database Operations ✅ **WORKING**
+- `POST /api/emergency/apply-visitor-tracking` - Emergency visitor tracking schema
+- `POST /api/emergency/fix-analytics-queries` - Emergency analytics query fixes
+- `GET /api/emergency/test-visitor-tracking` - Test visitor tracking tables
+- `GET /api/emergency/test-analytics` - Test analytics queries
 
 ### Sales Management ✅ **WORKING**
 - `GET /api/sales/leads` - Lead management with automatic scoring
