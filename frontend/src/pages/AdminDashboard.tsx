@@ -194,11 +194,51 @@ const AdminDashboard = () => {
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
-            {/* Backup Management */}
+            {/* Analytics Dashboard */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5 }}
+              className="luxury-glass p-6 rounded-xl"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <BarChart3 className="h-6 w-6 text-luxury-gold" />
+                <h2 className="text-xl font-luxury font-bold text-luxury-gold">
+                  分析儀表板
+                </h2>
+              </div>
+              <p className="text-luxury-platinum/80 mb-6">
+                查看活動表現、營收分析和會員參與度等關鍵業務指標。
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate('/admin/analytics')}
+                  className="w-full luxury-button text-center"
+                >
+                  查看分析數據
+                </button>
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => navigate('/admin/analytics')}
+                    className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm"
+                  >
+                    營收報告
+                  </button>
+                  <button 
+                    onClick={() => navigate('/admin/analytics')}
+                    className="px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors text-sm"
+                  >
+                    會員分析
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Backup Management */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 }}
               className="luxury-glass p-6 rounded-xl"
             >
               <div className="flex items-center space-x-3 mb-4">
@@ -232,11 +272,11 @@ const AdminDashboard = () => {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.6 }}
+              transition={{ delay: 0.7 }}
               className="luxury-glass p-6 rounded-xl"
             >
               <div className="flex items-center space-x-3 mb-4">
-                <BarChart3 className="h-6 w-6 text-luxury-gold" />
+                <Activity className="h-6 w-6 text-luxury-gold" />
                 <h2 className="text-xl font-luxury font-bold text-luxury-gold">
                   系統監控
                 </h2>
@@ -272,7 +312,7 @@ const AdminDashboard = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
+              transition={{ delay: 0.8 }}
               className="luxury-glass p-6 rounded-xl"
             >
               <div className="flex items-center space-x-3 mb-4">

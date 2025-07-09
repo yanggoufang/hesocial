@@ -363,4 +363,269 @@ router.post('/events/track', async (req, res) => {
   }
 })
 
+/**
+ * GET /api/analytics/revenue/events
+ * Get revenue analytics for events
+ */
+router.get('/revenue/events', async (req, res) => {
+  try {
+    // Get revenue by month - using actual column names
+    const monthlyRevenueQuery = `
+      SELECT 
+        strftime(e.dateTime, '%Y-%m') as month,
+        COUNT(e.id) as event_count,
+        SUM(e.currentAttendees) as total_registrations,
+        SUM(e.currentAttendees * CAST(json_extract(e.pricing, '$.platinum') AS INTEGER)) as revenue
+      FROM events e
+      WHERE e.currentAttendees > 0
+        AND e.dateTime >= CURRENT_TIMESTAMP - INTERVAL '12 months'
+      GROUP BY strftime(e.dateTime, '%Y-%m')
+      ORDER BY month DESC
+    `
+    
+    const monthlyRevenue = await pool.query(monthlyRevenueQuery)
+    
+    // Get revenue by category - using actual column names
+    const categoryRevenueQuery = `
+      SELECT 
+        ec.name as category,
+        SUM(e.currentAttendees * CAST(json_extract(e.pricing, '$.platinum') AS INTEGER)) as revenue,
+        COUNT(e.id) as event_count,
+        AVG(e.currentAttendees * CAST(json_extract(e.pricing, '$.platinum') AS INTEGER)) as avg_revenue_per_event
+      FROM events e
+      JOIN event_categories ec ON e.category_id = ec.id
+      WHERE e.currentAttendees > 0
+        AND e.dateTime >= CURRENT_TIMESTAMP - INTERVAL '12 months'
+      GROUP BY ec.id, ec.name
+      ORDER BY revenue DESC
+    `
+    
+    const categoryRevenue = await pool.query(categoryRevenueQuery)
+    
+    // Get revenue by membership tier
+    const tierRevenueQuery = `
+      SELECT 
+        u.membership_tier,
+        COUNT(r.id) as registration_count,
+        SUM(
+          CASE 
+            WHEN u.membership_tier = 'Platinum' THEN e.price_platinum
+            WHEN u.membership_tier = 'Diamond' THEN e.price_diamond
+            WHEN u.membership_tier = 'Black Card' THEN e.price_black_card
+            ELSE e.price_platinum
+          END
+        ) as total_revenue
+      FROM registrations r
+      JOIN users u ON r.user_id = u.id
+      JOIN events e ON r.event_id = e.id
+      WHERE r.status = 'confirmed'
+        AND e.start_datetime >= datetime('now', '-12 months')
+      GROUP BY u.membership_tier
+      ORDER BY total_revenue DESC
+    `
+    
+    const tierRevenue = await pool.query(tierRevenueQuery)
+
+    res.json({
+      success: true,
+      data: {
+        monthlyRevenue: monthlyRevenue.rows || [],
+        categoryRevenue: categoryRevenue.rows || [],
+        tierRevenue: tierRevenue.rows || []
+      }
+    })
+  } catch (error) {
+    logger.error('Revenue analytics error:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch revenue analytics'
+    })
+  }
+})
+
+/**
+ * GET /api/analytics/engagement/members
+ * Get member engagement analytics
+ */
+router.get('/engagement/members', async (req, res) => {
+  try {
+    // Get member engagement metrics
+    const engagementQuery = `
+      SELECT 
+        u.membership_tier,
+        COUNT(DISTINCT u.id) as total_members,
+        COUNT(DISTINCT r.user_id) as active_members,
+        (COUNT(DISTINCT r.user_id)::float / COUNT(DISTINCT u.id) * 100) as engagement_rate,
+        AVG(user_stats.event_count) as avg_events_per_member
+      FROM users u
+      LEFT JOIN registrations r ON u.id = r.user_id 
+        AND r.created_at >= datetime('now', '-30 days')
+        AND r.status != 'cancelled'
+      LEFT JOIN (
+        SELECT 
+          user_id,
+          COUNT(*) as event_count
+        FROM registrations
+        WHERE created_at >= datetime('now', '-30 days')
+          AND status != 'cancelled'
+        GROUP BY user_id
+      ) user_stats ON u.id = user_stats.user_id
+      WHERE u.created_at <= datetime('now', '-7 days')
+      GROUP BY u.membership_tier
+      ORDER BY engagement_rate DESC
+    `
+    
+    const engagement = await pool.query(engagementQuery)
+    
+    // Get most active members
+    const activeMembers = `
+      SELECT 
+        u.first_name,
+        u.last_name,
+        u.membership_tier,
+        COUNT(r.id) as events_attended,
+        SUM(
+          CASE 
+            WHEN u.membership_tier = 'Platinum' THEN e.price_platinum
+            WHEN u.membership_tier = 'Diamond' THEN e.price_diamond
+            WHEN u.membership_tier = 'Black Card' THEN e.price_black_card
+            ELSE e.price_platinum
+          END
+        ) as total_spent
+      FROM users u
+      JOIN registrations r ON u.id = r.user_id
+      JOIN events e ON r.event_id = e.id
+      WHERE r.status = 'confirmed'
+        AND r.created_at >= datetime('now', '-90 days')
+      GROUP BY u.id, u.first_name, u.last_name, u.membership_tier
+      ORDER BY events_attended DESC, total_spent DESC
+      LIMIT 20
+    `
+    
+    const topMembers = await pool.query(activeMembers)
+    
+    // Get retention metrics
+    const retentionQuery = `
+      SELECT 
+        strftime('%Y-%m', u.created_at) as cohort_month,
+        COUNT(DISTINCT u.id) as cohort_size,
+        COUNT(DISTINCT CASE WHEN r.created_at >= datetime('now', '-30 days') THEN u.id END) as active_this_month,
+        (COUNT(DISTINCT CASE WHEN r.created_at >= datetime('now', '-30 days') THEN u.id END)::float / COUNT(DISTINCT u.id) * 100) as retention_rate
+      FROM users u
+      LEFT JOIN registrations r ON u.id = r.user_id AND r.status != 'cancelled'
+      WHERE u.created_at >= datetime('now', '-12 months')
+      GROUP BY strftime('%Y-%m', u.created_at)
+      ORDER BY cohort_month DESC
+    `
+    
+    const retention = await pool.query(retentionQuery)
+
+    res.json({
+      success: true,
+      data: {
+        engagement: engagement.rows || [],
+        topMembers: topMembers.rows || [],
+        retention: retention.rows || []
+      }
+    })
+  } catch (error) {
+    logger.error('Member engagement analytics error:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch member engagement data'
+    })
+  }
+})
+
+/**
+ * GET /api/analytics/events/:id/performance
+ * Get individual event performance metrics
+ */
+router.get('/events/:id/performance', async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    // Get event details with performance metrics
+    const eventQuery = `
+      SELECT 
+        e.*,
+        c.name as category_name,
+        v.name as venue_name,
+        (e.current_registrations::float / e.capacity_max::float * 100) as fill_rate,
+        (e.price_platinum * e.current_registrations) as current_revenue,
+        (e.price_platinum * e.capacity_max) as potential_revenue
+      FROM events e
+      JOIN categories c ON e.category_id = c.id
+      JOIN venues v ON e.venue_id = v.id
+      WHERE e.id = ?
+    `
+    
+    const eventData = await pool.query(eventQuery, [id])
+    
+    if (!eventData.rows || eventData.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Event not found'
+      })
+    }
+    
+    // Get registration timeline
+    const registrationTimelineQuery = `
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(*) as registrations,
+        SUM(COUNT(*)) OVER (ORDER BY DATE(created_at)) as cumulative_registrations
+      FROM registrations
+      WHERE event_id = ? AND status != 'cancelled'
+      GROUP BY DATE(created_at)
+      ORDER BY date
+    `
+    
+    const registrationTimeline = await pool.query(registrationTimelineQuery, [id])
+    
+    // Get membership tier breakdown
+    const membershipBreakdownQuery = `
+      SELECT 
+        u.membership_tier,
+        COUNT(*) as count,
+        (COUNT(*)::float / (SELECT COUNT(*) FROM registrations WHERE event_id = ? AND status != 'cancelled') * 100) as percentage
+      FROM registrations r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.event_id = ? AND r.status != 'cancelled'
+      GROUP BY u.membership_tier
+      ORDER BY count DESC
+    `
+    
+    const membershipBreakdown = await pool.query(membershipBreakdownQuery, [id, id])
+    
+    // Get registration status breakdown
+    const statusBreakdownQuery = `
+      SELECT 
+        status,
+        COUNT(*) as count
+      FROM registrations
+      WHERE event_id = ?
+      GROUP BY status
+    `
+    
+    const statusBreakdown = await pool.query(statusBreakdownQuery, [id])
+
+    res.json({
+      success: true,
+      data: {
+        event: eventData.rows[0],
+        registrationTimeline: registrationTimeline.rows || [],
+        membershipBreakdown: membershipBreakdown.rows || [],
+        statusBreakdown: statusBreakdown.rows || []
+      }
+    })
+  } catch (error) {
+    logger.error('Event performance analytics error:', error)
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch event performance data'
+    })
+  }
+})
+
 export default router

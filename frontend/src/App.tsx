@@ -30,6 +30,7 @@ const VVIPPage = lazy(() => import('./pages/VVIPPage'));
 
 // Admin pages (loaded on demand)
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AnalyticsDashboard = lazy(() => import('./pages/AnalyticsDashboard'));
 const BackupManagement = lazy(() => import('./pages/BackupManagement'));
 const SystemHealthDashboard = lazy(() => import('./pages/SystemHealthDashboard'));
 const UserManagement = lazy(() => import('./pages/UserManagement'));
@@ -85,6 +86,7 @@ function App() {
 
                 {/* Admin Module */}
                 <Route path="/admin" element={<AdminRoute><Suspense fallback={<RouteLoader type="admin" message="載入管理台中..." />}><AdminDashboard /></Suspense></AdminRoute>} />
+                <Route path="/admin/analytics" element={<AdminRoute><Suspense fallback={<RouteLoader type="admin" message="載入分析儀表板中..." />}><AnalyticsDashboard /></Suspense></AdminRoute>} />
                 <Route path="/admin/backups" element={<BackupManagementRoute><Suspense fallback={<RouteLoader type="admin" message="載入備份管理中..." />}><BackupManagement /></Suspense></BackupManagementRoute>} />
                 <Route path="/admin/users" element={<UserManagementRoute><Suspense fallback={<RouteLoader type="admin" message="載入用戶管理中..." />}><UserManagement /></Suspense></UserManagementRoute>} />
                 <Route path="/admin/sales" element={<AdminRoute><Suspense fallback={<RouteLoader type="admin" message="載入銷售管理中..." />}><SalesManagement /></Suspense></AdminRoute>} />
