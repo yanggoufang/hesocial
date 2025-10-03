@@ -191,3 +191,144 @@ CREATE TABLE IF NOT EXISTS visitor_events (
   timestamp TIMESTAMP NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Event privacy overrides table - allows users to set different privacy levels for specific events
+CREATE TABLE IF NOT EXISTS event_privacy_overrides (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  event_id INTEGER NOT NULL,
+  privacy_level INTEGER NOT NULL DEFAULT 3 CHECK (privacy_level >= 1 AND privacy_level <= 5),
+  allow_contact BOOLEAN DEFAULT TRUE,
+  show_in_list BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, event_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+-- Event participant access tracking table - tracks who can view participants
+CREATE TABLE IF NOT EXISTS event_participant_access (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  event_id INTEGER NOT NULL,
+  has_access BOOLEAN DEFAULT FALSE,
+  access_granted_at TIMESTAMP,
+  payment_status VARCHAR(20) DEFAULT 'pending',
+  access_level VARCHAR(20) DEFAULT 'basic',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, event_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+-- Participant view logs table - security logging for participant viewing activities
+CREATE TABLE IF NOT EXISTS participant_view_logs (
+  id INTEGER PRIMARY KEY,
+  viewer_id INTEGER NOT NULL,
+  participant_id INTEGER NOT NULL,
+  event_id INTEGER NOT NULL,
+  access_level INTEGER NOT NULL,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (viewer_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (participant_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
+-- Sales leads table - track potential customers
+CREATE TABLE IF NOT EXISTS sales_leads (
+  id INTEGER PRIMARY KEY,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  phone VARCHAR(50),
+  company VARCHAR(200),
+  job_title VARCHAR(200),
+  annual_income BIGINT,
+  net_worth BIGINT,
+  source VARCHAR(100) DEFAULT 'manual',
+  referral_code VARCHAR(100),
+  lead_score INTEGER DEFAULT 0,
+  status VARCHAR(50) DEFAULT 'new',
+  interested_membership_tier VARCHAR(20),
+  budget_range VARCHAR(100),
+  timeline VARCHAR(100),
+  pain_points TEXT,
+  interests JSON DEFAULT '[]',
+  notes TEXT,
+  assigned_to INTEGER NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Sales opportunities table - track formal sales processes
+CREATE TABLE IF NOT EXISTS sales_opportunities (
+  id INTEGER PRIMARY KEY,
+  lead_id INTEGER,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  stage VARCHAR(50) DEFAULT 'prospecting',
+  probability INTEGER DEFAULT 0 CHECK (probability >= 0 AND probability <= 100),
+  value BIGINT DEFAULT 0,
+  expected_close_date DATE,
+  membership_tier VARCHAR(20),
+  payment_terms VARCHAR(100),
+  assigned_to INTEGER NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (lead_id) REFERENCES sales_leads(id) ON DELETE SET NULL,
+  FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Sales activities table - track sales interactions
+CREATE TABLE IF NOT EXISTS sales_activities (
+  id INTEGER PRIMARY KEY,
+  lead_id INTEGER NULL,
+  opportunity_id INTEGER NULL,
+  activity_type VARCHAR(50) NOT NULL,
+  subject VARCHAR(255) NOT NULL,
+  description TEXT,
+  outcome TEXT,
+  duration_minutes INTEGER,
+  scheduled_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  created_by INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (lead_id) REFERENCES sales_leads(id) ON DELETE SET NULL,
+  FOREIGN KEY (opportunity_id) REFERENCES sales_opportunities(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Sales pipeline stages table - configurable sales stages
+CREATE TABLE IF NOT EXISTS sales_pipeline_stages (
+  id INTEGER PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  description TEXT,
+  display_order INTEGER NOT NULL,
+  default_probability INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sales team members table - sales team structure
+CREATE TABLE IF NOT EXISTS sales_team_members (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL UNIQUE,
+  role VARCHAR(50) NOT NULL,
+  manager_id INTEGER NULL,
+  territory VARCHAR(200),
+  commission_rate DECIMAL(5,2) DEFAULT 0.00,
+  quota_amount BIGINT DEFAULT 0,
+  hire_date DATE,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL
+);

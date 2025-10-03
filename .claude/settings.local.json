@@ -25,7 +25,11 @@
       "Bash(git pull:*)",
       "Bash(npm run migrate:status:*)",
       "Bash(npm run:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(npm start)",
+      "Bash(tsx --test src/database/duckdb-connection.ts)",
+      "Bash(npx tsx:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }
