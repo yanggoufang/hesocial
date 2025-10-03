@@ -1,0 +1,60 @@
+{
+  "timestamp": "2025-10-03T04:18:19.683Z",
+  "summary": {
+    "drift_detected": true,
+    "issues_found": 1,
+    "warnings": 0,
+    "last_check": "2025-10-03T04:18:20.184Z"
+  },
+  "issues": [
+    {
+      "type": "validation_failure",
+      "severity": "error",
+      "message": "Documentation validation failed to run",
+      "details": "Command failed: npm run validate:docs\n⚠️  123 undocumented routes found:\n⚠️    POST /api//backup (admin.ts)\n⚠️    POST /api//restore (admin.ts)\n⚠️    GET /api//backups (admin.ts)\n⚠️    POST /api//cleanup (admin.ts)\n⚠️    GET /api//database/stats (admin.ts)\n⚠️    POST /api//periodic-backup/start (admin.ts)\n⚠️    POST /api//periodic-backup/stop (admin.ts)\n⚠️    GET /api//periodic-backup/status (admin.ts)\n⚠️    POST /api//database/checkpoint (admin.ts)\n⚠️    GET /api//visitors (analyticsRoutes.ts)\n⚠️    GET /api//visitors/daily (analyticsRoutes.ts)\n⚠️    GET /api//pages/popular (analyticsRoutes.ts)\n⚠️    GET /api//conversion (analyticsRoutes.ts)\n⚠️    GET /api//visitors/:visitorId (analyticsRoutes.ts)\n⚠️    GET /api//events/overview (analyticsRoutes.ts)\n⚠️    GET /api//events/performance (analyticsRoutes.ts)\n⚠️    GET /api//events/engagement (analyticsRoutes.ts)\n⚠️    POST /api//events/track (analyticsRoutes.ts)\n⚠️    GET /api//revenue/events (analyticsRoutes.ts)\n⚠️    GET /api//engagement/members (analyticsRoutes.ts)\n⚠️    GET /api//events/:id/performance (analyticsRoutes.ts)\n⚠️    POST /api//register (authRoutes.ts)\n⚠️    POST /api//login (authRoutes.ts)\n⚠️    GET /api//profile (authRoutes.ts)\n⚠️    PUT /api//profile (authRoutes.ts)\n⚠️    POST /api//refresh (authRoutes.ts)\n⚠️    GET /api//google (authRoutes.ts)\n⚠️    GET /api//google/callback (authRoutes.ts)\n⚠️    GET /api//linkedin (authRoutes.ts)\n⚠️    GET /api//linkedin/callback (authRoutes.ts)\n⚠️    POST /api//logout (authRoutes.ts)\n⚠️    GET /api//validate (authRoutes.ts)\n⚠️    GET /api// (categoryManagement.ts)\n⚠️    GET /api//:id (categoryManagement.ts)\n⚠️    POST /api// (categoryManagement.ts)\n⚠️    PUT /api//:id (categoryManagement.ts)\n⚠️    DELETE /api//:id (categoryManagement.ts)\n⚠️    GET /api//status (deploymentRoutes.ts)\n⚠️    GET /api//health (deploymentRoutes.ts)\n⚠️    POST /api//deploy-visitor-tracking (deploymentRoutes.ts)\n⚠️    POST /api//rollback (deploymentRoutes.ts)\n⚠️    POST /api//emergency-apply-visitor-tracking (deploymentRoutes.ts)\n⚠️    GET /api//migration-plans (deploymentRoutes.ts)\n⚠️    POST /api//test-connection (deploymentRoutes.ts)\n⚠️    POST /api//apply-visitor-tracking (emergencyRoutes.ts)\n⚠️    GET /api//test-visitor-tracking (emergencyRoutes.ts)\n⚠️    POST /api//fix-analytics-queries (emergencyRoutes.ts)\n⚠️    GET /api//test-analytics (emergencyRoutes.ts)\n⚠️    GET /api// (eventManagement.ts)\n⚠️    GET /api//:id (eventManagement.ts)\n⚠️    POST /api// (eventManagement.ts)\n⚠️    PUT /api//:id (eventManagement.ts)\n⚠️    DELETE /api//:id (eventManagement.ts)\n⚠️    POST /api//:id/publish (eventManagement.ts)\n⚠️    POST /api//:id/approve (eventManagement.ts)\n⚠️    GET /api// (eventRoutes.ts)\n⚠️    GET /api//categories (eventRoutes.ts)\n⚠️    GET /api//venues (eventRoutes.ts)\n⚠️    GET /api//:id (eventRoutes.ts)\n⚠️    POST /api// (eventRoutes.ts)\n⚠️    GET /api//database (health.ts)\n⚠️    GET /api//r2-sync (health.ts)\n⚠️    GET /api//full (health.ts)\n⚠️    GET /api//events (index.ts)\n⚠️    GET /api//events/:id (index.ts)\n⚠️    GET /api//categories (index.ts)\n⚠️    GET /api//venues (index.ts)\n⚠️    GET /api//media/events/:eventId (index.ts)\n⚠️    GET /api// (index.ts)\n⚠️    GET /api//test (index.ts)\n⚠️    GET /api//test (index.ts)\n⚠️    GET /api// (index.ts)\n⚠️    POST /api//events/:eventId/images (mediaRoutes.ts)\n⚠️    POST /api//events/:eventId/documents (mediaRoutes.ts)\n⚠️    GET /api//events/:eventId (mediaRoutes.ts)\n⚠️    POST /api//venues/:venueId/images (mediaRoutes.ts)\n⚠️    GET /api//venues/:venueId (mediaRoutes.ts)\n⚠️    DELETE /api//:mediaId (mediaRoutes.ts)\n⚠️    GET /api//download/:mediaId (mediaRoutes.ts)\n⚠️    GET /api//stats (mediaRoutes.ts)\n⚠️    POST /api//cleanup (mediaRoutes.ts)\n⚠️    GET /api//events/:eventId/participants (participants.ts)\n⚠️    GET /api//events/:eventId/participant-access (participants.ts)\n⚠️    GET /api//events/:eventId/participants/:participantId (participants.ts)\n⚠️    POST /api//events/:eventId/participants/:participantId/contact (participants.ts)\n⚠️    PUT /api//events/:eventId/privacy-settings (participants.ts)\n⚠️    GET /api//events/:eventId/privacy-settings (participants.ts)\n⚠️    GET /api//:width/:height (placeholderRoutes.ts)\n⚠️    GET /api//stats/:eventId (registrationRoutes.ts)\n⚠️    GET /api//user (registrationRoutes.ts)\n⚠️    POST /api// (registrationRoutes.ts)\n⚠️    GET /api//:id (registrationRoutes.ts)\n⚠️    PUT /api//:id (registrationRoutes.ts)\n⚠️    DELETE /api//:id (registrationRoutes.ts)\n⚠️    GET /api//leads (salesManagement.ts)\n⚠️    GET /api//leads/:id (salesManagement.ts)\n⚠️    POST /api//leads (salesManagement.ts)\n⚠️    PUT /api//leads/:id (salesManagement.ts)\n⚠️    DELETE /api//leads/:id (salesManagement.ts)\n⚠️    GET /api//opportunities (salesManagement.ts)\n⚠️    POST /api//opportunities (salesManagement.ts)\n⚠️    PUT /api//opportunities/:id (salesManagement.ts)\n⚠️    GET /api//activities (salesManagement.ts)\n⚠️    POST /api//activities (salesManagement.ts)\n⚠️    GET /api//metrics (salesManagement.ts)\n⚠️    GET /api//pipeline/stages (salesManagement.ts)\n⚠️    GET /api//team (salesManagement.ts)\n⚠️    GET /api//health (systemHealthRoutes.ts)\n⚠️    GET /api//health/detailed (systemHealthRoutes.ts)\n⚠️    GET /api//metrics (systemHealthRoutes.ts)\n⚠️    GET /api//diagnostics (systemHealthRoutes.ts)\n⚠️    GET /api// (userManagement.ts)\n⚠️    GET /api//:id (userManagement.ts)\n⚠️    PUT /api//:id (userManagement.ts)\n⚠️    DELETE /api//:id (userManagement.ts)\n⚠️    POST /api//:id/verify (userManagement.ts)\n⚠️    POST /api//:id/role (userManagement.ts)\n⚠️    GET /api//stats/overview (userManagement.ts)\n⚠️    GET /api// (venueManagement.ts)\n⚠️    GET /api//:id (venueManagement.ts)\n⚠️    POST /api// (venueManagement.ts)\n⚠️    PUT /api//:id (venueManagement.ts)\n⚠️    DELETE /api//:id (venueManagement.ts)\n❌ Missing required database tables: event_registrations\n⚠️  Version inconsistency detected:\n⚠️    CLAUDE.md: Phase 1\n⚠️    docs/systems/DEVELOPMENT_STATUS.md: Phase 11\n"
+    }
+  ],
+  "metrics": {
+    "versionConsistency": {
+      "filesChecked": 2,
+      "phaseValues": [],
+      "systemCounts": [],
+      "inconsistencies": false
+    },
+    "fileStructure": {
+      "requiredFiles": 9,
+      "optionalFiles": 6,
+      "missingRequired": 0,
+      "missingOptional": 0
+    },
+    "total_issues": 1,
+    "issues_by_type": {
+      "validation_failure": 1
+    },
+    "issues_by_severity": {
+      "error": 1
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "high",
+      "action": "Fix documentation accuracy issues",
+      "description": "Run npm run validate:docs to identify and fix issues",
+      "command": "npm run validate:docs"
+    },
+    {
+      "priority": "low",
+      "action": "Run regular validation",
+      "description": "Run documentation validation regularly to prevent drift",
+      "command": "npm run validate:docs",
+      "frequency": "Weekly"
+    },
+    {
+      "priority": "low",
+      "action": "Update API documentation",
+      "description": "Regenerate API documentation after route changes",
+      "command": "npm run generate:api-docs",
+      "frequency": "After route changes"
+    }
+  ]
+}

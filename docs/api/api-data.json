@@ -1,0 +1,2454 @@
+{
+  "generated": "2025-10-03T04:15:57.659Z",
+  "stats": {
+    "totalEndpoints": 114,
+    "methods": {
+      "POST": 34,
+      "GET": 64,
+      "PUT": 9,
+      "DELETE": 7
+    },
+    "files": {
+      "admin.ts": 9,
+      "analyticsRoutes.ts": 12,
+      "authRoutes.ts": 11,
+      "categoryManagement.ts": 5,
+      "deploymentRoutes.ts": 7,
+      "emergencyRoutes.ts": 4,
+      "eventManagement.ts": 7,
+      "eventRoutes.ts": 5,
+      "health.ts": 3,
+      "main.ts": 0,
+      "mediaRoutes.ts": 9,
+      "participants.ts": 6,
+      "placeholderRoutes.ts": 1,
+      "registrationRoutes.ts": 6,
+      "salesManagement.ts": 13,
+      "systemHealthRoutes.ts": 4,
+      "userManagement.ts": 7,
+      "venueManagement.ts": 5
+    }
+  },
+  "categories": {
+    "Administration": [
+      {
+        "method": "POST",
+        "path": "/backup",
+        "fullPath": "/api//backup",
+        "description": "POST /api/admin/backup\nCreate a manual backup to R2\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "admin.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/restore",
+        "fullPath": "/api//restore",
+        "description": "POST /api/admin/restore\nRestore database from R2 backup\nRequires super admin authentication",
+        "accessLevel": "Public",
+        "file": "admin.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/backups",
+        "fullPath": "/api//backups",
+        "description": "GET /api/admin/backups\nList available backups in R2\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "admin.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/cleanup",
+        "fullPath": "/api//cleanup",
+        "description": "POST /api/admin/cleanup\nClean up old backups based on retention policy\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "admin.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/database/stats",
+        "fullPath": "/api//database/stats",
+        "description": "GET /api/admin/database/stats\nGet database statistics and information",
+        "accessLevel": "Public",
+        "file": "admin.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/periodic-backup/start",
+        "fullPath": "/api//periodic-backup/start",
+        "description": "POST /api/admin/periodic-backup/start\nStart periodic backups\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "admin.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/periodic-backup/stop",
+        "fullPath": "/api//periodic-backup/stop",
+        "description": "POST /api/admin/periodic-backup/stop\nStop periodic backups\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "admin.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/periodic-backup/status",
+        "fullPath": "/api//periodic-backup/status",
+        "description": "GET /api/admin/periodic-backup/status\nGet the status of periodic backups\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "admin.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/database/checkpoint",
+        "fullPath": "/api//database/checkpoint",
+        "description": "POST /api/admin/database/checkpoint\nManually trigger database checkpoint/flush",
+        "accessLevel": "Public",
+        "file": "admin.ts"
+      }
+    ],
+    "Business Intelligence": [
+      {
+        "method": "GET",
+        "path": "/visitors",
+        "fullPath": "/api//visitors",
+        "description": "GET /api/analytics/visitors\nGet visitor analytics overview",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/visitors/daily",
+        "fullPath": "/api//visitors/daily",
+        "description": "GET /api/analytics/visitors/daily\nGet daily visitor analytics",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/pages/popular",
+        "fullPath": "/api//pages/popular",
+        "description": "GET /api/analytics/pages/popular\nGet popular pages analytics",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/conversion",
+        "fullPath": "/api//conversion",
+        "description": "GET /api/analytics/conversion\nGet conversion funnel analytics",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/visitors/:visitorId",
+        "fullPath": "/api//visitors/:visitorId",
+        "description": "GET /api/analytics/visitors/:visitorId\nGet detailed visitor journey",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/events/overview",
+        "fullPath": "/api//events/overview",
+        "description": "GET /api/analytics/events/overview\nGet event analytics overview",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/events/performance",
+        "fullPath": "/api//events/performance",
+        "description": "GET /api/analytics/events/performance\nGet event performance metrics",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/events/engagement",
+        "fullPath": "/api//events/engagement",
+        "description": "GET /api/analytics/events/engagement\nGet event engagement metrics",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/events/track",
+        "fullPath": "/api//events/track",
+        "description": "POST /api/analytics/events/track\nTrack custom visitor events (for future Google Analytics integration)",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/revenue/events",
+        "fullPath": "/api//revenue/events",
+        "description": "GET /api/analytics/revenue/events\nGet revenue analytics for events",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/engagement/members",
+        "fullPath": "/api//engagement/members",
+        "description": "GET /api/analytics/engagement/members\nGet member engagement analytics",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/events/:id/performance",
+        "fullPath": "/api//events/:id/performance",
+        "description": "GET /api/analytics/events/:id/performance\nGet individual event performance metrics",
+        "accessLevel": "Public",
+        "file": "analyticsRoutes.ts"
+      }
+    ],
+    "Authentication": [
+      {
+        "method": "POST",
+        "path": "/register",
+        "fullPath": "/api//register",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/login",
+        "fullPath": "/api//login",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/profile",
+        "fullPath": "/api//profile",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      },
+      {
+        "method": "PUT",
+        "path": "/profile",
+        "fullPath": "/api//profile",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/refresh",
+        "fullPath": "/api//refresh",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/google",
+        "fullPath": "/api//google",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/google/callback",
+        "fullPath": "/api//google/callback",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/linkedin",
+        "fullPath": "/api//linkedin",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/linkedin/callback",
+        "fullPath": "/api//linkedin/callback",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/logout",
+        "fullPath": "/api//logout",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/validate",
+        "fullPath": "/api//validate",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "authRoutes.ts"
+      }
+    ],
+    "General": [
+      {
+        "method": "GET",
+        "path": "/",
+        "fullPath": "/api//",
+        "description": "GET /api/categories\nGet all event categories",
+        "accessLevel": "Public",
+        "file": "categoryManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "GET /api/categories/:id\nGet category by ID",
+        "accessLevel": "Public",
+        "file": "categoryManagement.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/",
+        "fullPath": "/api//",
+        "description": "POST /api/categories\nCreate new event category (Admin only)",
+        "accessLevel": "Public",
+        "file": "categoryManagement.ts"
+      },
+      {
+        "method": "PUT",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "PUT /api/categories/:id\nUpdate event category (Admin only)",
+        "accessLevel": "Public",
+        "file": "categoryManagement.ts"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "DELETE /api/categories/:id\nDelete event category (Super Admin only)",
+        "accessLevel": "Public",
+        "file": "categoryManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/:width/:height",
+        "fullPath": "/api//:width/:height",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "placeholderRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/",
+        "fullPath": "/api//",
+        "description": "GET /api/users\nGet all users with pagination and filtering\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "userManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "GET /api/users/:id\nGet user by ID\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "userManagement.ts"
+      },
+      {
+        "method": "PUT",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "PUT /api/users/:id\nUpdate user information\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "userManagement.ts"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "DELETE /api/users/:id\nDelete user (soft delete by setting a deleted flag or hard delete)\nRequires super admin authentication",
+        "accessLevel": "Public",
+        "file": "userManagement.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/:id/verify",
+        "fullPath": "/api//:id/verify",
+        "description": "POST /api/users/:id/verify\nVerify user account\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "userManagement.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/:id/role",
+        "fullPath": "/api//:id/role",
+        "description": "POST /api/users/:id/role\nUpdate user role\nRequires super admin authentication",
+        "accessLevel": "Public",
+        "file": "userManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/stats/overview",
+        "fullPath": "/api//stats/overview",
+        "description": "GET /api/users/stats\nGet user statistics\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "userManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/",
+        "fullPath": "/api//",
+        "description": "GET /api/venues\nGet all venues with pagination and filtering",
+        "accessLevel": "Public",
+        "file": "venueManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "GET /api/venues/:id\nGet venue by ID",
+        "accessLevel": "Public",
+        "file": "venueManagement.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/",
+        "fullPath": "/api//",
+        "description": "POST /api/venues\nCreate new venue (Admin only)",
+        "accessLevel": "Public",
+        "file": "venueManagement.ts"
+      },
+      {
+        "method": "PUT",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "PUT /api/venues/:id\nUpdate venue (Admin only)",
+        "accessLevel": "Public",
+        "file": "venueManagement.ts"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "DELETE /api/venues/:id\nDelete venue (Super Admin only)",
+        "accessLevel": "Public",
+        "file": "venueManagement.ts"
+      }
+    ],
+    "Deployment": [
+      {
+        "method": "GET",
+        "path": "/status",
+        "fullPath": "/api//status",
+        "description": "GET /api/deployment/status\nGet current deployment system status",
+        "accessLevel": "Public",
+        "file": "deploymentRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/health",
+        "fullPath": "/api//health",
+        "description": "GET /api/deployment/health\nGet health status of all database environments",
+        "accessLevel": "Public",
+        "file": "deploymentRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/deploy-visitor-tracking",
+        "fullPath": "/api//deploy-visitor-tracking",
+        "description": "POST /api/deployment/deploy-visitor-tracking\nDeploy visitor tracking tables with zero downtime",
+        "accessLevel": "Public",
+        "file": "deploymentRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/rollback",
+        "fullPath": "/api//rollback",
+        "description": "POST /api/deployment/rollback\nPerform instant rollback to previous environment",
+        "accessLevel": "Public",
+        "file": "deploymentRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/emergency-apply-visitor-tracking",
+        "fullPath": "/api//emergency-apply-visitor-tracking",
+        "description": "POST /api/deployment/emergency-apply-visitor-tracking\nEmergency: Apply visitor tracking schema directly (bypass blue-green)\nUse only when blue-green system is not available",
+        "accessLevel": "Public",
+        "file": "deploymentRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/migration-plans",
+        "fullPath": "/api//migration-plans",
+        "description": "GET /api/deployment/migration-plans\nGet available migration plans",
+        "accessLevel": "Public",
+        "file": "deploymentRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/test-connection",
+        "fullPath": "/api//test-connection",
+        "description": "POST /api/deployment/test-connection\nTest database connections for both environments",
+        "accessLevel": "Public",
+        "file": "deploymentRoutes.ts"
+      }
+    ],
+    "Emergency Operations": [
+      {
+        "method": "POST",
+        "path": "/apply-visitor-tracking",
+        "fullPath": "/api//apply-visitor-tracking",
+        "description": "POST /api/emergency/apply-visitor-tracking\nEmergency: Apply visitor tracking schema directly",
+        "accessLevel": "Public",
+        "file": "emergencyRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/test-visitor-tracking",
+        "fullPath": "/api//test-visitor-tracking",
+        "description": "GET /api/emergency/test-visitor-tracking\nTest if visitor tracking tables exist and are working",
+        "accessLevel": "Public",
+        "file": "emergencyRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/fix-analytics-queries",
+        "fullPath": "/api//fix-analytics-queries",
+        "description": "POST /api/emergency/fix-analytics-queries\nFix analytics queries for DuckDB compatibility",
+        "accessLevel": "Public",
+        "file": "emergencyRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/test-analytics",
+        "fullPath": "/api//test-analytics",
+        "description": "GET /api/emergency/test-analytics\nTest basic analytics queries",
+        "accessLevel": "Public",
+        "file": "emergencyRoutes.ts"
+      }
+    ],
+    "Event Management": [
+      {
+        "method": "GET",
+        "path": "/",
+        "fullPath": "/api//",
+        "description": "GET /api/events\nGet all events with pagination, filtering, and search\nPublic endpoint with role-based data visibility",
+        "accessLevel": "Public",
+        "file": "eventManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "GET /api/events/:id\nGet event by ID with full details",
+        "accessLevel": "Public",
+        "file": "eventManagement.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/",
+        "fullPath": "/api//",
+        "description": "POST /api/events\nCreate new event (Admin only)",
+        "accessLevel": "Public",
+        "file": "eventManagement.ts"
+      },
+      {
+        "method": "PUT",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "PUT /api/events/:id\nUpdate event (Admin only)",
+        "accessLevel": "Public",
+        "file": "eventManagement.ts"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "DELETE /api/events/:id\nDelete event (Super Admin only)",
+        "accessLevel": "Public",
+        "file": "eventManagement.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/:id/publish",
+        "fullPath": "/api//:id/publish",
+        "description": "POST /api/events/:id/publish\nPublish event (Admin only)",
+        "accessLevel": "Public",
+        "file": "eventManagement.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/:id/approve",
+        "fullPath": "/api//:id/approve",
+        "description": "POST /api/events/:id/approve\nApprove event for publishing (Admin only)",
+        "accessLevel": "Public",
+        "file": "eventManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/",
+        "fullPath": "/api//",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "eventRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/categories",
+        "fullPath": "/api//categories",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "eventRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/venues",
+        "fullPath": "/api//venues",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "eventRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "eventRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/",
+        "fullPath": "/api//",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "eventRoutes.ts"
+      }
+    ],
+    "System Monitoring": [
+      {
+        "method": "GET",
+        "path": "/database",
+        "fullPath": "/api//database",
+        "description": "GET /api/health/database\nDatabase health check with detailed status",
+        "accessLevel": "Public",
+        "file": "health.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/r2-sync",
+        "fullPath": "/api//r2-sync",
+        "description": "GET /api/health/r2-sync\nR2 backup service health check and status",
+        "accessLevel": "Public",
+        "file": "health.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/full",
+        "fullPath": "/api//full",
+        "description": "GET /api/health/full\nComprehensive health check including database and R2 sync",
+        "accessLevel": "Public",
+        "file": "health.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/health",
+        "fullPath": "/api//health",
+        "description": "GET /api/system/health\nComprehensive system health dashboard data",
+        "accessLevel": "Public",
+        "file": "systemHealthRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/health/detailed",
+        "fullPath": "/api//health/detailed",
+        "description": "GET /api/system/health/detailed\nDetailed health check with all components",
+        "accessLevel": "Public",
+        "file": "systemHealthRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/metrics",
+        "fullPath": "/api//metrics",
+        "description": "GET /api/system/metrics\nSystem performance metrics",
+        "accessLevel": "Public",
+        "file": "systemHealthRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/diagnostics",
+        "fullPath": "/api//diagnostics",
+        "description": "GET /api/system/diagnostics\nRun system diagnostics tests",
+        "accessLevel": "Public",
+        "file": "systemHealthRoutes.ts"
+      }
+    ],
+    "Media Management": [
+      {
+        "method": "POST",
+        "path": "/events/:eventId/images",
+        "fullPath": "/api//events/:eventId/images",
+        "description": "POST /api/media/events/:eventId/images\nUpload images for an event\nRequires authentication and proper permissions",
+        "accessLevel": "Public",
+        "file": "mediaRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/events/:eventId/documents",
+        "fullPath": "/api//events/:eventId/documents",
+        "description": "POST /api/media/events/:eventId/documents\nUpload documents for an event\nRequires authentication and proper permissions",
+        "accessLevel": "Public",
+        "file": "mediaRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/events/:eventId",
+        "fullPath": "/api//events/:eventId",
+        "description": "GET /api/media/events/:eventId\nGet all media for an event\nPublic endpoint but respects event visibility",
+        "accessLevel": "Public",
+        "file": "mediaRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/venues/:venueId/images",
+        "fullPath": "/api//venues/:venueId/images",
+        "description": "POST /api/media/venues/:venueId/images\nUpload images for a venue\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "mediaRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/venues/:venueId",
+        "fullPath": "/api//venues/:venueId",
+        "description": "GET /api/media/venues/:venueId\nGet all media for a venue\nPublic endpoint",
+        "accessLevel": "Public",
+        "file": "mediaRoutes.ts"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:mediaId",
+        "fullPath": "/api//:mediaId",
+        "description": "DELETE /api/media/:mediaId\nDelete a media file\nRequires authentication and proper permissions",
+        "accessLevel": "Public",
+        "file": "mediaRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/download/:mediaId",
+        "fullPath": "/api//download/:mediaId",
+        "description": "GET /api/media/download/:mediaId\nDownload a document (generates signed URL)\nRequires authentication",
+        "accessLevel": "Public",
+        "file": "mediaRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/stats",
+        "fullPath": "/api//stats",
+        "description": "GET /api/media/stats\nGet media statistics for admin dashboard\nRequires admin authentication",
+        "accessLevel": "Public",
+        "file": "mediaRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/cleanup",
+        "fullPath": "/api//cleanup",
+        "description": "POST /api/media/cleanup\nClean up orphaned media files\nRequires super admin authentication",
+        "accessLevel": "Public",
+        "file": "mediaRoutes.ts"
+      }
+    ],
+    "Social Features": [
+      {
+        "method": "GET",
+        "path": "/events/:eventId/participants",
+        "fullPath": "/api//events/:eventId/participants",
+        "description": "GET /api/events/:eventId/participants\nGet filtered list of event participants based on viewer's access level",
+        "accessLevel": "Public",
+        "file": "participants.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/events/:eventId/participant-access",
+        "fullPath": "/api//events/:eventId/participant-access",
+        "description": "GET /api/events/:eventId/participant-access\nCheck viewer's access level for viewing participants",
+        "accessLevel": "Public",
+        "file": "participants.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/events/:eventId/participants/:participantId",
+        "fullPath": "/api//events/:eventId/participants/:participantId",
+        "description": "GET /api/events/:eventId/participants/:participantId\nGet detailed information about a specific participant (if access allows)",
+        "accessLevel": "Public",
+        "file": "participants.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/events/:eventId/participants/:participantId/contact",
+        "fullPath": "/api//events/:eventId/participants/:participantId/contact",
+        "description": "POST /api/events/:eventId/participants/:participantId/contact\nInitiate contact with a participant (if allowed)",
+        "accessLevel": "Public",
+        "file": "participants.ts"
+      },
+      {
+        "method": "PUT",
+        "path": "/events/:eventId/privacy-settings",
+        "fullPath": "/api//events/:eventId/privacy-settings",
+        "description": "PUT /api/events/:eventId/privacy-settings\nUpdate user's privacy settings for a specific event",
+        "accessLevel": "Public",
+        "file": "participants.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/events/:eventId/privacy-settings",
+        "fullPath": "/api//events/:eventId/privacy-settings",
+        "description": "GET /api/events/:eventId/privacy-settings\nGet user's current privacy settings for an event",
+        "accessLevel": "Public",
+        "file": "participants.ts"
+      }
+    ],
+    "Registration System": [
+      {
+        "method": "GET",
+        "path": "/stats/:eventId",
+        "fullPath": "/api//stats/:eventId",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "registrationRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/user",
+        "fullPath": "/api//user",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "registrationRoutes.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/",
+        "fullPath": "/api//",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "registrationRoutes.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "registrationRoutes.ts"
+      },
+      {
+        "method": "PUT",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "registrationRoutes.ts"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:id",
+        "fullPath": "/api//:id",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "registrationRoutes.ts"
+      }
+    ],
+    "Sales Management": [
+      {
+        "method": "GET",
+        "path": "/leads",
+        "fullPath": "/api//leads",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/leads/:id",
+        "fullPath": "/api//leads/:id",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/leads",
+        "fullPath": "/api//leads",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "PUT",
+        "path": "/leads/:id",
+        "fullPath": "/api//leads/:id",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "DELETE",
+        "path": "/leads/:id",
+        "fullPath": "/api//leads/:id",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/opportunities",
+        "fullPath": "/api//opportunities",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/opportunities",
+        "fullPath": "/api//opportunities",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "PUT",
+        "path": "/opportunities/:id",
+        "fullPath": "/api//opportunities/:id",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/activities",
+        "fullPath": "/api//activities",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "POST",
+        "path": "/activities",
+        "fullPath": "/api//activities",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/metrics",
+        "fullPath": "/api//metrics",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/pipeline/stages",
+        "fullPath": "/api//pipeline/stages",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      },
+      {
+        "method": "GET",
+        "path": "/team",
+        "fullPath": "/api//team",
+        "description": "",
+        "accessLevel": "Public",
+        "file": "salesManagement.ts"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "file": "admin.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/admin.ts",
+      "method": "POST",
+      "path": "/backup",
+      "fullPath": "/api//backup",
+      "description": "POST /api/admin/backup\nCreate a manual backup to R2\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "admin.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/admin.ts",
+      "method": "POST",
+      "path": "/restore",
+      "fullPath": "/api//restore",
+      "description": "POST /api/admin/restore\nRestore database from R2 backup\nRequires super admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "admin.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/admin.ts",
+      "method": "GET",
+      "path": "/backups",
+      "fullPath": "/api//backups",
+      "description": "GET /api/admin/backups\nList available backups in R2\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "admin.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/admin.ts",
+      "method": "POST",
+      "path": "/cleanup",
+      "fullPath": "/api//cleanup",
+      "description": "POST /api/admin/cleanup\nClean up old backups based on retention policy\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "admin.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/admin.ts",
+      "method": "GET",
+      "path": "/database/stats",
+      "fullPath": "/api//database/stats",
+      "description": "GET /api/admin/database/stats\nGet database statistics and information",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "admin.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/admin.ts",
+      "method": "POST",
+      "path": "/periodic-backup/start",
+      "fullPath": "/api//periodic-backup/start",
+      "description": "POST /api/admin/periodic-backup/start\nStart periodic backups\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "admin.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/admin.ts",
+      "method": "POST",
+      "path": "/periodic-backup/stop",
+      "fullPath": "/api//periodic-backup/stop",
+      "description": "POST /api/admin/periodic-backup/stop\nStop periodic backups\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "admin.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/admin.ts",
+      "method": "GET",
+      "path": "/periodic-backup/status",
+      "fullPath": "/api//periodic-backup/status",
+      "description": "GET /api/admin/periodic-backup/status\nGet the status of periodic backups\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "admin.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/admin.ts",
+      "method": "POST",
+      "path": "/database/checkpoint",
+      "fullPath": "/api//database/checkpoint",
+      "description": "POST /api/admin/database/checkpoint\nManually trigger database checkpoint/flush",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/visitors",
+      "fullPath": "/api//visitors",
+      "description": "GET /api/analytics/visitors\nGet visitor analytics overview",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/visitors/daily",
+      "fullPath": "/api//visitors/daily",
+      "description": "GET /api/analytics/visitors/daily\nGet daily visitor analytics",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/pages/popular",
+      "fullPath": "/api//pages/popular",
+      "description": "GET /api/analytics/pages/popular\nGet popular pages analytics",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/conversion",
+      "fullPath": "/api//conversion",
+      "description": "GET /api/analytics/conversion\nGet conversion funnel analytics",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/visitors/:visitorId",
+      "fullPath": "/api//visitors/:visitorId",
+      "description": "GET /api/analytics/visitors/:visitorId\nGet detailed visitor journey",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/events/overview",
+      "fullPath": "/api//events/overview",
+      "description": "GET /api/analytics/events/overview\nGet event analytics overview",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/events/performance",
+      "fullPath": "/api//events/performance",
+      "description": "GET /api/analytics/events/performance\nGet event performance metrics",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/events/engagement",
+      "fullPath": "/api//events/engagement",
+      "description": "GET /api/analytics/events/engagement\nGet event engagement metrics",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "POST",
+      "path": "/events/track",
+      "fullPath": "/api//events/track",
+      "description": "POST /api/analytics/events/track\nTrack custom visitor events (for future Google Analytics integration)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/revenue/events",
+      "fullPath": "/api//revenue/events",
+      "description": "GET /api/analytics/revenue/events\nGet revenue analytics for events",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/engagement/members",
+      "fullPath": "/api//engagement/members",
+      "description": "GET /api/analytics/engagement/members\nGet member engagement analytics",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "analyticsRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/analyticsRoutes.ts",
+      "method": "GET",
+      "path": "/events/:id/performance",
+      "fullPath": "/api//events/:id/performance",
+      "description": "GET /api/analytics/events/:id/performance\nGet individual event performance metrics",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "POST",
+      "path": "/register",
+      "fullPath": "/api//register",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "POST",
+      "path": "/login",
+      "fullPath": "/api//login",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "GET",
+      "path": "/profile",
+      "fullPath": "/api//profile",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "PUT",
+      "path": "/profile",
+      "fullPath": "/api//profile",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "POST",
+      "path": "/refresh",
+      "fullPath": "/api//refresh",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "GET",
+      "path": "/google",
+      "fullPath": "/api//google",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "GET",
+      "path": "/google/callback",
+      "fullPath": "/api//google/callback",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "GET",
+      "path": "/linkedin",
+      "fullPath": "/api//linkedin",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "GET",
+      "path": "/linkedin/callback",
+      "fullPath": "/api//linkedin/callback",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "POST",
+      "path": "/logout",
+      "fullPath": "/api//logout",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "authRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/authRoutes.ts",
+      "method": "GET",
+      "path": "/validate",
+      "fullPath": "/api//validate",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "categoryManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/categoryManagement.ts",
+      "method": "GET",
+      "path": "/",
+      "fullPath": "/api//",
+      "description": "GET /api/categories\nGet all event categories",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "categoryManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/categoryManagement.ts",
+      "method": "GET",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "GET /api/categories/:id\nGet category by ID",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "categoryManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/categoryManagement.ts",
+      "method": "POST",
+      "path": "/",
+      "fullPath": "/api//",
+      "description": "POST /api/categories\nCreate new event category (Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "categoryManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/categoryManagement.ts",
+      "method": "PUT",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "PUT /api/categories/:id\nUpdate event category (Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "categoryManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/categoryManagement.ts",
+      "method": "DELETE",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "DELETE /api/categories/:id\nDelete event category (Super Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "deploymentRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/deploymentRoutes.ts",
+      "method": "GET",
+      "path": "/status",
+      "fullPath": "/api//status",
+      "description": "GET /api/deployment/status\nGet current deployment system status",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "deploymentRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/deploymentRoutes.ts",
+      "method": "GET",
+      "path": "/health",
+      "fullPath": "/api//health",
+      "description": "GET /api/deployment/health\nGet health status of all database environments",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "deploymentRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/deploymentRoutes.ts",
+      "method": "POST",
+      "path": "/deploy-visitor-tracking",
+      "fullPath": "/api//deploy-visitor-tracking",
+      "description": "POST /api/deployment/deploy-visitor-tracking\nDeploy visitor tracking tables with zero downtime",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "deploymentRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/deploymentRoutes.ts",
+      "method": "POST",
+      "path": "/rollback",
+      "fullPath": "/api//rollback",
+      "description": "POST /api/deployment/rollback\nPerform instant rollback to previous environment",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "deploymentRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/deploymentRoutes.ts",
+      "method": "POST",
+      "path": "/emergency-apply-visitor-tracking",
+      "fullPath": "/api//emergency-apply-visitor-tracking",
+      "description": "POST /api/deployment/emergency-apply-visitor-tracking\nEmergency: Apply visitor tracking schema directly (bypass blue-green)\nUse only when blue-green system is not available",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "deploymentRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/deploymentRoutes.ts",
+      "method": "GET",
+      "path": "/migration-plans",
+      "fullPath": "/api//migration-plans",
+      "description": "GET /api/deployment/migration-plans\nGet available migration plans",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "deploymentRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/deploymentRoutes.ts",
+      "method": "POST",
+      "path": "/test-connection",
+      "fullPath": "/api//test-connection",
+      "description": "POST /api/deployment/test-connection\nTest database connections for both environments",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "emergencyRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/emergencyRoutes.ts",
+      "method": "POST",
+      "path": "/apply-visitor-tracking",
+      "fullPath": "/api//apply-visitor-tracking",
+      "description": "POST /api/emergency/apply-visitor-tracking\nEmergency: Apply visitor tracking schema directly",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "emergencyRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/emergencyRoutes.ts",
+      "method": "GET",
+      "path": "/test-visitor-tracking",
+      "fullPath": "/api//test-visitor-tracking",
+      "description": "GET /api/emergency/test-visitor-tracking\nTest if visitor tracking tables exist and are working",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "emergencyRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/emergencyRoutes.ts",
+      "method": "POST",
+      "path": "/fix-analytics-queries",
+      "fullPath": "/api//fix-analytics-queries",
+      "description": "POST /api/emergency/fix-analytics-queries\nFix analytics queries for DuckDB compatibility",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "emergencyRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/emergencyRoutes.ts",
+      "method": "GET",
+      "path": "/test-analytics",
+      "fullPath": "/api//test-analytics",
+      "description": "GET /api/emergency/test-analytics\nTest basic analytics queries",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventManagement.ts",
+      "method": "GET",
+      "path": "/",
+      "fullPath": "/api//",
+      "description": "GET /api/events\nGet all events with pagination, filtering, and search\nPublic endpoint with role-based data visibility",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventManagement.ts",
+      "method": "GET",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "GET /api/events/:id\nGet event by ID with full details",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventManagement.ts",
+      "method": "POST",
+      "path": "/",
+      "fullPath": "/api//",
+      "description": "POST /api/events\nCreate new event (Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventManagement.ts",
+      "method": "PUT",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "PUT /api/events/:id\nUpdate event (Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventManagement.ts",
+      "method": "DELETE",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "DELETE /api/events/:id\nDelete event (Super Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventManagement.ts",
+      "method": "POST",
+      "path": "/:id/publish",
+      "fullPath": "/api//:id/publish",
+      "description": "POST /api/events/:id/publish\nPublish event (Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventManagement.ts",
+      "method": "POST",
+      "path": "/:id/approve",
+      "fullPath": "/api//:id/approve",
+      "description": "POST /api/events/:id/approve\nApprove event for publishing (Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventRoutes.ts",
+      "method": "GET",
+      "path": "/",
+      "fullPath": "/api//",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventRoutes.ts",
+      "method": "GET",
+      "path": "/categories",
+      "fullPath": "/api//categories",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventRoutes.ts",
+      "method": "GET",
+      "path": "/venues",
+      "fullPath": "/api//venues",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventRoutes.ts",
+      "method": "GET",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "eventRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/eventRoutes.ts",
+      "method": "POST",
+      "path": "/",
+      "fullPath": "/api//",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "health.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/health.ts",
+      "method": "GET",
+      "path": "/database",
+      "fullPath": "/api//database",
+      "description": "GET /api/health/database\nDatabase health check with detailed status",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "health.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/health.ts",
+      "method": "GET",
+      "path": "/r2-sync",
+      "fullPath": "/api//r2-sync",
+      "description": "GET /api/health/r2-sync\nR2 backup service health check and status",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "health.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/health.ts",
+      "method": "GET",
+      "path": "/full",
+      "fullPath": "/api//full",
+      "description": "GET /api/health/full\nComprehensive health check including database and R2 sync",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "mediaRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/mediaRoutes.ts",
+      "method": "POST",
+      "path": "/events/:eventId/images",
+      "fullPath": "/api//events/:eventId/images",
+      "description": "POST /api/media/events/:eventId/images\nUpload images for an event\nRequires authentication and proper permissions",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "mediaRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/mediaRoutes.ts",
+      "method": "POST",
+      "path": "/events/:eventId/documents",
+      "fullPath": "/api//events/:eventId/documents",
+      "description": "POST /api/media/events/:eventId/documents\nUpload documents for an event\nRequires authentication and proper permissions",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "mediaRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/mediaRoutes.ts",
+      "method": "GET",
+      "path": "/events/:eventId",
+      "fullPath": "/api//events/:eventId",
+      "description": "GET /api/media/events/:eventId\nGet all media for an event\nPublic endpoint but respects event visibility",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "mediaRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/mediaRoutes.ts",
+      "method": "POST",
+      "path": "/venues/:venueId/images",
+      "fullPath": "/api//venues/:venueId/images",
+      "description": "POST /api/media/venues/:venueId/images\nUpload images for a venue\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "mediaRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/mediaRoutes.ts",
+      "method": "GET",
+      "path": "/venues/:venueId",
+      "fullPath": "/api//venues/:venueId",
+      "description": "GET /api/media/venues/:venueId\nGet all media for a venue\nPublic endpoint",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "mediaRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/mediaRoutes.ts",
+      "method": "DELETE",
+      "path": "/:mediaId",
+      "fullPath": "/api//:mediaId",
+      "description": "DELETE /api/media/:mediaId\nDelete a media file\nRequires authentication and proper permissions",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "mediaRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/mediaRoutes.ts",
+      "method": "GET",
+      "path": "/download/:mediaId",
+      "fullPath": "/api//download/:mediaId",
+      "description": "GET /api/media/download/:mediaId\nDownload a document (generates signed URL)\nRequires authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "mediaRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/mediaRoutes.ts",
+      "method": "GET",
+      "path": "/stats",
+      "fullPath": "/api//stats",
+      "description": "GET /api/media/stats\nGet media statistics for admin dashboard\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "mediaRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/mediaRoutes.ts",
+      "method": "POST",
+      "path": "/cleanup",
+      "fullPath": "/api//cleanup",
+      "description": "POST /api/media/cleanup\nClean up orphaned media files\nRequires super admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "participants.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/participants.ts",
+      "method": "GET",
+      "path": "/events/:eventId/participants",
+      "fullPath": "/api//events/:eventId/participants",
+      "description": "GET /api/events/:eventId/participants\nGet filtered list of event participants based on viewer's access level",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "participants.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/participants.ts",
+      "method": "GET",
+      "path": "/events/:eventId/participant-access",
+      "fullPath": "/api//events/:eventId/participant-access",
+      "description": "GET /api/events/:eventId/participant-access\nCheck viewer's access level for viewing participants",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "participants.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/participants.ts",
+      "method": "GET",
+      "path": "/events/:eventId/participants/:participantId",
+      "fullPath": "/api//events/:eventId/participants/:participantId",
+      "description": "GET /api/events/:eventId/participants/:participantId\nGet detailed information about a specific participant (if access allows)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "participants.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/participants.ts",
+      "method": "POST",
+      "path": "/events/:eventId/participants/:participantId/contact",
+      "fullPath": "/api//events/:eventId/participants/:participantId/contact",
+      "description": "POST /api/events/:eventId/participants/:participantId/contact\nInitiate contact with a participant (if allowed)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "participants.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/participants.ts",
+      "method": "PUT",
+      "path": "/events/:eventId/privacy-settings",
+      "fullPath": "/api//events/:eventId/privacy-settings",
+      "description": "PUT /api/events/:eventId/privacy-settings\nUpdate user's privacy settings for a specific event",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "participants.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/participants.ts",
+      "method": "GET",
+      "path": "/events/:eventId/privacy-settings",
+      "fullPath": "/api//events/:eventId/privacy-settings",
+      "description": "GET /api/events/:eventId/privacy-settings\nGet user's current privacy settings for an event",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "placeholderRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/placeholderRoutes.ts",
+      "method": "GET",
+      "path": "/:width/:height",
+      "fullPath": "/api//:width/:height",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "registrationRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/registrationRoutes.ts",
+      "method": "GET",
+      "path": "/stats/:eventId",
+      "fullPath": "/api//stats/:eventId",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "registrationRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/registrationRoutes.ts",
+      "method": "GET",
+      "path": "/user",
+      "fullPath": "/api//user",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "registrationRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/registrationRoutes.ts",
+      "method": "POST",
+      "path": "/",
+      "fullPath": "/api//",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "registrationRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/registrationRoutes.ts",
+      "method": "GET",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "registrationRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/registrationRoutes.ts",
+      "method": "PUT",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "registrationRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/registrationRoutes.ts",
+      "method": "DELETE",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "GET",
+      "path": "/leads",
+      "fullPath": "/api//leads",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "GET",
+      "path": "/leads/:id",
+      "fullPath": "/api//leads/:id",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "POST",
+      "path": "/leads",
+      "fullPath": "/api//leads",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "PUT",
+      "path": "/leads/:id",
+      "fullPath": "/api//leads/:id",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "DELETE",
+      "path": "/leads/:id",
+      "fullPath": "/api//leads/:id",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "GET",
+      "path": "/opportunities",
+      "fullPath": "/api//opportunities",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "POST",
+      "path": "/opportunities",
+      "fullPath": "/api//opportunities",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "PUT",
+      "path": "/opportunities/:id",
+      "fullPath": "/api//opportunities/:id",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "GET",
+      "path": "/activities",
+      "fullPath": "/api//activities",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "POST",
+      "path": "/activities",
+      "fullPath": "/api//activities",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "GET",
+      "path": "/metrics",
+      "fullPath": "/api//metrics",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "GET",
+      "path": "/pipeline/stages",
+      "fullPath": "/api//pipeline/stages",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "salesManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/salesManagement.ts",
+      "method": "GET",
+      "path": "/team",
+      "fullPath": "/api//team",
+      "description": "",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "systemHealthRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/systemHealthRoutes.ts",
+      "method": "GET",
+      "path": "/health",
+      "fullPath": "/api//health",
+      "description": "GET /api/system/health\nComprehensive system health dashboard data",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "systemHealthRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/systemHealthRoutes.ts",
+      "method": "GET",
+      "path": "/health/detailed",
+      "fullPath": "/api//health/detailed",
+      "description": "GET /api/system/health/detailed\nDetailed health check with all components",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "systemHealthRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/systemHealthRoutes.ts",
+      "method": "GET",
+      "path": "/metrics",
+      "fullPath": "/api//metrics",
+      "description": "GET /api/system/metrics\nSystem performance metrics",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "systemHealthRoutes.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/systemHealthRoutes.ts",
+      "method": "GET",
+      "path": "/diagnostics",
+      "fullPath": "/api//diagnostics",
+      "description": "GET /api/system/diagnostics\nRun system diagnostics tests",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "userManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/userManagement.ts",
+      "method": "GET",
+      "path": "/",
+      "fullPath": "/api//",
+      "description": "GET /api/users\nGet all users with pagination and filtering\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "userManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/userManagement.ts",
+      "method": "GET",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "GET /api/users/:id\nGet user by ID\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "userManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/userManagement.ts",
+      "method": "PUT",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "PUT /api/users/:id\nUpdate user information\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "userManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/userManagement.ts",
+      "method": "DELETE",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "DELETE /api/users/:id\nDelete user (soft delete by setting a deleted flag or hard delete)\nRequires super admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "userManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/userManagement.ts",
+      "method": "POST",
+      "path": "/:id/verify",
+      "fullPath": "/api//:id/verify",
+      "description": "POST /api/users/:id/verify\nVerify user account\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "userManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/userManagement.ts",
+      "method": "POST",
+      "path": "/:id/role",
+      "fullPath": "/api//:id/role",
+      "description": "POST /api/users/:id/role\nUpdate user role\nRequires super admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "userManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/userManagement.ts",
+      "method": "GET",
+      "path": "/stats/overview",
+      "fullPath": "/api//stats/overview",
+      "description": "GET /api/users/stats\nGet user statistics\nRequires admin authentication",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "venueManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/venueManagement.ts",
+      "method": "GET",
+      "path": "/",
+      "fullPath": "/api//",
+      "description": "GET /api/venues\nGet all venues with pagination and filtering",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "venueManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/venueManagement.ts",
+      "method": "GET",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "GET /api/venues/:id\nGet venue by ID",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "venueManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/venueManagement.ts",
+      "method": "POST",
+      "path": "/",
+      "fullPath": "/api//",
+      "description": "POST /api/venues\nCreate new venue (Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "venueManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/venueManagement.ts",
+      "method": "PUT",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "PUT /api/venues/:id\nUpdate venue (Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    },
+    {
+      "file": "venueManagement.ts",
+      "filePath": "/home/yanggf/a/hesocial/backend/src/routes/venueManagement.ts",
+      "method": "DELETE",
+      "path": "/:id",
+      "fullPath": "/api//:id",
+      "description": "DELETE /api/venues/:id\nDelete venue (Super Admin only)",
+      "accessLevel": "Public",
+      "parameters": [],
+      "responses": [],
+      "examples": [],
+      "tags": []
+    }
+  ]
+}

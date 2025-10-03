@@ -11,6 +11,7 @@
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "cd backend && npm run build",
     "start": "cd backend && npm start",
+    "preview": "cd frontend && npm run preview",
     "lint": "npm run lint:frontend && npm run lint:backend",
     "lint:frontend": "cd frontend && npm run lint",
     "lint:backend": "cd backend && npm run lint",
@@ -36,7 +37,11 @@
     "setup": "npm install && cd frontend && npm install && cd ../backend && npm install",
     "clean": "npm run clean:frontend && npm run clean:backend",
     "clean:frontend": "cd frontend && rm -rf dist",
-    "clean:backend": "cd backend && rm -rf dist"
+    "clean:backend": "cd backend && rm -rf dist",
+    "validate:docs": "node scripts/validate-docs.js",
+    "generate:api-docs": "node scripts/generate-api-docs.js",
+    "monitor:docs": "node scripts/monitor-docs.js",
+    "validate:all": "npm run validate:docs && npm run lint && npm run typecheck && npm run test"
   },
   "keywords": [
     "social",

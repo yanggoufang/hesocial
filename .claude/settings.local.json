@@ -29,7 +29,8 @@
       "Bash(npm start)",
       "Bash(tsx --test src/database/duckdb-connection.ts)",
       "Bash(npx tsx:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }

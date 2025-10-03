@@ -1,0 +1,47 @@
+#!/usr/bin/env sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit validations..."
+
+# Run documentation validation
+echo "📚 Validating documentation accuracy..."
+npm run validate:docs
+if [ $? -ne 0 ]; then
+  echo "❌ Documentation validation failed"
+  echo "   Please fix the documentation issues before committing"
+  echo "   Run 'npm run validate:docs' to see detailed errors"
+  exit 1
+fi
+
+# Run code quality checks
+echo "🔧 Running code quality checks..."
+npm run lint:fix
+if [ $? -ne 0 ]; then
+  echo "❌ Linting failed"
+  echo "   Some linting issues could not be fixed automatically"
+  exit 1
+fi
+
+# Type checking
+echo "📋 Running type checking..."
+npm run typecheck
+if [ $? -ne 0 ]; then
+  echo "❌ Type checking failed"
+  exit 1
+fi
+
+# Quick tests (if not in a hurry)
+if [ "$HUSKY_SKIP_TESTS" != "true" ]; then
+  echo "🧪 Running quick tests..."
+  npm run test -- --run
+  if [ $? -ne 0 ]; then
+    echo "❌ Tests failed"
+    exit 1
+  fi
+fi
+
+echo "✅ All pre-commit validations passed!"
+echo "   Documentation is accurate"
+echo "   Code quality is maintained"
+echo "   Types are correct"
+echo "   Tests are passing"
