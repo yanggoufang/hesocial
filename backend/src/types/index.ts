@@ -1,3 +1,5 @@
+import type { Request } from 'express'
+
 export interface User {
   id: string
   email: string
@@ -107,8 +109,6 @@ export interface FinancialVerification {
   createdAt: Date
   updatedAt: Date
 }
-
-import { Request } from 'express'
 
 export interface AuthenticatedRequest extends Request {
   user?: User;
