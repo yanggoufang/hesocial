@@ -1,4 +1,3 @@
-import { getDuckDBConnection } from '../database/duckdb-connection.js'
 import { 
   ParticipantViewAccess, 
   FilteredParticipantInfo, 

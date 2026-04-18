@@ -52,6 +52,7 @@ npm run test     # Run tests
 **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
 **Backend**: Node.js 22 + Express + TypeScript + DuckDB
 **Storage**: Cloudflare R2 + Local DuckDB
+**Hosting**: Render static site + Render Node web service (`render.yaml`)
 **Auth**: JWT + Google OAuth 2.0
 
 ## Development Environment
@@ -69,6 +70,8 @@ npm run test     # Run tests
 ## Deployment Considerations
 
 - The application is hosted on Render.com. The backend is `hesocial-api` and the frontend is `hesocial-frontend`.
+- Cloudflare is used for R2 storage/backups/media and may be used externally for DNS/domain routing; it is not the frontend/backend runtime in the committed config.
+- See `docs/DEPLOYMENT_TARGETS.md` before making deployment or runtime assumptions.
 - When checking production deployments, always verify the commit ID to ensure the correct version is deployed.
 
 ## Database

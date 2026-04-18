@@ -9,7 +9,7 @@ axios.defaults.timeout = 10000
 // Add request interceptor to include auth token
 axios.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('hesocial_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -25,8 +25,7 @@ axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      localStorage.removeItem('hesocial_token')
       window.location.href = '/login'
     }
     return Promise.reject(error)
@@ -73,6 +72,25 @@ export interface CategoryPerformance {
   total_registrations: number
   avg_fill_rate: number
   total_revenue: number
+}
+
+export interface EventsOverviewResponse {
+  period_days: number
+  event_stats?: {
+    total_events?: number
+    recent_events?: number
+    past_events?: number
+  }
+  registration_stats?: {
+    total_registrations?: number
+  }
+  popular_events?: Array<{
+    id?: string | number
+    name?: string
+    current_attendees?: number
+    capacity?: number
+    occupancy_rate?: number
+  }>
 }
 
 export interface EventPerformanceData {
@@ -150,12 +168,7 @@ export interface EngagementData {
 
 class AnalyticsService {
   // Get events overview analytics
-  async getEventsOverview(): Promise<ApiResponse<{
-    overview: AnalyticsOverview
-    trends: EventTrend[]
-    topEvents: TopEvent[]
-    categoryPerformance: CategoryPerformance[]
-  }>> {
+  async getEventsOverview(): Promise<ApiResponse<EventsOverviewResponse>> {
     try {
       const response = await axios.get('/analytics/events/overview')
       return response.data

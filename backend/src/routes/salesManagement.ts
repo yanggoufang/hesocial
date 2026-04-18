@@ -31,28 +31,28 @@ const router = Router()
 router.use(requireAuth)
 
 // Sales Leads Routes
-router.get('/leads', getLeads as (req: Request, res: Response) => Promise<void>);
-router.get('/leads/:id', getLeadById as (req: Request, res: Response) => Promise<void>);
-router.post('/leads', createLead as (req: Request, res: Response) => Promise<void>);
-router.put('/leads/:id', updateLead as (req: Request, res: Response) => Promise<void>);
-router.delete('/leads/:id', requireAdmin, deleteLead as (req: Request, res: Response) => Promise<void>); // Only admins can delete
+router.get('/leads', getLeads as any);
+router.get('/leads/:id', getLeadById as any);
+router.post('/leads', createLead as any);
+router.put('/leads/:id', updateLead as any);
+router.delete('/leads/:id', requireAdmin, deleteLead as any); // Only admins can delete
 
 // Sales Opportunities Routes
-router.get('/opportunities', getOpportunities as (req: Request, res: Response) => Promise<void>);
-router.post('/opportunities', createOpportunity as (req: Request, res: Response) => Promise<void>);
-router.put('/opportunities/:id', updateOpportunity as (req: Request, res: Response) => Promise<void>);
+router.get('/opportunities', getOpportunities as any);
+router.post('/opportunities', createOpportunity as any);
+router.put('/opportunities/:id', updateOpportunity as any);
 
 // Sales Activities Routes
-router.get('/activities', getActivities as (req: Request, res: Response) => Promise<void>);
-router.post('/activities', createActivity as (req: Request, res: Response) => Promise<void>);
+router.get('/activities', getActivities as any);
+router.post('/activities', createActivity as any);
 
 // Sales Metrics & Analytics Routes
-router.get('/metrics', getSalesMetrics as (req: Request, res: Response) => Promise<void>);
+router.get('/metrics', getSalesMetrics as any);
 
 // Pipeline Management Routes
-router.get('/pipeline/stages', getPipelineStages as (req: Request, res: Response) => Promise<void>);
+router.get('/pipeline/stages', getPipelineStages as any);
 
 // Sales Team Routes
-router.get('/team', getSalesTeam as (req: Request, res: Response) => Promise<void>);
+router.get('/team', getSalesTeam as any);
 
 export default router

@@ -10,6 +10,9 @@ export interface Registration {
   paymentStatus: 'pending' | 'paid' | 'refunded'
   paymentIntentId?: string
   specialRequests?: string
+  eventName?: string
+  eventDateTime?: string
+  venueName?: string
   createdAt: string
   updatedAt: string
 }
@@ -67,7 +70,7 @@ export interface ApiResponse<T = any> {
 
 class RegistrationService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('hesocial_token')
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`

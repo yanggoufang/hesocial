@@ -31,7 +31,7 @@ const VenueManagement: React.FC = () => {
     setLoading(true);
     try {
       // Replace with your actual API service call
-      const response = await fetch('/api/venues', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+      const response = await fetch('/api/venues', { headers: { 'Authorization': `Bearer ${localStorage.getItem('hesocial_token')}` } });
       const data = await response.json();
       if (data.success) {
         setVenues(data.data || []);
@@ -63,7 +63,7 @@ const VenueManagement: React.FC = () => {
 
   const filteredVenues = venues.filter(v => v.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  if (!user || !['admin', 'super_admin'].includes(user.role)) {
+  if (!user || !['admin', 'super_admin'].includes(user.role ?? '')) {
     return <div>Access Denied</div>;
   }
 

@@ -48,8 +48,8 @@ export class BlueGreenDatabaseManager {
   private rollbackTimer: NodeJS.Timeout | null = null;
 
   constructor(
-    private baseDbPath: string = '/home/yanggf/a/hesocial/hesocial.duckdb',
-    private schemaPath: string = '/home/yanggf/a/hesocial/database/duckdb-schema.sql'
+    private baseDbPath: string = path.join(process.cwd(), 'hesocial.duckdb'),
+    private schemaPath: string = path.join(process.cwd(), 'database/duckdb-schema.sql')
   ) {}
 
   /**

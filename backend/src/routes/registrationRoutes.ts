@@ -46,18 +46,18 @@ router.get('/stats/:eventId', optionalAuth, async (req, res) => {
 // =============================================================================
 
 // Get user's own registrations
-router.get('/user', protect, getUserRegistrations as (req: Request, res: Response) => Promise<void>);
+router.get('/user', protect, getUserRegistrations as any);
 
 // Register for an event (requires authentication)
-router.post('/', protect, registerForEvent as (req: Request, res: Response) => Promise<void>);
+router.post('/events/:eventId', protect, registerForEvent as any);
 
 // Get specific registration details (user can only see their own)
-router.get('/:id', protect, getRegistrationById as (req: Request, res: Response) => Promise<void>);
+router.get('/:id', protect, getRegistrationById as any);
 
 // Update registration (user can only update their own)
-router.put('/:id', protect, updateRegistration as (req: Request, res: Response) => Promise<void>);
+router.put('/:id', protect, updateRegistration as any);
 
 // Cancel registration (user can only cancel their own)
-router.delete('/:id', protect, cancelRegistration as (req: Request, res: Response) => Promise<void>);
+router.delete('/:id', protect, cancelRegistration as any);
 
 export default router;

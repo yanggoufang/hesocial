@@ -23,7 +23,7 @@ const EventManagement: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user && ['admin', 'super_admin'].includes(user.role)) {
+    if (user && ['admin', 'super_admin'].includes(user.role ?? '')) {
       loadData();
     }
   }, [user, filters]);
@@ -92,7 +92,7 @@ const EventManagement: React.FC = () => {
   const formatDate = (dateString: string) => new Date(dateString).toLocaleString('zh-TW', { dateStyle: 'medium', timeStyle: 'short' });
   const formatPrice = (price: number, currency: string = 'TWD') => new Intl.NumberFormat('zh-TW', { style: 'currency', currency }).format(price);
 
-  if (!user || !['admin', 'super_admin'].includes(user.role)) {
+  if (!user || !['admin', 'super_admin'].includes(user.role ?? '')) {
     return (
       <div className="min-h-screen bg-luxury-midnight-black flex items-center justify-center text-luxury-platinum">
         <div className="text-center">

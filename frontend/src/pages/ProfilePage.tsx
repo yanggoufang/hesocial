@@ -6,15 +6,17 @@ import {
   Award, TrendingUp, Users
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
-import { authService } from '../services/authService'
+import { authService, type User } from '../services/authService'
+
+type ProfileData = Partial<User> & { interests: string[] }
 
 const ProfilePage = () => {
   const { updateProfile } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [profileData, setProfileData] = useState<any>(null)
-  const [editData, setEditData] = useState<any>(null)
+  const [profileData, setProfileData] = useState<ProfileData | null>(null)
+  const [editData, setEditData] = useState<ProfileData | null>(null)
   const [newInterest, setNewInterest] = useState('')
 
   useEffect(() => {
@@ -27,7 +29,10 @@ const ProfilePage = () => {
       const response = await authService.getProfile()
       
       if (response.success && response.data) {
-        const userData = response.data.user
+        const userData = {
+          ...response.data.user,
+          interests: response.data.user.interests || []
+        }
         setProfileData(userData)
         setEditData(userData)
       } else {
@@ -80,14 +85,19 @@ const ProfilePage = () => {
   }
 
   const handleSave = async () => {
+    if (!editData) return
     setIsSaving(true)
     
     try {
-      const result = await authService.updateProfile(editData)
+      const result = await authService.updateProfile(editData as Partial<User>)
       
       if (result.success && result.data) {
-        setProfileData(result.data.user)
-        setEditData(result.data.user)
+        const userData = {
+          ...result.data.user,
+          interests: result.data.user.interests || []
+        }
+        setProfileData(userData)
+        setEditData(userData)
         setIsEditing(false)
       } else {
         console.error('Profile update failed:', result.error)
@@ -105,30 +115,31 @@ const ProfilePage = () => {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setEditData(prev => ({
+    setEditData((prev: ProfileData | null) => prev ? ({
       ...prev,
       [e.target.name]: e.target.value
-    }))
+    }) : prev)
   }
 
   const addInterest = () => {
+    if (!editData) return
     if (newInterest.trim() && !editData.interests.includes(newInterest.trim()) && editData.interests.length < 10) {
-      setEditData(prev => ({
+      setEditData((prev: ProfileData | null) => prev ? ({
         ...prev,
         interests: [...prev.interests, newInterest.trim()]
-      }))
+      }) : prev)
       setNewInterest('')
     }
   }
 
   const removeInterest = (interest: string) => {
-    setEditData(prev => ({
+    setEditData((prev: ProfileData | null) => prev ? ({
       ...prev,
-      interests: prev.interests.filter(i => i !== interest)
-    }))
+      interests: prev.interests.filter((i: string) => i !== interest)
+    }) : prev)
   }
 
-  const getMembershipColor = (tier: string) => {
+  const getMembershipColor = (tier?: string) => {
     switch (tier) {
       case 'Platinum':
         return 'text-gray-400'
@@ -337,7 +348,7 @@ const ProfilePage = () => {
                 )}
               </div>
 
-              {isEditing ? (
+                  {isEditing && editData ? (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -432,7 +443,7 @@ const ProfilePage = () => {
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {editData.interests.map((interest, index) => (
+                      {editData.interests.map((interest: string, index: number) => (
                         <span
                           key={index}
                           className="inline-flex items-center px-3 py-1 bg-luxury-gold/20 text-luxury-gold text-sm rounded-full"
@@ -515,7 +526,7 @@ const ProfilePage = () => {
                     <div>
                       <label className="text-luxury-platinum/60 text-sm">興趣愛好</label>
                       <div className="flex flex-wrap gap-2 mt-1">
-                        {profileData.interests.map((interest, index) => (
+                        {profileData.interests.map((interest: string, index: number) => (
                           <span
                             key={index}
                             className="px-2 py-1 bg-luxury-gold/20 text-luxury-gold text-xs rounded-full"

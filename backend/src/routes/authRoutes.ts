@@ -108,8 +108,7 @@ router.post('/logout', authenticateToken, (req, res) => {
   }
 })
 
-// Validate token endpoint
-router.get('/validate', authenticateToken, (req, res) => {
+const validateToken = (req, res) => {
   res.json({
     success: true,
     data: {
@@ -118,6 +117,10 @@ router.get('/validate', authenticateToken, (req, res) => {
     },
     message: 'Token is valid'
   })
-})
+}
+
+// Validate token endpoint
+router.get('/validate', authenticateToken, validateToken)
+router.post('/validate', authenticateToken, validateToken)
 
 export default router

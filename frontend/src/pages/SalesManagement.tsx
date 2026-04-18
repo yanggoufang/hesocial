@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../hooks/useAuth'
+import salesService, { SalesLead, SalesMetrics, SalesOpportunity } from '../services/salesService'
 import { 
   TrendingUp, 
   Users, 
@@ -24,61 +25,6 @@ import {
   Crown,
   Shield
 } from 'lucide-react'
-
-interface SalesLead {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  phone?: string
-  company?: string
-  position?: string
-  leadScore: number
-  annualIncome: number
-  netWorth: number
-  source: 'website' | 'referral' | 'event' | 'cold_call' | 'linkedin' | 'advertisement'
-  status: 'new' | 'qualified' | 'contacted' | 'nurturing' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost'
-  assignedTo?: string
-  interests: string[]
-  lastContactDate?: string
-  nextFollowUpDate?: string
-  notes?: string
-  createdAt: string
-  updatedAt: string
-}
-
-interface SalesOpportunity {
-  id: string
-  leadId: string
-  name: string
-  description?: string
-  stage: 'qualification' | 'needs_analysis' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost'
-  probability: number
-  value: number
-  membershipTier: 'Platinum' | 'Diamond' | 'Black Card'
-  expectedCloseDate: string
-  actualCloseDate?: string
-  assignedTo?: string
-  notes?: string
-  createdAt: string
-  updatedAt: string
-  lead?: {
-    firstName: string
-    lastName: string
-    email: string
-  }
-}
-
-interface SalesMetrics {
-  totalLeads: number
-  qualifiedLeads: number
-  totalOpportunities: number
-  totalPipelineValue: number
-  wonDeals: number
-  conversionRate: number
-  averageDealSize: number
-  salesCycleLength: number
-}
 
 const SalesManagement: React.FC = () => {
   const { user } = useAuth()
@@ -124,56 +70,16 @@ const SalesManagement: React.FC = () => {
     setError(null)
     
     try {
-      // Mock API call - replace with actual API
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Mock data
-      const mockLeads: SalesLead[] = [
-        {
-          id: '1',
-          firstName: '張',
-          lastName: '志明',
-          email: 'zhang.zhiming@example.com',
-          phone: '+886 912345678',
-          company: '台積電',
-          position: '副總經理',
-          leadScore: 85,
-          annualIncome: 25000000,
-          netWorth: 150000000,
-          source: 'linkedin',
-          status: 'qualified',
-          assignedTo: 'sales-001',
-          interests: ['投資', '高爾夫', '藝術收藏'],
-          lastContactDate: '2025-07-05',
-          nextFollowUpDate: '2025-07-10',
-          notes: '對私人銀行服務表現出高度興趣',
-          createdAt: '2025-07-01T10:00:00Z',
-          updatedAt: '2025-07-05T15:30:00Z'
-        },
-        {
-          id: '2',
-          firstName: '李',
-          lastName: '美華',
-          email: 'li.meihua@example.com',
-          phone: '+886 987654321',
-          company: '鴻海精密',
-          position: '財務長',
-          leadScore: 92,
-          annualIncome: 30000000,
-          netWorth: 200000000,
-          source: 'referral',
-          status: 'nurturing',
-          assignedTo: 'sales-002',
-          interests: ['遊艇', '紅酒', '慈善'],
-          lastContactDate: '2025-07-06',
-          nextFollowUpDate: '2025-07-12',
-          notes: '透過現有客戶推薦，對 Black Card 會員感興趣',
-          createdAt: '2025-07-02T14:00:00Z',
-          updatedAt: '2025-07-06T09:15:00Z'
-        }
-      ]
-      
-      setLeads(mockLeads)
+      const response = await salesService.getLeads({
+        ...leadFilters,
+        page: leadsPage,
+        limit: pageSize
+      })
+      if (response.success) {
+        setLeads(response.data || [])
+      } else {
+        setError(response.error || 'Failed to fetch leads')
+      }
     } catch (err) {
       setError('Failed to fetch leads')
     } finally {
@@ -186,53 +92,16 @@ const SalesManagement: React.FC = () => {
     setError(null)
     
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const mockOpportunities: SalesOpportunity[] = [
-        {
-          id: '1',
-          leadId: '1',
-          name: 'Black Card 會員申請 - 張志明',
-          description: '高淨值客戶申請 Black Card 會員資格',
-          stage: 'proposal',
-          probability: 75,
-          value: 500000,
-          membershipTier: 'Black Card',
-          expectedCloseDate: '2025-07-20',
-          assignedTo: 'sales-001',
-          notes: '已提交初步提案，等待客戶回覆',
-          createdAt: '2025-07-03T10:00:00Z',
-          updatedAt: '2025-07-06T16:00:00Z',
-          lead: {
-            firstName: '張',
-            lastName: '志明',
-            email: 'zhang.zhiming@example.com'
-          }
-        },
-        {
-          id: '2',
-          leadId: '2',
-          name: 'Diamond 會員升級 - 李美華',
-          description: '現有 Platinum 會員申請升級至 Diamond',
-          stage: 'negotiation',
-          probability: 85,
-          value: 300000,
-          membershipTier: 'Diamond',
-          expectedCloseDate: '2025-07-15',
-          assignedTo: 'sales-002',
-          notes: '價格談判中，客戶對服務內容滿意',
-          createdAt: '2025-07-04T09:00:00Z',
-          updatedAt: '2025-07-07T11:30:00Z',
-          lead: {
-            firstName: '李',
-            lastName: '美華',
-            email: 'li.meihua@example.com'
-          }
-        }
-      ]
-      
-      setOpportunities(mockOpportunities)
+      const response = await salesService.getOpportunities({
+        ...oppFilters,
+        page: oppsPage,
+        limit: pageSize
+      })
+      if (response.success) {
+        setOpportunities(response.data || [])
+      } else {
+        setError(response.error || 'Failed to fetch opportunities')
+      }
     } catch (err) {
       setError('Failed to fetch opportunities')
     } finally {
@@ -245,21 +114,12 @@ const SalesManagement: React.FC = () => {
     setError(null)
     
     try {
-      // Mock API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const mockMetrics: SalesMetrics = {
-        totalLeads: 156,
-        qualifiedLeads: 89,
-        totalOpportunities: 34,
-        totalPipelineValue: 12500000,
-        wonDeals: 18,
-        conversionRate: 57.1,
-        averageDealSize: 425000,
-        salesCycleLength: 45
+      const response = await salesService.getMetrics()
+      if (response.success && response.data) {
+        setMetrics(response.data)
+      } else {
+        setError(response.error || 'Failed to fetch metrics')
       }
-      
-      setMetrics(mockMetrics)
     } catch (err) {
       setError('Failed to fetch metrics')
     } finally {
@@ -506,7 +366,14 @@ const SalesManagement: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-luxury-gold/10">
-                        {leads.map((lead) => (
+                      {leads.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-12 text-center text-luxury-platinum/70">
+                            目前沒有符合條件的銷售線索
+                          </td>
+                        </tr>
+                      )}
+                      {leads.map((lead) => (
                           <tr key={lead.id} className="hover:bg-luxury-gold/5 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div>
@@ -617,7 +484,14 @@ const SalesManagement: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {opportunities.map((opp) => (
+	                      {opportunities.length === 0 && (
+	                        <tr>
+	                          <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+	                            目前沒有符合條件的銷售商機
+	                          </td>
+	                        </tr>
+	                      )}
+	                      {opportunities.map((opp) => (
                         <tr key={opp.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div>
@@ -717,7 +591,7 @@ const SalesManagement: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-luxury-platinum/70">成交數</p>
-                    <p className="text-3xl font-bold text-luxury-platinum">{metrics.wonDeals}</p>
+                    <p className="text-3xl font-bold text-luxury-platinum">{metrics.winRate.toFixed(1)}%</p>
                   </div>
                   <CheckCircle className="w-8 h-8 text-emerald-400" />
                 </div>
@@ -761,50 +635,41 @@ const SalesManagement: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-luxury-platinum/70">新線索</span>
-                    <span className="text-sm font-medium text-luxury-gold">67</span>
+                    <span className="text-sm font-medium text-luxury-gold">{metrics.totalLeads}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-luxury-platinum/70">合格線索</span>
-                    <span className="text-sm font-medium text-luxury-gold">89</span>
+                    <span className="text-sm font-medium text-luxury-gold">{metrics.qualifiedLeads}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-luxury-platinum/70">提案階段</span>
-                    <span className="text-sm font-medium text-luxury-gold">34</span>
+                    <span className="text-sm font-medium text-luxury-gold">{metrics.totalOpportunities}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-luxury-platinum/70">談判中</span>
-                    <span className="text-sm font-medium text-luxury-gold">18</span>
+                    <span className="text-sm font-medium text-luxury-gold">{metrics.conversionRate.toFixed(1)}%</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-luxury-platinum/70">成交</span>
-                    <span className="text-sm font-medium text-luxury-gold">18</span>
+                    <span className="text-sm font-medium text-luxury-gold">{metrics.winRate.toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
               
               <div className="luxury-glass rounded-lg p-6 border border-luxury-gold/20">
-                <h3 className="text-lg font-medium text-luxury-platinum mb-4">會員等級分布</h3>
+                <h3 className="text-lg font-medium text-luxury-platinum mb-4">營收</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 text-luxury-platinum/70" />
-                      <span className="text-sm text-luxury-platinum/70">Platinum</span>
-                    </div>
-                    <span className="text-sm font-medium text-luxury-gold">12</span>
+                    <span className="text-sm text-luxury-platinum/70">本月成交營收</span>
+                    <span className="text-sm font-medium text-luxury-gold">{formatCurrency(metrics.monthlyRevenue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Crown className="w-4 h-4 text-blue-400" />
-                      <span className="text-sm text-luxury-platinum/70">Diamond</span>
-                    </div>
-                    <span className="text-sm font-medium text-luxury-gold">15</span>
+                    <span className="text-sm text-luxury-platinum/70">本季成交營收</span>
+                    <span className="text-sm font-medium text-luxury-gold">{formatCurrency(metrics.quarterlyRevenue)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-luxury-gold" />
-                      <span className="text-sm text-luxury-platinum/70">Black Card</span>
-                    </div>
-                    <span className="text-sm font-medium text-luxury-gold">7</span>
+                    <span className="text-sm text-luxury-platinum/70">今年成交營收</span>
+                    <span className="text-sm font-medium text-luxury-gold">{formatCurrency(metrics.yearlyRevenue)}</span>
                   </div>
                 </div>
               </div>

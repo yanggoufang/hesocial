@@ -26,8 +26,9 @@ const VisitorTracker: React.FC<VisitorTrackerProps> = ({ showVisitorId = false }
     // Set visitor ID in headers for API calls
     if (id) {
       // Add to axios defaults if available
-      if (window.axios) {
-        window.axios.defaults.headers.common['X-Visitor-ID'] = id
+      const axiosInstance = (window as any).axios
+      if (axiosInstance) {
+        axiosInstance.defaults.headers.common['X-Visitor-ID'] = id
       }
     }
   }, [])

@@ -32,7 +32,7 @@ const CategoryManagement: React.FC = () => {
     setLoading(true);
     try {
       // Replace with your actual API service call
-      const response = await fetch('/api/categories', { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+      const response = await fetch('/api/categories', { headers: { 'Authorization': `Bearer ${localStorage.getItem('hesocial_token')}` } });
       const data = await response.json();
       if (data.success) {
         setCategories(data.data || []);
@@ -64,7 +64,7 @@ const CategoryManagement: React.FC = () => {
 
   const filteredCategories = categories.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  if (!user || !['admin', 'super_admin'].includes(user.role)) {
+  if (!user || !['admin', 'super_admin'].includes(user.role ?? '')) {
     return <div>Access Denied</div>; // Or a more styled component
   }
 

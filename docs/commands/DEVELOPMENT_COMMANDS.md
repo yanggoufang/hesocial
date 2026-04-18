@@ -112,4 +112,10 @@ npm run test         # Run Vitest tests
 ### Database Development Modes
 - **Demo Mode**: `npm run dev:demo` - uses mock data, no database required
 - **DuckDB Mode**: `npm run dev:duckdb` - local DuckDB file for development
-- **Full Mode**: `npm run dev` - DuckDB with Cloudflare R2 for production
+- **Full Mode**: `npm run dev` - Node/Express with DuckDB and optional Cloudflare R2 integration
+
+### Production Hosting Source Of Truth
+- Frontend production target: Render static site `hesocial-frontend`
+- Backend production target: Render Node web service `hesocial-api`
+- Cloudflare role: R2 storage/backups/media and possible external DNS/domain routing
+- See `docs/DEPLOYMENT_TARGETS.md` before assuming Cloudflare Workers, Pages Functions, or D1.

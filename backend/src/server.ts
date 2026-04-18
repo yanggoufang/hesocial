@@ -234,24 +234,6 @@ app.get('/api/health/config', (req, res) => {
 })
 
 
-app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Unhandled error:', {
-    error: error.message,
-    stack: error.stack,
-    url: req.url,
-    method: req.method,
-    body: req.body,
-    params: req.params,
-    query: req.query
-  })
-
-  res.status(500).json({
-    success: false,
-    error: config.nodeEnv === 'production' ? 'Internal server error' : error.message,
-    message: 'An unexpected error occurred'
-  })
-})
-
 const startServer = async (): Promise<void> => {
   try {
     logger.info('🚀 Starting HeSocial API Server...')
@@ -261,139 +243,7 @@ const startServer = async (): Promise<void> => {
     
     // Start periodic backups if enabled
     r2BackupService.startPeriodicBackups()
-    
-    // Temporary working auth routes (bypass import issues)
-    app.post('/api/auth/login', async (req, res) => {
-      const { email, password } = req.body
-      
-      // Debug logging
-      logger.info('Login attempt:', { email, passwordLength: password?.length })
-      
-      // Simple auth check for development
-      if (email === 'admin@hesocial.com' && password === 'admin123') {
-        logger.info('Login successful for admin')
-        res.json({
-          success: true,
-          data: {
-            token: 'dev-token-12345',
-            user: {
-              id: 1,
-              email: 'admin@hesocial.com',
-              role: 'admin',
-              membershipTier: 'Black Card'
-            }
-          },
-          message: 'Login successful'
-        })
-      } else {
-        logger.info('Login failed:', { receivedEmail: email, expectedEmail: 'admin@hesocial.com', passwordMatch: password === 'admin123' })
-        res.status(401).json({
-          success: false,
-          error: 'Invalid credentials'
-        })
-      }
-    })
-    
-    // Add logout endpoint
-    app.post('/api/auth/logout', (req, res) => {
-      res.json({
-        success: true,
-        message: 'Logged out successfully'
-      })
-    })
-    
-    // Add token validation endpoint (POST)
-    app.post('/api/auth/validate', (req, res) => {
-      const token = req.headers.authorization?.replace('Bearer ', '')
-      if (token === 'dev-token-12345') {
-        res.json({
-          success: true,
-          data: {
-            user: {
-              id: 1,
-              email: 'admin@hesocial.com',
-              role: 'admin',
-              membershipTier: 'Black Card'
-            }
-          }
-        })
-      } else {
-        res.status(401).json({
-          success: false,
-          error: 'Invalid token'
-        })
-      }
-    })
-    
-    // Add token validation endpoint (GET) for frontend compatibility
-    app.get('/api/auth/validate', (req, res) => {
-      const token = req.headers.authorization?.replace('Bearer ', '')
-      if (token === 'dev-token-12345') {
-        res.json({
-          success: true,
-          data: {
-            user: {
-              id: 1,
-              email: 'admin@hesocial.com',
-              role: 'admin',
-              membershipTier: 'Black Card'
-            },
-            valid: true
-          }
-        })
-      } else {
-        res.status(401).json({
-          success: false,
-          error: 'Invalid token'
-        })
-      }
-    })
-    
-    logger.info('✅ Temporary auth routes configured')
-    
-    // Add the specific health endpoints that admin console needs
-    app.get('/api/health/database', async (req, res) => {
-      try {
-        res.json({
-          success: true,
-          database: {
-            type: 'DuckDB',
-            connected: true,
-            status: 'healthy'
-          },
-          timestamp: new Date().toISOString()
-        })
-      } catch (error) {
-        res.status(503).json({
-          success: false,
-          error: 'Database health check failed',
-          timestamp: new Date().toISOString()
-        })
-      }
-    })
 
-    app.get('/api/health/r2-sync', async (req, res) => {
-      try {
-        res.json({
-          success: true,
-          r2Sync: {
-            enabled: r2BackupService.isEnabled(),
-            status: r2BackupService.isEnabled() ? 'healthy' : 'disabled',
-            connectionHealthy: true
-          },
-          timestamp: new Date().toISOString()
-        })
-      } catch (error) {
-        res.status(503).json({
-          success: false,
-          error: 'R2 sync health check failed',
-          timestamp: new Date().toISOString()
-        })
-      }
-    })
-    
-    logger.info('✅ Admin health endpoints configured')
-    
     // Dynamically load and mount API routes
     try {
       logger.info('🔄 Loading API routes...')
@@ -420,6 +270,24 @@ const startServer = async (): Promise<void> => {
         success: false,
         error: 'Route not found',
         message: `${req.method} ${req.path} is not a valid endpoint`
+      })
+    })
+
+    app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+      logger.error('Unhandled error:', {
+        error: error.message,
+        stack: error.stack,
+        url: req.url,
+        method: req.method,
+        body: req.body,
+        params: req.params,
+        query: req.query
+      })
+
+      res.status(500).json({
+        success: false,
+        error: config.nodeEnv === 'production' ? 'Internal server error' : error.message,
+        message: 'An unexpected error occurred'
       })
     })
     

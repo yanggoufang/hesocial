@@ -121,7 +121,7 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({
     return m.type === filter
   })
 
-  const canEdit = editable && user && ['admin', 'super_admin'].includes(user.role)
+  const canEdit = editable && user && user.role && ['admin', 'super_admin'].includes(user.role)
 
   if (loading) {
     return (

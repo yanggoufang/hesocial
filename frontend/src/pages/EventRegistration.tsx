@@ -83,10 +83,10 @@ const EventRegistration: React.FC = () => {
     setError(null)
     
     try {
-      const response = await eventService.getEventById(eventId)
+      const response = await eventService.getEvent(eventId)
       
       if (response.success && response.data) {
-        setEvent(response.data)
+        setEvent(response.data as unknown as Event)
         await checkEligibility()
       } else {
         setError(response.error || 'Failed to fetch event details')

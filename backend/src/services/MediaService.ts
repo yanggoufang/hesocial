@@ -434,7 +434,7 @@ class MediaService {
         SELECT * FROM event_media WHERE id = ?
         UNION ALL
         SELECT * FROM venue_media WHERE id = ?
-      `).get(mediaId, mediaId)
+      `).get(mediaId, mediaId) as any
 
       if (!media) {
         throw new Error('Media not found')
@@ -540,7 +540,7 @@ class MediaService {
         `).get()
       ])
 
-      const [eventStats, venueStats, recentStats] = stats
+      const [eventStats, venueStats, recentStats] = stats as any[]
 
       return {
         eventMedia: {

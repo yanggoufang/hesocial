@@ -138,6 +138,7 @@ class DuckDBConnection {
 
 const duckDBConnection = new DuckDBConnection()
 export const duckdb = duckDBConnection
+export const getDuckDBConnection = (): DuckDBConnection => duckDBConnection
 
 export const connectDatabases = async (): Promise<void> => {
   await duckdb.connect()

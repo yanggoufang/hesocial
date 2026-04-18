@@ -48,6 +48,7 @@ cd frontend && npm run test -- <file-pattern>
 - **Backend**: Node.js 22 + Express + TypeScript. Entry: `backend/src/server.ts`. Dev port: **5000**.
 - **Database**: **DuckDB** embedded file at repo root (`hesocial.duckdb`) — no external DB server. Schema: `database/duckdb-schema.sql`. Migrations managed via `backend/src/database/MigrationService.ts`.
 - **Storage**: Cloudflare R2 for media and DB backups (optional in dev).
+- **Hosting target**: Render (`render.yaml`) hosts the frontend static site and backend Node service. Cloudflare is not the app runtime in the committed config.
 - **Auth**: JWT + Google OAuth 2.0.
 
 Backend routes live in `backend/src/routes/` and are registered in `backend/src/server.ts`. Frontend pages in `frontend/src/pages/` are lazy-loaded via React Router.
@@ -91,6 +92,8 @@ cp backend/.env.example backend/.env
 
 - **Do not start or restart servers automatically** — ask the user to do it.
 - Frontend deploys require a build (`npm run build:frontend`) before serving.
+- Production hosting source of truth is `render.yaml`; see [Deployment Targets](docs/DEPLOYMENT_TARGETS.md).
+- Cloudflare references in this repo mean R2 storage/backups/media unless a future Worker/Pages config is added.
 - Never commit `.env`, `.credentials.json`, or the `statsig/` directory.
 
 ## Documentation Structure

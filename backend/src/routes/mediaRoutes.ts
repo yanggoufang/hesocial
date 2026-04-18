@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Request, type Response } from 'express'
 import { authenticateToken, requireAdmin } from '../middleware/auth.js'
 import {
   uploadMiddleware,
@@ -130,7 +130,7 @@ router.get('/stats', authenticateToken, requireAdmin, async (req, res) => {
       `).all()
     ])
 
-    const [eventStats, venueStats, recentStats, topUploaders] = stats
+    const [eventStats, venueStats, recentStats, topUploaders] = stats as any[]
 
     res.json({
       success: true,
@@ -186,7 +186,7 @@ router.post('/cleanup', authenticateToken, async (req, res) => {
       FROM event_media em
       LEFT JOIN events e ON em.event_id = e.id
       WHERE e.id IS NULL OR e.is_active = false
-    `).all()
+    `).all() as any[]
 
     // Find orphaned venue media (venues that no longer exist)
     const orphanedVenueMedia = await duckdb.prepare(`
@@ -194,7 +194,7 @@ router.post('/cleanup', authenticateToken, async (req, res) => {
       FROM venue_media vm
       LEFT JOIN venues v ON vm.venue_id = v.id
       WHERE v.id IS NULL OR v.is_active = false
-    `).all()
+    `).all() as any[]
 
     let deletedFiles = 0
     let deletedRecords = 0

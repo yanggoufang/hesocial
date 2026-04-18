@@ -10,7 +10,7 @@ const API_BASE = '/api'
 
 class ParticipantService {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('hesocial_token')
     
     const response = await fetch(`${API_BASE}${endpoint}`, {
       headers: {

@@ -210,7 +210,7 @@ const EventForm: React.FC<EventFormProps> = ({ event, isOpen, onClose, onSuccess
       if (formData.capacityMax <= 0) {
         throw new Error('Maximum capacity must be greater than 0')
       }
-      if (formData.capacityMin > formData.capacityMax) {
+      if ((formData.capacityMin ?? 0) > formData.capacityMax) {
         throw new Error('Minimum capacity cannot exceed maximum capacity')
       }
 

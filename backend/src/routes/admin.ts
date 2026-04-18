@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import { r2BackupService } from '../services/R2BackupService.js';
 import { duckdb } from '../database/duckdb-connection.js';
 import { authenticateToken, requireAdmin, requireSuperAdmin } from '../middleware/auth.js';

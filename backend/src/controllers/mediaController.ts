@@ -64,7 +64,7 @@ export const uploadEventImages = async (req: AuthenticatedRequest, res: Response
       FROM events 
       WHERE id = ? AND is_active = true
     `);
-    const eventCheck = await stmt.get(eventId);
+    const eventCheck = await stmt.get(eventId) as any;
 
     if (!eventCheck) {
       res.status(404).json({
@@ -132,7 +132,7 @@ export const uploadEventDocuments = async (req: AuthenticatedRequest, res: Respo
       FROM events 
       WHERE id = ? AND is_active = true
     `);
-    const eventCheck = await stmt.get(eventId);
+    const eventCheck = await stmt.get(eventId) as any;
 
     if (!eventCheck) {
       res.status(404).json({
@@ -206,7 +206,7 @@ export const getEventMedia = async (req: Request, res: Response): Promise<void> 
     `
 
     const stmt = await duckdb.prepare(mediaQuery);
-    const result = await stmt.all(...params);
+    const result = await stmt.all(...params) as any[];
 
     const media = await Promise.all(result.map(async (item: any) => {
       let filePath = item.filePath
@@ -269,7 +269,7 @@ export const deleteMedia = async (req: AuthenticatedRequest, res: Response): Pro
       FROM venue_media vm
       WHERE vm.id = ?
     `);
-    const media = await stmt.get(mediaId, mediaId);
+    const media = await stmt.get(mediaId, mediaId) as any;
 
     if (!media) {
       res.status(404).json({
@@ -390,7 +390,7 @@ export const getVenueMedia = async (req: Request, res: Response): Promise<void> 
     `
 
     const stmt = await duckdb.prepare(mediaQuery);
-    const result = await stmt.all(venueId);
+    const result = await stmt.all(venueId) as any[];
 
     const media = result.map((item: any) => ({
       ...item,
@@ -422,7 +422,7 @@ export const downloadDocument = async (req: AuthenticatedRequest, res: Response)
     const stmt = await duckdb.prepare(`
       SELECT * FROM event_media WHERE id = ? AND type = 'document'
     `);
-    const document = await stmt.get(mediaId);
+    const document = await stmt.get(mediaId) as any;
 
     if (!document) {
       res.status(404).json({

@@ -44,11 +44,23 @@ hesocial/
 - **Backup System**: AWS SDK v3 with smart restore logic and automatic backups
 - **Authentication**: ✅ **Production Ready** - JWT + Google OAuth 2.0 with Passport.js
 - **Payments**: Stripe integration
-- **Infrastructure**: Cloudflare R2 for database persistence and backup management
+- **Hosting**: Render static site (`hesocial-frontend`) + Render Node web service (`hesocial-api`) via `render.yaml`
+- **Infrastructure**: Cloudflare R2 for database persistence, backup management, and media storage
+
+## Deployment Targets
+
+The current committed production deployment target is **Render**:
+
+- Frontend: Render static site `hesocial-frontend`, built from `frontend/dist`
+- Backend: Render Node web service `hesocial-api`, running `backend/dist/server.js`
+- Cloudflare: R2 storage/backups/media, and possibly external DNS/domain routing outside this repo
+
+Cloudflare is not currently configured as the frontend or backend runtime in this repository. There is no `wrangler.toml`, Worker entrypoint, Pages Functions directory, or D1 configuration. See [Deployment Targets](./docs/DEPLOYMENT_TARGETS.md).
 
 ## Documentation
 
 - **[Development Guide](./CLAUDE.md)** - AI assistant guidance and architecture information
+- **[Deployment Targets](./docs/DEPLOYMENT_TARGETS.md)** - Current hosting/runtime source of truth
 - **[Authentication Implementation](./docs/AUTHENTICATION_IMPLEMENTATION.md)** - Complete authentication system documentation
 - **[Business Features Roadmap](./docs/BUSINESS_FEATURES_ROADMAP.md)** - Event and sales management implementation plan
 - **[Default Users Guide](./docs/DEFAULT_USERS.md)** - Admin accounts and test users documentation
@@ -301,7 +313,7 @@ Complete access control system with reasonable public access for browsing while 
 
 #### **🔒 Protected Endpoints (Authentication Required)**
 - **User Profiles**: `GET/PUT /api/auth/profile` - Personal account management
-- **Event Registration**: `POST /api/registrations`, `GET /api/registrations/user` - Event registration and history
+- **Event Registration**: `POST /api/registrations/events/:eventId`, `GET /api/registrations/user` - Event registration and history
 - **Social Features**: `GET /api/events/:eventId/participants` - Participant discovery with privacy controls
 
 #### **👑 Admin Endpoints (Admin Role Required)**

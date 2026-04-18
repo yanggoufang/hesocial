@@ -132,7 +132,7 @@ async function trackVisitorSession(
 }
 
 // Helper function to link visitor to user after registration
-export const linkVisitorToUser = async (visitorId: string, userId: number): Promise<void> => {
+export const linkVisitorToUser = async (visitorId: string, userId: string): Promise<void> => {
   try {
     await pool.query(`
       UPDATE visitor_sessions 

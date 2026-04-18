@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import registrationService, { Registration } from '../services/registrationService';
+import registrationService, { Registration, RegistrationFilters } from '../services/registrationService';
 import {
   Calendar,
   MapPin,
@@ -65,11 +65,14 @@ const MyRegistrations: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await registrationService.getUserRegistrations({
-        ...filters,
+      const requestFilters: RegistrationFilters = {
+        status: filters.status ? filters.status as Registration['status'] : undefined,
+        paymentStatus: filters.paymentStatus ? filters.paymentStatus as Registration['paymentStatus'] : undefined,
+        search: filters.search || undefined,
         page: currentPage,
         limit: pageSize,
-      });
+      };
+      const response = await registrationService.getUserRegistrations(requestFilters);
 
       if (response.success && response.data) {
         setRegistrations(response.data);
@@ -190,10 +193,13 @@ const MyRegistrations: React.FC = () => {
   };
 
   const canEdit = (registration: Registration) => {
-    return registration.status === 'pending' && new Date(registration.eventDateTime) > new Date();
+    const eventDateTime = registration.eventDateTime;
+    if (!eventDateTime) return false;
+    return registration.status === 'pending' && new Date(eventDateTime) > new Date();
   };
 
   const canCancel = (registration: Registration) => {
+    if (!registration.eventDateTime) return false;
     const hoursUntilEvent = (new Date(registration.eventDateTime).getTime() - new Date().getTime()) / (1000 * 3600);
     return registration.status !== 'cancelled' && registration.status !== 'rejected' && hoursUntilEvent > 24;
   };
@@ -321,10 +327,10 @@ const MyRegistrations: React.FC = () => {
                 <div key={reg.id} className="p-6 hover:bg-white/5 transition-colors duration-300">
                   <div className="flex flex-col md:flex-row items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h4 className="text-xl font-luxury font-bold text-luxury-gold mb-3">{reg.eventName}</h4>
+                      <h4 className="text-xl font-luxury font-bold text-luxury-gold mb-3">{reg.eventName || '活動'}</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-4 text-luxury-platinum">
-                        <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-luxury-gold" /><span>{formatDateTime(reg.eventDateTime)}</span></div>
-                        <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-luxury-gold" /><span>{reg.venueName}</span></div>
+                        <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-luxury-gold" /><span>{reg.eventDateTime ? formatDateTime(reg.eventDateTime) : '時間待確認'}</span></div>
+                        <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-luxury-gold" /><span>{reg.venueName || '場地待確認'}</span></div>
                         <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-luxury-gold" /><span>報名於 {formatDateTime(reg.createdAt)}</span></div>
                       </div>
                       <div className="flex items-center gap-3 mb-4">
@@ -381,7 +387,7 @@ const MyRegistrations: React.FC = () => {
             </div>
             <div className="mb-6">
               <p className="text-luxury-platinum mb-4">
-                活動: <strong className="text-luxury-gold">{selectedRegistration.eventName}</strong>
+                活動: <strong className="text-luxury-gold">{selectedRegistration.eventName || '活動'}</strong>
               </p>
               <label className="block text-sm font-medium text-luxury-platinum mb-2">特別要求</label>
               <textarea

@@ -134,10 +134,20 @@ GET  /api/admin/backups    // Admin+ required
 
 ## Deployment Architecture
 
+### Production Hosting
+
+The current committed production deployment target is Render:
+
+- **Frontend**: Render static site `hesocial-frontend`, built from `frontend/dist`
+- **Backend**: Render Node web service `hesocial-api`, running the compiled Express server
+- **Cloudflare**: R2 storage/backups/media, and possibly external DNS/domain routing outside this repo
+
+Cloudflare is not currently the frontend or backend runtime. The repo has no `wrangler.toml`, Worker entrypoint, Pages Functions directory, or D1 configuration. See [Deployment Targets](../DEPLOYMENT_TARGETS.md).
+
 ### Database Development Modes
 - **Demo Mode**: `npm run dev:demo` - uses mock data, no database required
 - **DuckDB Mode**: `npm run dev:duckdb` - local DuckDB file for development
-- **Full Mode**: `npm run dev` - DuckDB with Cloudflare R2 for production
+- **Full Mode**: `npm run dev` - Node/Express with DuckDB and optional Cloudflare R2 integration
 
 ### Environment Separation
 - Development: `hesocial-duckdb-dev`

@@ -62,6 +62,13 @@ const SystemHealthDashboard: React.FC = () => {
     await loadHealthData()
   }
 
+  const getOverallStatusLabel = (status?: SystemHealthData['overall']) => {
+    if (status === 'healthy') return '健康'
+    if (status === 'warning') return '警告'
+    if (status === 'error') return '錯誤'
+    return '未知'
+  }
+
   useEffect(() => {
     loadHealthData()
     
@@ -131,7 +138,7 @@ const SystemHealthDashboard: React.FC = () => {
             {getOverallStatusIcon(healthData?.overall || 'error')}
             <div>
               <h3 className="text-2xl font-luxury font-bold text-luxury-gold">
-                系統狀態：{healthData?.overall === 'healthy' ? '健康' : healthData?.overall === 'warning' ? '警告' : healthData?.overall === 'error' ? '錯誤' : healthData?.overall?.toUpperCase()}
+                系統狀態：{getOverallStatusLabel(healthData?.overall)}
               </h3>
               <p className="text-luxury-platinum/80">
                 最後更新：{healthData?.timestamp ? new Date(healthData.timestamp).toLocaleString('zh-TW') : '未知'}

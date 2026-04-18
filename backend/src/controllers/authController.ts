@@ -105,7 +105,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     // Link visitor to user if visitor ID exists
     const visitorReq = req as VisitorRequest
     if (visitorReq.visitorId) {
-      linkVisitorToUser(visitorReq.visitorId, userId).catch(error => {
+      linkVisitorToUser(visitorReq.visitorId, String(userId)).catch(error => {
         logger.warn('Failed to link visitor to user:', error)
       })
     }

@@ -40,6 +40,7 @@ This is a high-end social event platform targeting affluent individuals aged 45-
 - **Runtime**: Node.js 22.16.0 with Express framework
 - **Language**: TypeScript with ESM modules
 - **Database**: DuckDB as primary database with Cloudflare R2 persistence
+- **Hosting**: Render Node web service via `render.yaml`
 - **Security**: Helmet, CORS, rate limiting, compression
 - **Logging**: Winston with Morgan middleware
 - **File Processing**: Multer with Sharp for image processing
@@ -51,6 +52,14 @@ This is a high-end social event platform targeting affluent individuals aged 45-
 - **Production Persistence**: Cloudflare R2 backup system
 - **Development**: Local DuckDB file for development
 - **Key Tables**: Users, Events, Venues, Event Categories, Registrations, Financial verification, Server state tracking
+
+### Deployment Targets
+- **Frontend**: Render static site `hesocial-frontend`
+- **Backend**: Render Node web service `hesocial-api`
+- **Cloudflare**: R2 storage/backups/media and possible external DNS/domain routing
+- **Not currently configured**: Cloudflare Workers, Cloudflare Pages Functions, D1, KV, Durable Objects
+
+See [Deployment Targets](./DEPLOYMENT_TARGETS.md).
 
 ## Project Architecture
 
@@ -65,7 +74,7 @@ hesocial/
 ```
 
 ### Backend Server Variants
-1. **Production Server** (`server.ts`): DuckDB with Cloudflare R2 persistence
+1. **Production Server** (`server.ts`): Node/Express with DuckDB and optional Cloudflare R2 persistence
 2. **DuckDB Server** (`server-duckdb.ts`): Local DuckDB file for development
 3. **Demo Server** (`server-demo.ts`): Mock data for quick prototyping
 

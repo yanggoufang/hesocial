@@ -103,10 +103,21 @@ npm run migrate:validate  # Validate migration integrity
 
 ## Development Environment Options
 
+### Local Runtime Model
+
+Local development simulates the current Render-hosted production shape, not Cloudflare Workers or Cloudflare Pages Functions:
+
+- Frontend runs with Vite or from the built `frontend/dist` static assets.
+- Backend runs as a Node/Express process.
+- DuckDB uses the local `hesocial.duckdb` file.
+- Cloudflare R2 is optional locally and only active when real R2 environment variables are configured.
+
+See [Deployment Targets](../DEPLOYMENT_TARGETS.md).
+
 ### Database Development Modes
 - **Demo Mode**: `npm run dev:demo` - uses mock data, no database required
 - **DuckDB Mode**: `npm run dev:duckdb` - local DuckDB file for development
-- **Full Mode**: `npm run dev` - DuckDB with Cloudflare R2 for production
+- **Full Mode**: `npm run dev` - Node/Express with DuckDB and optional Cloudflare R2 integration
 
 ### Temporary Server for Development
 For development and testing when the main DuckDB server has connection issues:

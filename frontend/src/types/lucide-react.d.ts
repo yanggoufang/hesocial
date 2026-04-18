@@ -20,6 +20,7 @@ declare module 'lucide-react' {
   export const BarChart3: LucideIcon;
   export const Bell: LucideIcon;
   export const Briefcase: LucideIcon;
+  export const Building: LucideIcon;
   export const Calendar: LucideIcon;
   export const CalendarDays: LucideIcon;
   export const Check: LucideIcon;
@@ -32,6 +33,7 @@ declare module 'lucide-react' {
   export const Clock3: LucideIcon;
   export const Cloud: LucideIcon;
   export const CreditCard: LucideIcon;
+  export const Crosshair: LucideIcon;
   export const Crown: LucideIcon;
   export const Database: LucideIcon;
   export const Diamond: LucideIcon;
@@ -44,6 +46,7 @@ declare module 'lucide-react' {
   export const EyeOff: LucideIcon;
   export const Facebook: LucideIcon;
   export const File: LucideIcon;
+  export const FileText: LucideIcon;
   export const Filter: LucideIcon;
   export const HardDrive: LucideIcon;
   export const Heart: LucideIcon;
@@ -54,14 +57,17 @@ declare module 'lucide-react' {
   export const LayoutGrid: LucideIcon;
   export const Linkedin: LucideIcon;
   export const Loader: LucideIcon;
+  export const Loader2: LucideIcon;
   export const Lock: LucideIcon;
   export const LogOut: LucideIcon;
   export const Mail: LucideIcon;
   export const Map: LucideIcon;
   export const MapPin: LucideIcon;
   export const Menu: LucideIcon;
+  export const MessageCircle: LucideIcon;
   export const Phone: LucideIcon;
   export const Plus: LucideIcon;
+  export const PieChart: LucideIcon;
   export const Refresh: LucideIcon;
   export const RefreshCw: LucideIcon;
   export const Save: LucideIcon;
@@ -73,7 +79,10 @@ declare module 'lucide-react' {
   export const Shirt: LucideIcon;
   export const Star: LucideIcon;
   export const Tag: LucideIcon;
+  export const Target: LucideIcon;
+  export const Ticket: LucideIcon;
   export const Trash2: LucideIcon;
+  export const TrendingDown: LucideIcon;
   export const TrendingUp: LucideIcon;
   export const Twitter: LucideIcon;
   export const Upload: LucideIcon;

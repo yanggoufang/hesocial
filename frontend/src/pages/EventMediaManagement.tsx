@@ -246,7 +246,7 @@ const EventMediaManagement: React.FC = () => {
           
           <MediaGallery
             eventId={event.id}
-            type={activeTab === 'all' ? 'all' : activeTab}
+            type={activeTab === 'all' ? 'all' : activeTab === 'images' ? 'image' : 'document'}
             editable={true}
             onMediaChange={handleMediaChange}
             key={`${mediaRefresh}-${activeTab}`}
