@@ -20,6 +20,7 @@
 | F7 | Medium | Catch-all shadows duplicated debug block (lines 385-672) |
 | F8 | Medium | Error handler registered before route mounting |
 | F9 | Medium | `SalesManagement.tsx` mock data bypasses working backend |
+| F10 | High | `BlueGreenDatabaseManager` hardcoded absolute dev paths break on deploy |
 
 ---
 
@@ -322,6 +323,40 @@ npm run validate:all         # full gate
 8. `fix(routes): re-enable user and admin routers`                      (C4+C5)
 9. `fix(routes): re-enable media router`                                (C6)
 10. `fix(frontend): restore frontend typecheck`                         (D2)
+
+---
+
+## Phase E — F10: Portable Database Paths
+
+**Goal**: Remove hardcoded absolute dev paths that break deployment on Render / any non-local host.
+**Effort**: 5 min.
+**Risk**: Low.
+
+### E1. `backend/src/database/BlueGreenDatabaseManager.ts:50-53`
+
+Before:
+
+```ts
+constructor(
+  private baseDbPath: string = '/home/yanggf/a/hesocial/hesocial.duckdb',
+  private schemaPath: string = '/home/yanggf/a/hesocial/database/duckdb-schema.sql'
+) {}
+```
+
+After:
+
+```ts
+constructor(
+  private baseDbPath: string = path.join(process.cwd(), 'hesocial.duckdb'),
+  private schemaPath: string = path.join(process.cwd(), 'database/duckdb-schema.sql')
+) {}
+```
+
+`path` is already imported at line 8. Matches the resolution pattern used by `duckdb-connection.ts`.
+
+### E2. Commit
+
+`fix(db): use cwd-relative paths in BlueGreenDatabaseManager`
 
 ---
 
