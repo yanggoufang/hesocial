@@ -4,8 +4,8 @@ services:
     name: hesocial-api
     runtime: node
     plan: free
-    buildCommand: cd backend && npm install && npm run build
-    startCommand: cd backend && npm start
+    buildCommand: npm ci --include=dev && npm run build:backend
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -25,7 +25,7 @@ services:
   - type: web
     name: hesocial-frontend
     runtime: static
-    buildCommand: cd frontend && npm install && npm run build
+    buildCommand: npm ci --include=dev && npm run build:frontend
     staticPublishPath: ./frontend/dist
     envVars:
       - key: VITE_API_URL
