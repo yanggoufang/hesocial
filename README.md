@@ -63,13 +63,14 @@ Cloudflare is not currently configured as the frontend or backend runtime in thi
 - **[Deployment Targets](./docs/DEPLOYMENT_TARGETS.md)** - Current hosting/runtime source of truth
 - **[Authentication Implementation](./docs/AUTHENTICATION_IMPLEMENTATION.md)** - Complete authentication system documentation
 - **[Business Features Roadmap](./docs/BUSINESS_FEATURES_ROADMAP.md)** - Event and sales management implementation plan
+- **[Rebuild Plan](./docs/REBUILD_PLAN.md)** - Turso/libSQL rebuild direction and unresolved production issues
 - **[Default Users Guide](./docs/DEFAULT_USERS.md)** - Admin accounts and test users documentation
 - **[Setup Documentation](./docs/setup/)** - Database and service setup guides
 - **[Specifications](./docs/specifications/)** - Platform specifications and requirements
 
 ## Database & Backup
 
-The platform uses DuckDB as the primary database with Cloudflare R2 for production-ready backup and persistence:
+The platform currently uses DuckDB as the primary database with Cloudflare R2 backup support. The next planned rebuild moves transactional production data to Turso/libSQL; see [Rebuild Plan](./docs/REBUILD_PLAN.md).
 
 ### ✅ **Production-Ready R2 Integration**
 - **Automatic Backups**: Created on graceful server shutdown with SIGTERM/SIGINT handling

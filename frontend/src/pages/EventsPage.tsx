@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, Star, Search, ChevronLeft, ChevronRight, Diamond } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../services/apiBase';
 
 // Define the types for our data structures
 interface Venue {
@@ -99,8 +100,6 @@ const EventsPage = () => {
         return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   const fetchEvents = useCallback(async (page: number) => {
     setLoading(true);

@@ -18,7 +18,7 @@ class DuckDBConnection {
 
     try {
       // Create DuckDB instance with file storage using absolute path
-      const dbPath = join(__dirname, '../../../hesocial.duckdb')
+      const dbPath = process.env.DUCKDB_PATH || join(__dirname, '../../../hesocial.duckdb')
       logger.info(`Connecting to DuckDB at: ${dbPath}`)
       
       // Force persistent mode by explicitly setting file path
@@ -140,9 +140,52 @@ const duckDBConnection = new DuckDBConnection()
 export const duckdb = duckDBConnection
 export const getDuckDBConnection = (): DuckDBConnection => duckDBConnection
 
+const ensureUserRoleColumn = async (): Promise<void> => {
+  try {
+    await duckdb.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS role VARCHAR DEFAULT 'user'
+    `)
+
+    await duckdb.query(`
+      UPDATE users
+      SET role = CASE
+        WHEN email IN ('admin@hesocial.com', 'superadmin@hesocial.com') THEN 'super_admin'
+        WHEN role IS NULL THEN 'user'
+        ELSE role
+      END
+      WHERE role IS NULL
+        OR (email IN ('admin@hesocial.com', 'superadmin@hesocial.com') AND role = 'user')
+    `)
+  } catch (error) {
+    logger.warn('Unable to ensure users.role column:', error)
+  }
+}
+
+const ensureVisitorTrackingSequences = async (): Promise<void> => {
+  const sequences = [
+    { table: 'visitor_sessions', sequence: 'visitor_sessions_id_seq' },
+    { table: 'visitor_page_views', sequence: 'visitor_page_views_id_seq' },
+    { table: 'visitor_events', sequence: 'visitor_events_id_seq' }
+  ]
+
+  for (const { table, sequence } of sequences) {
+    try {
+      const result = await duckdb.query(`SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM ${table}`)
+      const nextId = Number(result.rows[0]?.next_id || 1)
+
+      await duckdb.query(`DROP SEQUENCE IF EXISTS ${sequence}`)
+      await duckdb.query(`CREATE SEQUENCE ${sequence} START ${Math.max(1, nextId)}`)
+    } catch (error) {
+      logger.warn(`Unable to ensure ${sequence}:`, error)
+    }
+  }
+}
+
 export const connectDatabases = async (): Promise<void> => {
   await duckdb.connect()
-  // Additional database setup logic can go here
+  await ensureUserRoleColumn()
+  await ensureVisitorTrackingSequences()
 }
 
 export const closeDatabases = async (): Promise<void> => {

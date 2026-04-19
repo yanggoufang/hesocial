@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { API_BASE_URL } from '../services/apiBase'
 
 interface VisitorTrackerProps {
   showVisitorId?: boolean
@@ -38,7 +39,7 @@ const VisitorTracker: React.FC<VisitorTrackerProps> = ({ showVisitorId = false }
     if (!visitorId) return
 
     // Send to backend analytics API
-    fetch('/api/analytics/events/track', {
+    fetch(`${API_BASE_URL}/analytics/events/track`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

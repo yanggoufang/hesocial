@@ -15,9 +15,9 @@ export const visitorTracking = async (
 ): Promise<void> => {
   try {
     const visitorReq = req as VisitorRequest
-    
+
     // Check for existing visitor ID in headers or cookies
-    let visitorId = req.headers['x-visitor-id'] as string || 
+    let visitorId = req.headers['x-visitor-id'] as string ||
                    req.cookies?.visitorId ||
                    req.query.visitorId as string
 
@@ -27,7 +27,7 @@ export const visitorTracking = async (
     if (!visitorId) {
       visitorId = `visitor_${uuidv4()}`
       isNewVisitor = true
-      
+
       // Set visitor ID cookie (expires in 1 year)
       res.cookie('visitorId', visitorId, {
         maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
@@ -55,8 +55,8 @@ export const visitorTracking = async (
 }
 
 async function trackVisitorSession(
-  visitorId: string, 
-  req: Request, 
+  visitorId: string,
+  req: Request,
   isNewVisitor: boolean
 ): Promise<void> {
   try {
@@ -77,9 +77,12 @@ async function trackVisitorSession(
       // Create new visitor record
       await pool.query(`
         INSERT INTO visitor_sessions (
-          visitor_id, ip_address, user_agent, referer, 
+          id, visitor_id, ip_address, user_agent, referer,
           first_seen, last_seen, page_views, session_count
-        ) VALUES ($1, $2, $3, $4, $5, $5, 1, 1)
+        ) VALUES (
+          nextval('visitor_sessions_id_seq'),
+          $1, $2, $3, $4, $5, $5, 1, 1
+        )
         ON CONFLICT (visitor_id) DO UPDATE SET
           last_seen = $5,
           page_views = visitor_sessions.page_views + 1,
@@ -94,8 +97,8 @@ async function trackVisitorSession(
     } else {
       // Update existing visitor
       await pool.query(`
-        UPDATE visitor_sessions 
-        SET 
+        UPDATE visitor_sessions
+        SET
           last_seen = $2,
           page_views = page_views + 1,
           ip_address = $3,
@@ -112,9 +115,12 @@ async function trackVisitorSession(
     // Track individual page view
     await pool.query(`
       INSERT INTO visitor_page_views (
-        visitor_id, path, method, query_params, 
+        id, visitor_id, path, method, query_params,
         referer, timestamp, ip_address, user_agent
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ) VALUES (
+        nextval('visitor_page_views_id_seq'),
+        $1, $2, $3, $4, $5, $6, $7, $8
+      )
     `, [
       visitorId,
       sessionData.path,
@@ -135,8 +141,8 @@ async function trackVisitorSession(
 export const linkVisitorToUser = async (visitorId: string, userId: string): Promise<void> => {
   try {
     await pool.query(`
-      UPDATE visitor_sessions 
-      SET 
+      UPDATE visitor_sessions
+      SET
         user_id = $2,
         converted_at = $3
       WHERE visitor_id = $1
@@ -152,13 +158,13 @@ export const linkVisitorToUser = async (visitorId: string, userId: string): Prom
 export const getVisitorAnalytics = async (days: number = 30) => {
   try {
     const result = await pool.query(`
-      SELECT 
+      SELECT
         COUNT(DISTINCT visitor_id) as unique_visitors,
         COUNT(*) as total_page_views,
         COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN visitor_id END) as converted_visitors,
         AVG(page_views) as avg_pages_per_visitor,
         COUNT(CASE WHEN first_seen >= $1 THEN 1 END) as new_visitors
-      FROM visitor_sessions 
+      FROM visitor_sessions
       WHERE last_seen >= $1
     `, [new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()])
 

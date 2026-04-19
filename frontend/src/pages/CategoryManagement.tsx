@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Tag, Search, Plus, Edit, Trash2, Eye, EyeOff, RefreshCw, ArrowUp, ArrowDown, X } from 'lucide-react';
 import EventManagementLayout from '../components/EventManagementLayout';
+import { API_BASE_URL } from '../services/apiBase';
 
 // Simplified interface for this component
 interface EventCategory {
@@ -32,7 +33,7 @@ const CategoryManagement: React.FC = () => {
     setLoading(true);
     try {
       // Replace with your actual API service call
-      const response = await fetch('/api/categories', { headers: { 'Authorization': `Bearer ${localStorage.getItem('hesocial_token')}` } });
+      const response = await fetch(`${API_BASE_URL}/categories`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('hesocial_token')}` } });
       const data = await response.json();
       if (data.success) {
         setCategories(data.data || []);

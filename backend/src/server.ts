@@ -256,12 +256,11 @@ const startServer = async (): Promise<void> => {
         app.use('/api', apiRoutes)
         logger.info('✅ API routes loaded and mounted successfully')
       } else {
-        logger.error('❌ API routes object is null/undefined')
-        logger.error('Server will continue without API routes')
+        throw new Error('API routes object is null/undefined')
       }
     } catch (error) {
       logger.error('❌ Failed to load API routes:', error)
-      logger.error('Server will continue without API routes')
+      throw error
     }
     
     // Add 404 handler after routes

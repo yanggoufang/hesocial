@@ -27,22 +27,20 @@ export class EnhancedDuckDBPool implements DatabasePool {
   async query(sql: string, params: any[] = []): Promise<any> {
     const queryId = ++this.queryCount;
     const queryStart = Date.now();
-    
+    const converted = this.convertParameters(sql, params);
+
     try {
-      // Convert PostgreSQL-style parameters ($1, $2, etc.) to DuckDB-style (?)
-      const convertedSql = this.convertParameters(sql, params);
-      
-      logger.debug('Executing query', { 
+      logger.debug('Executing query', {
         queryId,
-        sql: convertedSql, 
-        paramCount: params?.length || 0,
-        params: this.shouldLogParams(sql) ? params : '[REDACTED]'
+        sql: converted.sql,
+        paramCount: converted.params.length,
+        params: this.shouldLogParams(sql) ? converted.params : '[REDACTED]'
       });
 
-      const result = await duckdb.query(convertedSql, params);
-      
+      const result = await duckdb.query(converted.sql, converted.params);
+
       const queryDuration = Date.now() - queryStart;
-      logger.debug('Query completed', { 
+      logger.debug('Query completed', {
         queryId,
         duration: `${queryDuration}ms`,
         rowCount: result.rows?.length || 0
@@ -51,12 +49,12 @@ export class EnhancedDuckDBPool implements DatabasePool {
       return result;
     } catch (error) {
       const queryDuration = Date.now() - queryStart;
-      logger.error('Database query failed', { 
+      logger.error('Database query failed', {
         queryId,
         sql: this.sanitizeSqlForLogging(sql),
-        paramCount: params?.length || 0,
+        paramCount: converted.params.length,
         duration: `${queryDuration}ms`,
-        error: error instanceof Error ? error.message : error 
+        error: error instanceof Error ? error.message : error
       });
       throw new Error(`Database query failed: ${error instanceof Error ? error.message : error}`);
     }
@@ -76,16 +74,16 @@ export class EnhancedDuckDBPool implements DatabasePool {
   async end(): Promise<void> {
     try {
       const uptime = Date.now() - this.startTime.getTime();
-      logger.info('Closing database connection', { 
+      logger.info('Closing database connection', {
         totalQueries: this.queryCount,
         uptime: `${Math.floor(uptime / 1000)}s`
       });
-      
+
       await duckdb.close();
       this.isConnected = false;
     } catch (error) {
-      logger.error('Error closing database connection', { 
-        error: error instanceof Error ? error.message : error 
+      logger.error('Error closing database connection', {
+        error: error instanceof Error ? error.message : error
       });
       throw error;
     }
@@ -96,18 +94,21 @@ export class EnhancedDuckDBPool implements DatabasePool {
    * $1, $2, $3 -> ?, ?, ?
    * Also handles proper parameter ordering
    */
-  private convertParameters(sql: string, params: any[]): string {
+  private convertParameters(sql: string, params: any[]): { sql: string; params: any[] } {
     if (!params || params.length === 0) {
-      return sql;
+      return { sql, params: [] };
     }
 
-    // Replace $1, $2, etc. with ? placeholders in the correct order
-    let convertedSql = sql;
-    for (let i = params.length; i >= 1; i--) {
-      convertedSql = convertedSql.replace(new RegExp(`\\$${i}`, 'g'), '?');
-    }
+    const orderedParams: any[] = [];
+    const convertedSql = sql.replace(/\$(\d+)/g, (_match, index) => {
+      orderedParams.push(params[Number(index) - 1]);
+      return '?';
+    });
 
-    return convertedSql;
+    return {
+      sql: convertedSql,
+      params: orderedParams.length > 0 ? orderedParams : params
+    };
   }
 
   /**
@@ -122,7 +123,7 @@ export class EnhancedDuckDBPool implements DatabasePool {
       /auth/i,
       /hash/i
     ];
-    
+
     return !sensitivePatterns.some(pattern => pattern.test(sql));
   }
 
@@ -211,8 +212,8 @@ export async function testDatabaseConnection(): Promise<boolean> {
     const result = await enhancedPool.query('SELECT 1 as test');
     return result.rows && result.rows.length > 0 && result.rows[0].test === 1;
   } catch (error) {
-    logger.error('Database connection test failed', { 
-      error: error instanceof Error ? error.message : error 
+    logger.error('Database connection test failed', {
+      error: error instanceof Error ? error.message : error
     });
     return false;
   }

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Suspense, lazy } from 'react';
 import { AuthProvider } from './hooks/useAuth';
@@ -69,6 +69,8 @@ function App() {
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/events" element={<EventsPage />} />
                 <Route path="/events/:id" element={<EventDetailPage />} />
+                <Route path="/dashboard" element={<Navigate to="/profile" replace />} />
+                <Route path="/complete-profile" element={<Navigate to="/profile" replace />} />
 
                 {/* Authenticated User Routes */}
                 <Route path="/profile" element={<UserRoute><Suspense fallback={<RouteLoader type="auth" message="載入個人資料中..." />}><ProfilePage /></Suspense></UserRoute>} />

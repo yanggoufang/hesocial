@@ -1,9 +1,8 @@
 import axios from 'axios'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import { API_BASE_URL } from './apiBase'
 
 // Configure axios defaults
-axios.defaults.baseURL = API_URL
+axios.defaults.baseURL = API_BASE_URL
 axios.defaults.timeout = 10000
 
 // Add request interceptor to include auth token

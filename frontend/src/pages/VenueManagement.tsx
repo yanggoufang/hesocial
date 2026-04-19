@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Search, Plus, Edit, Trash2 } from 'lucide-react';
 import EventManagementLayout from '../components/EventManagementLayout';
+import { API_BASE_URL } from '../services/apiBase';
 
 // Simplified interface for this component
 interface Venue {
@@ -31,7 +32,7 @@ const VenueManagement: React.FC = () => {
     setLoading(true);
     try {
       // Replace with your actual API service call
-      const response = await fetch('/api/venues', { headers: { 'Authorization': `Bearer ${localStorage.getItem('hesocial_token')}` } });
+      const response = await fetch(`${API_BASE_URL}/venues`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('hesocial_token')}` } });
       const data = await response.json();
       if (data.success) {
         setVenues(data.data || []);

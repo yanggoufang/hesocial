@@ -355,8 +355,8 @@ router.post('/events/track', async (req, res) => {
     }
 
     await pool.query(`
-      INSERT INTO visitor_events (visitor_id, event_type, event_data, timestamp)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO visitor_events (id, visitor_id, event_type, event_data, timestamp)
+      VALUES (nextval('visitor_events_id_seq'), $1, $2, $3, $4)
     `, [
       visitor_id,
       event_type,

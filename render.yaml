@@ -29,7 +29,7 @@ services:
     staticPublishPath: ./frontend/dist
     envVars:
       - key: VITE_API_URL
-        value: https://hesocial-api.onrender.com
+        value: https://hesocial-api.onrender.com/api
       - key: VITE_ENVIRONMENT
         value: production
     routes:

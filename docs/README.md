@@ -22,6 +22,7 @@ The main `CLAUDE.md` file has been **reorganized and reduced from 947 lines to 1
 | `authentication/AUTHENTICATION_SYSTEM.md` | Complete authentication system guide | 180+ |
 | `database/DATABASE_SYSTEM.md` | Database architecture and migrations | 200+ |
 | `configuration/R2_CONFIGURATION.md` | R2 storage configuration guide | 60+ |
+| `REBUILD_PLAN.md` | Turso/libSQL rebuild direction and unresolved issues | 120+ |
 
 ## Directory Structure
 
@@ -60,6 +61,7 @@ docs/
 - **Database questions?** Read [`database/DATABASE_SYSTEM.md`](database/DATABASE_SYSTEM.md)
 - **System status?** View [`systems/COMPLETED_SYSTEMS.md`](systems/COMPLETED_SYSTEMS.md)
 - **API reference?** Browse [`api/API_REFERENCE.md`](api/API_REFERENCE.md)
+- **Rebuild direction?** Read [`REBUILD_PLAN.md`](REBUILD_PLAN.md)
 
 ## Benefits of New Structure
 
