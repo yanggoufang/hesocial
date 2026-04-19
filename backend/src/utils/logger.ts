@@ -10,6 +10,12 @@ const logger = winston.createLogger({
   ),
   defaultMeta: { service: 'hesocial-backend' },
   transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
+    }),
     new winston.transports.File({ 
       filename: 'logs/error.log', 
       level: 'error',
@@ -23,14 +29,5 @@ const logger = winston.createLogger({
     })
   ]
 })
-
-if (config.nodeEnv !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
-  }))
-}
 
 export default logger

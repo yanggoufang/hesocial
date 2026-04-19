@@ -259,6 +259,7 @@ const startServer = async (): Promise<void> => {
         throw new Error('API routes object is null/undefined')
       }
     } catch (error) {
+      console.error('FATAL: API route mount failed:', error)
       logger.error('❌ Failed to load API routes:', error)
       throw error
     }
