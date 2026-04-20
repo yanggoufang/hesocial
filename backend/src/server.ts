@@ -12,6 +12,15 @@ import createRoutes from './routes/main.js'
 import { r2BackupService } from './services/R2BackupService.js'
 import { visitorTracking } from './middleware/visitorTracking.js'
 
+;(BigInt.prototype as unknown as { toJSON: () => number }).toJSON = function () {
+  const value = this as unknown as bigint
+  const asNumber = Number(value)
+  if (!Number.isSafeInteger(asNumber)) {
+    return value.toString() as unknown as number
+  }
+  return asNumber
+}
+
 const app = express()
 
 app.use(helmet({
