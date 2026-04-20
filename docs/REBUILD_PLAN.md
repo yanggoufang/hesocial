@@ -122,8 +122,8 @@ Do not rebuild the frontend, routing, or product surface just to change the data
 
 These are known issues that should stay open until verified in production or fixed in the Turso migration.
 
-1. **Production admin login is unverified.**
-   Local smoke no longer crashes on `/api/auth/login`, but `admin@hesocial.com / admin123` returned `401` locally. This may be local seed drift. Production must be tested after deploy.
+1. **Additional seed users require deploy verification.**
+   Production admin login has been verified for `admin@hesocial.com / admin123`. A follow-up startup repair now inserts missing controlled accounts (`superadmin@hesocial.com`, `events@hesocial.com`, and the four `test.*` accounts) if absent. Confirm those accounts after the next deploy.
 
 2. **Render dashboard env overrides are unverified.**
    `render.yaml` now sets `VITE_API_URL=https://hesocial-api.onrender.com/api`, and frontend normalization tolerates either host or host-plus-`/api`. A stale dashboard override could still point elsewhere.
@@ -149,6 +149,7 @@ The current hotfix is still worth deploying before the rebuild because it:
 - fixes production API base URL construction;
 - removes frontend raw `/api/...` calls that would hit the static frontend host;
 - repairs schema drift for `users.role`;
+- repairs missing controlled seed users for admin/test access;
 - stabilizes visitor tracking enough for the current Render app.
 
 The Turso rebuild should start only after this is deployed and production behavior is measured.

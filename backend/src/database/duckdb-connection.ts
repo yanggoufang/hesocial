@@ -162,6 +162,144 @@ const ensureUserRoleColumn = async (): Promise<void> => {
   }
 }
 
+const ensureSeedUsers = async (): Promise<void> => {
+  const adminHash = '$2a$10$TC8bYbpDQYjwyi66LiZMYuaX6XAKcZMjQXtfoGV/8u6rQ7T.jj2N6'
+  const testHash = '$2a$10$bt0AdKVHTbGLIwN44tp6dO9xMCf8vh2FSFje7iFt72zCfMgS0g6TK'
+
+  try {
+    await duckdb.query(`
+      INSERT OR IGNORE INTO users (
+        id, email, password_hash, first_name, last_name, age, profession,
+        annual_income, net_worth, membership_tier, privacy_level,
+        is_verified, verification_status, role, bio, interests,
+        created_at, updated_at
+      ) VALUES
+        (
+          1001,
+          'superadmin@hesocial.com',
+          '${adminHash}',
+          'Super',
+          'Admin',
+          40,
+          'System Developer',
+          5000000,
+          30000000,
+          'Black Card',
+          5,
+          true,
+          'approved',
+          'super_admin',
+          'Platform super administrator for development and system maintenance.',
+          ['system development', 'database management', 'security auditing', 'feature development'],
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        ),
+        (
+          1002,
+          'events@hesocial.com',
+          '${adminHash}',
+          'Event',
+          'Manager',
+          42,
+          'Event Coordinator',
+          5000000,
+          30000000,
+          'Diamond',
+          3,
+          true,
+          'approved',
+          'admin',
+          'Specialized administrator for luxury event planning and member experience management.',
+          ['luxury events', 'hospitality', 'member relations', 'venue management'],
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        ),
+        (
+          2001,
+          'test.platinum@example.com',
+          '${testHash}',
+          'Test',
+          'Platinum',
+          45,
+          'Business Owner',
+          8000000,
+          50000000,
+          'Platinum',
+          3,
+          true,
+          'approved',
+          'user',
+          'Test user account for Platinum tier membership testing and development.',
+          ['business development', 'networking', 'fine dining', 'travel'],
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        ),
+        (
+          2002,
+          'test.diamond@example.com',
+          '${testHash}',
+          'Test',
+          'Diamond',
+          50,
+          'Investment Manager',
+          15000000,
+          120000000,
+          'Diamond',
+          4,
+          true,
+          'approved',
+          'user',
+          'Test user account for Diamond tier membership testing and premium feature validation.',
+          ['investment strategy', 'luxury lifestyle', 'art collection', 'private events'],
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        ),
+        (
+          2003,
+          'test.blackcard@example.com',
+          '${testHash}',
+          'Test',
+          'BlackCard',
+          55,
+          'Private Equity Partner',
+          50000000,
+          500000000,
+          'Black Card',
+          5,
+          true,
+          'approved',
+          'user',
+          'Test user account for Black Card tier membership testing and exclusive feature validation.',
+          ['private equity', 'exclusive events', 'yacht ownership', 'philanthropy'],
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        ),
+        (
+          2004,
+          'test.pending@example.com',
+          '${testHash}',
+          'Test',
+          'Pending',
+          42,
+          'Startup Founder',
+          6000000,
+          40000000,
+          'Platinum',
+          2,
+          false,
+          'pending',
+          'user',
+          'Test user account for testing the verification process and pending state handling.',
+          ['startup ecosystem', 'technology', 'innovation', 'venture capital'],
+          CURRENT_TIMESTAMP,
+          CURRENT_TIMESTAMP
+        )
+    `)
+  } catch (error) {
+    logger.warn('Unable to ensure seed users:', error)
+  }
+}
+
 const ensureSeedUserPasswords = async (): Promise<void> => {
   const adminHash = '$2a$10$TC8bYbpDQYjwyi66LiZMYuaX6XAKcZMjQXtfoGV/8u6rQ7T.jj2N6'
   const testHash = '$2a$10$bt0AdKVHTbGLIwN44tp6dO9xMCf8vh2FSFje7iFt72zCfMgS0g6TK'
@@ -226,6 +364,7 @@ const ensureVisitorTrackingSequences = async (): Promise<void> => {
 export const connectDatabases = async (): Promise<void> => {
   await duckdb.connect()
   await ensureUserRoleColumn()
+  await ensureSeedUsers()
   await ensureSeedUserPasswords()
   await ensureVisitorTrackingSequences()
 }
