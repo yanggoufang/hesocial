@@ -1,4 +1,4 @@
-import { Migration } from './Migration';
+import { Migration } from './Migration.js';
 import { duckdb } from '../duckdb-connection.js';
 
 export class RefactorEventMedia implements Migration {

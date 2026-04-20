@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getPlaceholderImage } from '../controllers/placeholderController';
+import { getPlaceholderImage } from '../controllers/placeholderController.js';
 
 const router = Router();
 
