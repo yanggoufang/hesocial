@@ -165,7 +165,6 @@ const ensureUserRoleColumn = async (): Promise<void> => {
 const ensureSeedUserPasswords = async (): Promise<void> => {
   const adminHash = '$2a$10$TC8bYbpDQYjwyi66LiZMYuaX6XAKcZMjQXtfoGV/8u6rQ7T.jj2N6'
   const testHash = '$2a$10$bt0AdKVHTbGLIwN44tp6dO9xMCf8vh2FSFje7iFt72zCfMgS0g6TK'
-  const legacyPlaceholder = '$2b$10$rQZ9uAVQSUg8HSLOzpD3eO9iYg9Yjb1qJ8N0qyc9X1Qjh7Pf1Kg6K'
 
   const adminEmails = ['admin@hesocial.com', 'superadmin@hesocial.com', 'events@hesocial.com']
   const testEmails = [
@@ -179,19 +178,26 @@ const ensureSeedUserPasswords = async (): Promise<void> => {
     const adminList = adminEmails.map(e => `'${e}'`).join(', ')
     const testList = testEmails.map(e => `'${e}'`).join(', ')
 
-    await duckdb.query(`
+    const before = await duckdb.query(`
+      SELECT email, LENGTH(password_hash) AS hash_len
+      FROM users
+      WHERE email IN (${adminList}, ${testList})
+    `)
+    logger.info('ensureSeedUserPasswords before:', before.rows)
+
+    const adminResult = await duckdb.query(`
       UPDATE users
       SET password_hash = '${adminHash}'
       WHERE email IN (${adminList})
-        AND (password_hash = '${legacyPlaceholder}' OR password_hash IS NULL OR password_hash = '')
     `)
+    logger.info('ensureSeedUserPasswords admin update result:', adminResult.rows)
 
-    await duckdb.query(`
+    const testResult = await duckdb.query(`
       UPDATE users
       SET password_hash = '${testHash}'
       WHERE email IN (${testList})
-        AND (password_hash = '${legacyPlaceholder}' OR password_hash IS NULL OR password_hash = '')
     `)
+    logger.info('ensureSeedUserPasswords test update result:', testResult.rows)
   } catch (error) {
     logger.warn('Unable to ensure seed user passwords:', error)
   }
