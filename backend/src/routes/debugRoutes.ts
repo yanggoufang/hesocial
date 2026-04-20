@@ -82,7 +82,7 @@ router.post('/manual-seed', async (req, res) => {
       (2, '大倉久和大飯店', '台北市中山區南京東路一段9號', '台北', 25.0518, 121.5228, 5, '["日式庭園","高級餐廳"]', '[]')`)
 
     await pool.query(`INSERT OR IGNORE INTO users (id, email, password_hash, first_name, last_name, age, profession, annual_income, net_worth, membership_tier, is_verified, verification_status) VALUES
-      (1, 'admin@hesocial.com', '$2b$10$rQZ9uAVQSUg8HSLOzpD3eO9iYg9Yjb1qJ8N0qyc9X1Qjh7Pf1Kg6K', 'Admin', 'User', 35, 'Administrator', 5000000, 30000000, 'Black Card', true, 'approved')`)
+      (1, 'admin@hesocial.com', '$2a$10$TC8bYbpDQYjwyi66LiZMYuaX6XAKcZMjQXtfoGV/8u6rQ7T.jj2N6', 'Admin', 'User', 35, 'Administrator', 5000000, 30000000, 'Black Card', true, 'approved')`)
 
     await pool.query(`DELETE FROM events WHERE id IN (1, 2, 3)`)
     await pool.query(`INSERT INTO events (id, name, description, date_time, registration_deadline, venue_id, category_id, organizer_id, pricing, exclusivity_level, dress_code, capacity, current_attendees, is_active) VALUES

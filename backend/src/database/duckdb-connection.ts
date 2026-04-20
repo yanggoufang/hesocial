@@ -162,6 +162,41 @@ const ensureUserRoleColumn = async (): Promise<void> => {
   }
 }
 
+const ensureSeedUserPasswords = async (): Promise<void> => {
+  const adminHash = '$2a$10$TC8bYbpDQYjwyi66LiZMYuaX6XAKcZMjQXtfoGV/8u6rQ7T.jj2N6'
+  const testHash = '$2a$10$bt0AdKVHTbGLIwN44tp6dO9xMCf8vh2FSFje7iFt72zCfMgS0g6TK'
+  const legacyPlaceholder = '$2b$10$rQZ9uAVQSUg8HSLOzpD3eO9iYg9Yjb1qJ8N0qyc9X1Qjh7Pf1Kg6K'
+
+  const adminEmails = ['admin@hesocial.com', 'superadmin@hesocial.com', 'events@hesocial.com']
+  const testEmails = [
+    'test.platinum@example.com',
+    'test.diamond@example.com',
+    'test.blackcard@example.com',
+    'test.pending@example.com'
+  ]
+
+  try {
+    const adminList = adminEmails.map(e => `'${e}'`).join(', ')
+    const testList = testEmails.map(e => `'${e}'`).join(', ')
+
+    await duckdb.query(`
+      UPDATE users
+      SET password_hash = '${adminHash}'
+      WHERE email IN (${adminList})
+        AND (password_hash = '${legacyPlaceholder}' OR password_hash IS NULL OR password_hash = '')
+    `)
+
+    await duckdb.query(`
+      UPDATE users
+      SET password_hash = '${testHash}'
+      WHERE email IN (${testList})
+        AND (password_hash = '${legacyPlaceholder}' OR password_hash IS NULL OR password_hash = '')
+    `)
+  } catch (error) {
+    logger.warn('Unable to ensure seed user passwords:', error)
+  }
+}
+
 const ensureVisitorTrackingSequences = async (): Promise<void> => {
   const sequences = [
     { table: 'visitor_sessions', sequence: 'visitor_sessions_id_seq' },
@@ -185,6 +220,7 @@ const ensureVisitorTrackingSequences = async (): Promise<void> => {
 export const connectDatabases = async (): Promise<void> => {
   await duckdb.connect()
   await ensureUserRoleColumn()
+  await ensureSeedUserPasswords()
   await ensureVisitorTrackingSequences()
 }
 

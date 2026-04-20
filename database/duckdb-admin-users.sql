@@ -14,7 +14,7 @@ INSERT OR REPLACE INTO users (
 ) VALUES (
     1000, 
     'admin@hesocial.com',
-    '$2b$10$rQZ9uAVQSUg8HSLOzpD3eO9iYg9Yjb1qJ8N0qyc9X1Qjh7Pf1Kg6K', -- Password: admin123
+    '$2a$10$TC8bYbpDQYjwyi66LiZMYuaX6XAKcZMjQXtfoGV/8u6rQ7T.jj2N6', -- Password: admin123
     'System',
     'Administrator',
     45,
@@ -41,7 +41,7 @@ INSERT OR REPLACE INTO users (
 ) VALUES (
     1001,
     'superadmin@hesocial.com', 
-    '$2b$10$rQZ9uAVQSUg8HSLOzpD3eO9iYg9Yjb1qJ8N0qyc9X1Qjh7Pf1Kg6K', -- Password: admin123
+    '$2a$10$TC8bYbpDQYjwyi66LiZMYuaX6XAKcZMjQXtfoGV/8u6rQ7T.jj2N6', -- Password: admin123
     'Super',
     'Admin',
     40,
@@ -68,7 +68,7 @@ INSERT OR REPLACE INTO users (
 ) VALUES (
     1002,
     'events@hesocial.com',
-    '$2b$10$rQZ9uAVQSUg8HSLOzpD3eO9iYg9Yjb1qJ8N0qyc9X1Qjh7Pf1Kg6K', -- Password: admin123
+    '$2a$10$TC8bYbpDQYjwyi66LiZMYuaX6XAKcZMjQXtfoGV/8u6rQ7T.jj2N6', -- Password: admin123
     'Event',
     'Manager',
     42,
@@ -97,7 +97,7 @@ INSERT OR REPLACE INTO users (
 ) VALUES (
     2001,
     'test.platinum@example.com',
-    '$2b$10$rQZ9uAVQSUg8HSLOzpD3eO9iYg9Yjb1qJ8N0qyc9X1Qjh7Pf1Kg6K', -- Password: test123
+    '$2a$10$bt0AdKVHTbGLIwN44tp6dO9xMCf8vh2FSFje7iFt72zCfMgS0g6TK', -- Password: test123
     'Test',
     'Platinum',
     45,
@@ -124,7 +124,7 @@ INSERT OR REPLACE INTO users (
 ) VALUES (
     2002,
     'test.diamond@example.com',
-    '$2b$10$rQZ9uAVQSUg8HSLOzpD3eO9iYg9Yjb1qJ8N0qyc9X1Qjh7Pf1Kg6K', -- Password: test123
+    '$2a$10$bt0AdKVHTbGLIwN44tp6dO9xMCf8vh2FSFje7iFt72zCfMgS0g6TK', -- Password: test123
     'Test',
     'Diamond',
     50,
@@ -151,7 +151,7 @@ INSERT OR REPLACE INTO users (
 ) VALUES (
     2003,
     'test.blackcard@example.com',
-    '$2b$10$rQZ9uAVQSUg8HSLOzpD3eO9iYg9Yjb1qJ8N0qyc9X1Qjh7Pf1Kg6K', -- Password: test123
+    '$2a$10$bt0AdKVHTbGLIwN44tp6dO9xMCf8vh2FSFje7iFt72zCfMgS0g6TK', -- Password: test123
     'Test',
     'BlackCard',
     55,
@@ -178,7 +178,7 @@ INSERT OR REPLACE INTO users (
 ) VALUES (
     2004,
     'test.pending@example.com',
-    '$2b$10$rQZ9uAVQSUg8HSLOzpD3eO9iYg9Yjb1qJ8N0qyc9X1Qjh7Pf1Kg6K', -- Password: test123
+    '$2a$10$bt0AdKVHTbGLIwN44tp6dO9xMCf8vh2FSFje7iFt72zCfMgS0g6TK', -- Password: test123
     'Test',
     'Pending',
     42,
