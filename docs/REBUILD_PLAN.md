@@ -122,8 +122,9 @@ Do not rebuild the frontend, routing, or product surface just to change the data
 
 These are known issues that should stay open until verified in production or fixed in the Turso migration.
 
-1. **Additional seed users require deploy verification.**
-   Production admin login has been verified for `admin@hesocial.com / admin123`. A follow-up startup repair now inserts missing controlled accounts (`superadmin@hesocial.com`, `events@hesocial.com`, and the four `test.*` accounts) if absent. Confirm those accounts after the next deploy.
+1. **Seed user login verified in production.** ✅
+   Deploy `4cac7ef` is live. All documented credentials return `200` from `POST /api/auth/login` against `https://hesocial-api.onrender.com`:
+   `admin@hesocial.com` / `superadmin@hesocial.com` / `events@hesocial.com` (password `admin123`) and `test.platinum@example.com` / `test.diamond@example.com` / `test.blackcard@example.com` / `test.pending@example.com` (password `test123`). Roles returned match the seed intent (`super_admin`, `admin`, `user`). No further action required on this item.
 
 2. **Render dashboard env overrides are unverified.**
    `render.yaml` now sets `VITE_API_URL=https://hesocial-api.onrender.com/api`, and frontend normalization tolerates either host or host-plus-`/api`. A stale dashboard override could still point elsewhere.

@@ -1,6 +1,7 @@
 
 # Local settings for Claude
 .claude/
+.codex
 node_modules
 
 # Database files
