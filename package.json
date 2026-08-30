@@ -17,7 +17,7 @@
     "lint:backend": "cd backend && npm run lint",
     "lint:fix": "npm run lint:frontend:fix && npm run lint:backend:fix",
     "lint:frontend:fix": "cd frontend && npm run lint:fix",
-    "lint:backend:fix": "cd backend && npm run lint",
+    "lint:backend:fix": "cd backend && npm run lint:fix",
     "typecheck": "npm run typecheck:frontend && npm run typecheck:backend",
     "typecheck:frontend": "cd frontend && npm run typecheck",
     "typecheck:backend": "cd backend && npm run typecheck",
