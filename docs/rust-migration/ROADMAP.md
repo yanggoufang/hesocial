@@ -28,9 +28,9 @@
 
 | Phase | 內容 | 狀態 |
 |---|---|---|
-| 0 | backend-rust spike:workspace + `/api/health` parity + HS256/bcrypt 相容性 proof | ✅ 已完成(commit 中) |
-| 0.5 | `d1/schema.sql` + `d1/seed.sql` + contract test 雙 target harness(express 先回歸綠) | ⏳ 進行中 |
-| 1 | 唯讀公開端點:`/api/health/*`、`GET /api/events`、`/categories`、`/venues` | 待開始 |
+| 0 | backend-rust spike:workspace + `/api/health` parity + HS256/bcrypt 相容性 proof | ✅ 已完成(commit `3b6454b`) |
+| 0.5 | `d1/schema.sql` + `d1/seed.sql` + contract test 雙 target harness(express 先回歸綠) | ✅ schema/seed 已落地並實證;contract harness 併入 Phase 1 首項 |
+| 1 | contract 雙 target harness(前置:vitest 0.34→4 升級)→ 唯讀公開端點:`/api/health/*`、`GET /api/events`、`/categories`、`/venues` | 待開始 |
 | 2 | auth(register/login/profile/refresh/logout + bcrypt→PBKDF2)+ RBAC + rate limiting binding | 待開始 |
 | 3 | `/api/auth/*` zone route cutover,觀察 48h | 待開始 |
 | 4 | events CRUD + approval flow(統一新 schema) | 待開始 |
@@ -45,8 +45,19 @@
 - 時間戳雙格式會在 SQLite 排序 silently 出錯 → repository 層統一 ISO-8601 UTC
 - `jsonwebtoken` crate 依賴 ring(wasm 不可用)→ 純 Rust HMAC-SHA256
 - Workers Free 10ms CPU 跑不動 bcrypt cost 12 → 必須 Paid(已決策)
-- 5 張死表不移植:`user_sessions`、`audit_logs`、`oauth_providers`、`financial_verifications`、`event_feedback`
+- 5 張死表不移植:`user_sessions`、`audit_logs`、`oauth_providers`、`financial_verifications`、`event_feedback`;另 `sales_targets`/`sales_commissions`/`user_preferences` 僅存在於 migration 檔(零 runtime 引用)同樣排除;**visitor 三表不存在於 D1**(鎖定決策 #3,Phase 6 直接做在 Analytics Engine/KV)
+- D1 不用舊的 `schema_migrations` 機制 — 未來 D1 schema 變更走 wrangler d1 migrations
 - 前端 `participantService.ts` 相對路徑 `/api` 在 Render rewrite 下是壞的 → Worker 同 origin 後免費修好
+
+## Phase 1 必辦清單(2026-08-30 Kimi 審查產出)
+
+1. **OPTIONS preflight + 全回應 CORS**:worker 目前只掛 `get(...)`,preflight 會吃 405 且 404/500 回應無 CORS headers(Express 是全部回應都帶 + 短路 OPTIONS)。auth 路由上線前必須補,否則瀏覽器帶 Authorization 的請求全數硬失敗
+2. **jsonwebtoken fixture 互通測試**:現有 round-trip 測試是自我一致,不是互通證明。要加一支用 Express `jwt.sign` 實際產出的 token(含 `iat`)當 fixture 在 Rust 端驗證
+3. **iat + JWT_EXPIRES_IN**:Rust 簽發側補 `iat`;效期從 hardcoded 7 天改成讀 env(Express 可由 `JWT_EXPIRES_IN` 配置)
+4. **ApiEnvelope 補 `message`**:Express 成功回應是 `{success, data, message}`(見 authController),envelope shape 現在就定,不要每端點各自發現
+5. **registration port 前置**:Express 新密碼是 cost 12(`authController.ts:39`),移植要用 `bcrypt::hash(pw, 12)`;`bcrypt` crate 在 wasm32(js getrandom)上的**雜湊**路徑要先實證(目前只證了 verify)
+6. **health routes 對齊**:移除 `/api/health/detailed`(Express 沒有)、實作 `/api/health/status`(uptime/memory);D1 cutover 時 `database: "duckdb"` 與訊息文字必須同步更新,不能留著說謊
+7. **rust gates 進 CI**:等 CI 環境有 Rust + wasm32 target,把 `test:rust`/`lint:rust` 接進 `validate:all`(工具鏈缺席會硬失敗,所以現階段先不接)
 
 ## 未決事項
 
