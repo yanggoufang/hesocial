@@ -1,0 +1,15 @@
+name = "hesocial-backend-rust"
+main = "crates/worker/build/worker/shim.mjs"
+compatibility_date = "2026-08-30"
+
+[build]
+command = "worker-build --release crates/worker"
+
+[vars]
+CORS_ORIGINS = "http://localhost:3000"
+NODE_ENV = "development"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hesocial-db"
+database_id = "00000000-0000-0000-0000-000000000000"
