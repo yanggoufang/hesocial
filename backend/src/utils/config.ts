@@ -75,4 +75,12 @@ const config: Config = {
   fileUploadPath: process.env.FILE_UPLOAD_PATH || './uploads'
 }
 
+if (
+  config.nodeEnv === 'production' &&
+  (config.jwtSecret === 'fallback-secret-key-change-in-production' ||
+    config.jwtSecret.length < 32)
+) {
+  throw new Error('JWT_SECRET must be set to a value of at least 32 characters in production')
+}
+
 export default config

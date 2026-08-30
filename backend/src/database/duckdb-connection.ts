@@ -162,7 +162,7 @@ const ensureUserRoleColumn = async (): Promise<void> => {
   }
 }
 
-const ensureSeedUsers = async (): Promise<void> => {
+export const ensureSeedUsers = async (): Promise<void> => {
   const adminHash = '$2a$10$TC8bYbpDQYjwyi66LiZMYuaX6XAKcZMjQXtfoGV/8u6rQ7T.jj2N6'
   const testHash = '$2a$10$bt0AdKVHTbGLIwN44tp6dO9xMCf8vh2FSFje7iFt72zCfMgS0g6TK'
 
@@ -300,47 +300,6 @@ const ensureSeedUsers = async (): Promise<void> => {
   }
 }
 
-const ensureSeedUserPasswords = async (): Promise<void> => {
-  const adminHash = '$2a$10$TC8bYbpDQYjwyi66LiZMYuaX6XAKcZMjQXtfoGV/8u6rQ7T.jj2N6'
-  const testHash = '$2a$10$bt0AdKVHTbGLIwN44tp6dO9xMCf8vh2FSFje7iFt72zCfMgS0g6TK'
-
-  const adminEmails = ['admin@hesocial.com', 'superadmin@hesocial.com', 'events@hesocial.com']
-  const testEmails = [
-    'test.platinum@example.com',
-    'test.diamond@example.com',
-    'test.blackcard@example.com',
-    'test.pending@example.com'
-  ]
-
-  try {
-    const adminList = adminEmails.map(e => `'${e}'`).join(', ')
-    const testList = testEmails.map(e => `'${e}'`).join(', ')
-
-    const before = await duckdb.query(`
-      SELECT email, LENGTH(password_hash) AS hash_len
-      FROM users
-      WHERE email IN (${adminList}, ${testList})
-    `)
-    logger.info('ensureSeedUserPasswords before:', before.rows)
-
-    const adminResult = await duckdb.query(`
-      UPDATE users
-      SET password_hash = '${adminHash}'
-      WHERE email IN (${adminList})
-    `)
-    logger.info('ensureSeedUserPasswords admin update result:', adminResult.rows)
-
-    const testResult = await duckdb.query(`
-      UPDATE users
-      SET password_hash = '${testHash}'
-      WHERE email IN (${testList})
-    `)
-    logger.info('ensureSeedUserPasswords test update result:', testResult.rows)
-  } catch (error) {
-    logger.warn('Unable to ensure seed user passwords:', error)
-  }
-}
-
 const ensureVisitorTrackingSequences = async (): Promise<void> => {
   const sequences = [
     { table: 'visitor_sessions', sequence: 'visitor_sessions_id_seq' },
@@ -364,8 +323,6 @@ const ensureVisitorTrackingSequences = async (): Promise<void> => {
 export const connectDatabases = async (): Promise<void> => {
   await duckdb.connect()
   await ensureUserRoleColumn()
-  await ensureSeedUsers()
-  await ensureSeedUserPasswords()
   await ensureVisitorTrackingSequences()
 }
 

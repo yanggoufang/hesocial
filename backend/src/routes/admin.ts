@@ -189,7 +189,7 @@ router.post('/cleanup', authenticateToken, requireAdmin, async (req, res) => {
  * GET /api/admin/database/stats
  * Get database statistics and information
  */
-router.get('/database/stats', async (req, res) => {
+router.get('/database/stats', authenticateToken, requireAdmin, async (req, res) => {
   try {
     // Get server stats
     const serverStats = await duckdb.getServerStats();
@@ -330,7 +330,7 @@ router.get('/periodic-backup/status', authenticateToken, requireAdmin, async (re
  * Manually trigger database checkpoint/flush
  */
 
-router.post('/database/checkpoint', async (req, res) => {
+router.post('/database/checkpoint', authenticateToken, requireAdmin, async (req, res) => {
   try {
     // DuckDB automatically manages checkpoints, but we can force a checkpoint
     await duckdb.query('CHECKPOINT');

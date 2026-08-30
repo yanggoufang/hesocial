@@ -78,9 +78,10 @@ There is only one dev entrypoint: `npm run dev`. It always uses the local DuckDB
 
 ## Test Accounts
 
+Seed accounts are created ONLY by the explicit `npm run seed` — server startup no longer seeds or resets them, so a fresh database has no users (and no working login) until you run seed. Changed passwords stay changed across restarts.
+
 - **Admin**: `admin@hesocial.com` / `admin123`
 - **Test User**: `test.platinum@example.com` / `test123`
-- **Dev Token**: `dev-token-12345` (bypass auth for local API testing)
 
 📖 **[Authentication System](docs/authentication/AUTHENTICATION_SYSTEM.md)**
 

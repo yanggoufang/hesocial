@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { duckdb } from './duckdb-connection.js'
+import { duckdb, ensureSeedUsers } from './duckdb-connection.js'
 import logger from '../utils/logger.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -38,6 +38,10 @@ async function runSeedFile(filename: string) {
 async function seed() {
   try {
     logger.info('🌱 Starting database seeding...')
+
+    if (process.env.NODE_ENV === 'production') {
+      logger.warn('⚠️  Seeding in production plants KNOWN default credentials (admin123 / test123). Rotate all seeded passwords immediately after seeding.')
+    }
     
     // Connect to database
     await duckdb.connect()
@@ -47,6 +51,7 @@ async function seed() {
     await runSeedFile('event-management-schema.sql')
     await runSeedFile('duckdb-admin-users.sql')
     await runSeedFile('duckdb-seed-realistic.sql')
+    await ensureSeedUsers()
     
     logger.info('🎉 Database seeding completed successfully!')
     

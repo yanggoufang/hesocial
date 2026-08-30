@@ -5,8 +5,7 @@
 node_modules
 
 # Database files
-*.duckdb
-*.duckdb.wal
+*.duckdb*
 
 # Build outputs
 dist/

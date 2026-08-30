@@ -23,6 +23,10 @@ import { visitorTracking } from './middleware/visitorTracking.js'
 
 const app = express()
 
+if (config.nodeEnv === 'production') {
+  app.set('trust proxy', 1)
+}
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -71,12 +75,22 @@ const adminLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Apply more permissive rate limiting to admin and event management routes first
+const authRateLimitMax = parseInt(process.env.AUTH_RATE_LIMIT_MAX || '20', 10)
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number.isNaN(authRateLimitMax) ? 20 : authRateLimitMax,
+  message: JSON.stringify({
+    success: false,
+    error: 'Too many authentication attempts, please try again later.'
+  }),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use('/api/admin', adminLimiter);
-app.use('/api/events/manage', adminLimiter);
-app.use('/api/events/admin', adminLimiter);
-app.use('/api/events/venues', adminLimiter);
-app.use('/api/events/categories', adminLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 
 // Apply general rate limiting to all other /api routes
 app.use('/api', generalLimiter);
