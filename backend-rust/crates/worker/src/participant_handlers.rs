@@ -400,7 +400,7 @@ async fn list_participants_inner(
         Err(_) => return internal_error("Failed to get event participants"),
     };
     let page = js_parse_int(filters.get("page"), 1);
-    let limit = js_parse_int(filters.get("limit"), 20).min(100);
+    let limit = js_parse_int(filters.get("limit"), 20).clamp(1, 100);
     match get_participant_list(&db, &user, &event_id, page, limit, &filters).await {
         Ok(list) => Json(json!({
             "success": true,
@@ -459,32 +459,60 @@ async fn get_participant_inner(
         Ok(db) => db,
         Err(_) => return internal_error("Failed to get participant details"),
     };
-    let access_check = check_access(&db, &user, &event_id).await;
-    if access_check.get("hasAccess").and_then(Value::as_bool) != Some(true) {
+    // K3 review fix: query the target by id through the same visibility
+    // predicates as the list — the Express-ported LIMIT-1 fetch + find
+    // 404'd for every participant except the sort-first row, and it
+    // mis-attributed the view log to that first row.
+    let access = participant_access(&db, &user, &event_id).await;
+    if !access.can_view_participants {
         return json_error(
             StatusCode::FORBIDDEN,
             "Access denied - payment required to view participants",
         );
     }
-    let list = match get_participant_list(&db, &user, &event_id, 1, 1, &HashMap::new()).await {
-        Ok(list) => list,
+    let participant_sql = "SELECT u.id, u.first_name, u.last_name, u.email, u.phone_number AS phone, u.age, u.profession, u.company, NULL AS city, u.membership_tier, u.interests, u.profile_picture, u.bio, COALESCE(epo.privacy_level, u.privacy_level, 2) AS effective_privacy_level, COALESCE(epo.allow_contact, 1) AS can_contact FROM users u JOIN event_participant_access epa ON u.id = epa.user_id LEFT JOIN event_privacy_overrides epo ON u.id = epo.user_id AND epo.event_id = ? WHERE epa.event_id = ? AND epa.payment_status = 'paid' AND COALESCE(epo.show_in_list, 1) = 1 AND COALESCE(epo.privacy_level, u.privacy_level, 2) <= ? AND u.id != ? AND u.id = ? LIMIT 1";
+    let row = match bind_statement(
+        &db,
+        participant_sql,
+        &[
+            id_bind(&event_id),
+            id_bind(&event_id),
+            JsValue::from_f64(access.max_privacy_level_visible as f64),
+            JsValue::from_str(&user.id),
+            JsValue::from_str(&participant_id),
+        ],
+    ) {
+        Ok(query) => match query.first::<ParticipantRow>(None).await {
+            Ok(Some(row)) => row,
+            Ok(None) => {
+                return json_error(
+                    StatusCode::NOT_FOUND,
+                    "Participant not found or not visible",
+                );
+            }
+            Err(_) => return internal_error("Failed to get participant details"),
+        },
         Err(()) => return internal_error("Failed to get participant details"),
     };
-    let participant = list
-        .participants
-        .into_iter()
-        .find(|participant| participant.get("id").and_then(Value::as_str) == Some(&participant_id));
-    let Some(participant) = participant else {
+    let Some(masked) = mask_participant(&row, access) else {
         return json_error(
             StatusCode::NOT_FOUND,
             "Participant not found or not visible",
         );
     };
+    log_views(
+        &db,
+        &user.id,
+        &event_id,
+        access.access_level,
+        std::slice::from_ref(&masked),
+    )
+    .await;
     Json(json!({
         "success": true,
         "data": {
-            "participant": participant,
-            "viewerAccess": access_check["accessLevel"],
+            "participant": masked,
+            "viewerAccess": access.access_level,
         }
     }))
     .into_response()
@@ -562,10 +590,9 @@ async fn update_privacy_settings_inner(
     event_id: String,
     body: PrivacySettingsBody,
 ) -> Response {
-    if body
-        .privacy_level
-        .is_some_and(|privacy_level| !(1.0..=5.0).contains(&privacy_level))
-    {
+    if body.privacy_level.is_some_and(|privacy_level| {
+        !(1.0..=5.0).contains(&privacy_level) || privacy_level.fract() != 0.0
+    }) {
         return json_error(
             StatusCode::BAD_REQUEST,
             "Privacy level must be between 1 and 5",
@@ -578,11 +605,13 @@ async fn update_privacy_settings_inner(
     let privacy_level = body.privacy_level.map_or(JsValue::NULL, JsValue::from_f64);
     let query = bind_statement(
         &db,
-        "INSERT INTO event_privacy_overrides (user_id, event_id, privacy_level, allow_contact, show_in_list, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, event_id) DO UPDATE SET privacy_level = COALESCE(excluded.privacy_level, privacy_level), allow_contact = COALESCE(excluded.allow_contact, allow_contact), show_in_list = COALESCE(excluded.show_in_list, show_in_list), updated_at = excluded.updated_at",
+        "INSERT INTO event_privacy_overrides (user_id, event_id, privacy_level, allow_contact, show_in_list, created_at, updated_at) VALUES (?, ?, COALESCE(?, (SELECT privacy_level FROM event_privacy_overrides WHERE user_id = ? AND event_id = ?), 3), ?, ?, ?, ?) ON CONFLICT(user_id, event_id) DO UPDATE SET privacy_level = COALESCE(excluded.privacy_level, privacy_level), allow_contact = COALESCE(excluded.allow_contact, allow_contact), show_in_list = COALESCE(excluded.show_in_list, show_in_list), updated_at = excluded.updated_at",
         &[
             JsValue::from_str(&user.id),
             id_bind(&event_id),
             privacy_level,
+            JsValue::from_str(&user.id),
+            id_bind(&event_id),
             optional_bool_bind(body.allow_contact),
             optional_bool_bind(body.show_in_list),
             JsValue::from_str(&now_iso()),

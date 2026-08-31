@@ -44,7 +44,7 @@ const DECREMENT_EVENT_SQL: &str = "UPDATE events SET current_registrations = MAX
 
 const ACCEPT_NEXT_WAITLIST_SQL: &str = "UPDATE event_waitlist SET status = 'accepted', offered_at = ?, updated_at = ? WHERE id = (SELECT ew.id FROM event_waitlist ew JOIN registrations r ON r.event_id = ew.event_id AND r.user_id = ew.user_id WHERE ew.event_id = ? AND ew.status = 'waiting' AND r.status = 'waitlisted' ORDER BY ew.position ASC, ew.created_at ASC, ew.id ASC LIMIT 1) AND EXISTS (SELECT 1 FROM registrations cancelled WHERE cancelled.id = ? AND cancelled.status = 'cancelled' AND cancelled.cancelled_at = ?)";
 
-const PROMOTE_WAITLIST_REGISTRATION_SQL: &str = "UPDATE registrations SET status = 'pending', updated_at = ? WHERE event_id = ? AND status = 'waitlisted' AND user_id = (SELECT user_id FROM event_waitlist WHERE event_id = ? AND status = 'accepted' AND offered_at = ? ORDER BY position ASC, id ASC LIMIT 1)";
+const PROMOTE_WAITLIST_REGISTRATION_SQL: &str = "UPDATE registrations SET status = 'pending', updated_at = ? WHERE event_id = ? AND status = 'waitlisted' AND user_id = (SELECT user_id FROM event_waitlist WHERE event_id = ? AND status = 'accepted' AND offered_at = ? ORDER BY position DESC, id DESC LIMIT 1)";
 
 const INCREMENT_PROMOTED_EVENT_SQL: &str = "UPDATE events SET current_registrations = current_registrations + 1, updated_at = ? WHERE id = ? AND current_registrations < capacity_max AND EXISTS (SELECT 1 FROM registrations promoted JOIN event_waitlist ew ON ew.event_id = promoted.event_id AND ew.user_id = promoted.user_id WHERE promoted.event_id = events.id AND promoted.status = 'pending' AND promoted.updated_at = ? AND ew.status = 'accepted' AND ew.offered_at = ?)";
 
@@ -75,6 +75,24 @@ fn id_bind(id: &str) -> JsValue {
     match id.parse::<f64>().ok().filter(|value| value.is_finite()) {
         Some(number) => JsValue::from_f64(number),
         None => JsValue::from_str(id),
+    }
+}
+
+async fn duplicate_registration_response(
+    db: &D1Database,
+    user_id: &str,
+    event_id: i64,
+) -> Response {
+    // A UNIQUE(event_id,user_id) violation in a batch surfaces as a plain
+    // error; re-check whether a registration for this pair now exists and
+    // answer 400 instead of an opaque 500 for the concurrent-double-register
+    // race.
+    match existing_registration(db, user_id, event_id).await {
+        Ok(Some(_)) => json_error(
+            StatusCode::BAD_REQUEST,
+            "You are already registered for this event",
+        ),
+        _ => internal_error("Failed to register for event"),
     }
 }
 
@@ -336,7 +354,9 @@ async fn register_for_event_inner(
                 );
             }
             Ok(None) => {}
-            Err(()) => return internal_error("Failed to register for event"),
+            Err(()) => {
+                return duplicate_registration_response(&db, &user.id, event.id).await;
+            }
         }
     }
 
@@ -368,10 +388,11 @@ async fn register_for_event_inner(
                     "pending",
                     "Registration submitted successfully. Pending approval.",
                 ),
-                _ => internal_error("Failed to register for event"),
+                Ok(None) => json_error(StatusCode::BAD_REQUEST, "Event is at full capacity"),
+                Err(()) => duplicate_registration_response(&db, &user.id, event.id).await,
             }
         }
-        Err(()) => internal_error("Failed to register for event"),
+        Err(()) => duplicate_registration_response(&db, &user.id, event.id).await,
     }
 }
 
