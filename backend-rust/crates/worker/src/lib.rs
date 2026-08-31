@@ -16,6 +16,8 @@ use tower_service::Service;
 use worker::send::SendFuture;
 use worker::{Context, Env, HttpRequest, Result, event};
 
+mod analytics_d1_handlers;
+mod analytics_handlers;
 mod auth;
 mod auth_handlers;
 mod event_handlers;
@@ -37,6 +39,7 @@ const RATE_LIMITER_UNKEYED_CLIENT: &str = "unknown";
 pub struct AppState {
     allowed_origins: Vec<String>,
     pub env: Env,
+    pub analytics: analytics_handlers::AnalyticsBackend,
 }
 
 impl AppState {
@@ -61,6 +64,7 @@ impl AppState {
         Self {
             allowed_origins,
             env: env.clone(),
+            analytics: analytics_handlers::AnalyticsBackend::from_env(env),
         }
     }
 
@@ -299,8 +303,63 @@ fn router(state: AppState) -> Router {
             get(sales_handlers::get_pipeline_stages),
         )
         .route("/api/sales/team", get(sales_handlers::get_sales_team))
+        .route(
+            "/api/analytics/visitors",
+            get(analytics_handlers::visitors_overview),
+        )
+        .route(
+            "/api/analytics/visitors/daily",
+            get(analytics_handlers::visitors_daily),
+        )
+        .route(
+            "/api/analytics/visitors/{visitor_id}",
+            get(analytics_handlers::visitor_detail),
+        )
+        .route(
+            "/api/analytics/pages/popular",
+            get(analytics_handlers::popular_pages),
+        )
+        .route(
+            "/api/analytics/conversion",
+            get(analytics_handlers::conversion),
+        )
+        .route(
+            "/api/analytics/events/engagement",
+            get(analytics_handlers::events_engagement),
+        )
+        .route(
+            "/api/analytics/events/track",
+            post(analytics_handlers::track_event),
+        )
+        .route(
+            "/api/analytics/events/overview",
+            get(analytics_d1_handlers::events_overview),
+        )
+        .route(
+            "/api/analytics/events/performance",
+            get(analytics_d1_handlers::events_performance),
+        )
+        .route(
+            "/api/analytics/events/{id}/performance",
+            get(analytics_d1_handlers::event_performance_detail),
+        )
+        .route(
+            "/api/analytics/revenue/events",
+            get(analytics_d1_handlers::revenue_events),
+        )
+        .route(
+            "/api/analytics/engagement/members",
+            get(analytics_d1_handlers::members_engagement),
+        )
         .nest("/api/auth", auth_routes(&state))
         .fallback(handlers::fallback)
+        // Express order: visitorTracking runs after CORS, before routes. The
+        // CORS layer (outermost here) short-circuits OPTIONS, so preflights
+        // are never tracked — same as Express's cors preflight handling.
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            analytics_handlers::visitor_tracking_middleware,
+        ))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             cors_middleware,

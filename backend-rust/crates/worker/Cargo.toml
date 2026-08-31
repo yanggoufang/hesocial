@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 axum.workspace = true
+getrandom.workspace = true
 hesocial-core = { package = "core", path = "../core" }
 serde.workspace = true
 serde_json.workspace = true

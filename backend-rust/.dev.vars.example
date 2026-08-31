@@ -3,3 +3,9 @@ JWT_SECRET=replace-with-a-local-development-secret
 # returns the Express-parity 503. Values come from the Google Cloud console.
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+# Analytics Engine SQL API reads (Phase 2g Stage 2). The account id also
+# exists as a [vars] entry in wrangler.toml; set it here too for local dev.
+# Optional: ANALYTICS_QUERY_STUB=true makes every analytics read return the
+# compiled-in stub fixture (no token/account id needed).
+CLOUDFLARE_ACCOUNT_ID=
+CLOUDFLARE_API_TOKEN=

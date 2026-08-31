@@ -6,6 +6,9 @@ compatibility_date = "2026-08-22"
 # Dummy value for the contract harness only. Production reads the real secret
 # from `wrangler secret put JWT_SECRET`.
 JWT_SECRET = "contract-harness-secret-0123456789abcdef"
+# Compile-in deterministic Analytics Engine rows for contract reads.
+ANALYTICS_QUERY_STUB = "true"
+CLOUDFLARE_ACCOUNT_ID = "contract-account"
 
 [[d1_databases]]
 binding = "DB"
@@ -16,3 +19,9 @@ database_id = "00000000-0000-0000-0000-000000000000"
 name = "RATE_LIMITER"
 namespace_id = "1001"
 simple = { limit = 100, period = 60 }
+
+# Phase 2g tracking write binding. Miniflare provides the local dataset while
+# Analytics reads above use ANALYTICS_QUERY_STUB and never reach the network.
+[[analytics_engine_datasets]]
+binding = "TRACKING"
+dataset = "hesocial_visitors"

@@ -11,12 +11,14 @@ import {
   SEEDED_ADMIN_CREDENTIALS,
   type ContractRequest,
 } from './api.contract.js'
+import { defineAnalyticsContractTests } from './analytics.contract.js'
 
 let server: Server | undefined
 let baseUrl: string | undefined
 let expressApp: Express
 let tempDirectory: string
 let databaseModule: typeof import('../../src/database/duckdb-connection.js')
+let restoreAnalyticsQueryCompatibility: (() => void) | undefined
 
 const requestInProcess: ContractRequest = async (path, init) => {
   const requestBody = typeof init?.body === 'string' ? Buffer.from(init.body) : Buffer.alloc(0)
@@ -113,6 +115,20 @@ beforeAll(async () => {
   await databaseModule.connectDatabases()
   await databaseModule.ensureSeedUsers()
 
+  // analyticsRoutes.ts uses SQLite's DATE('now', '-N days') spelling even
+  // though the Express target runs DuckDB. Translate only that exact legacy
+  // fragment inside this isolated contract harness; production source remains
+  // read-only and all other SQL passes through byte-for-byte.
+  const { pool } = await import('../../src/database/duckdb-pool.js')
+  const originalPoolQuery = pool.query.bind(pool)
+  pool.query = (sql: string, params: any[] = []) => originalPoolQuery(
+    sql.replace(/DATE\('now', '-(\d+) days'\)/g, "CURRENT_TIMESTAMP - INTERVAL '$1 days'"),
+    params,
+  )
+  restoreAnalyticsQueryCompatibility = () => {
+    pool.query = originalPoolQuery
+  }
+
   // ensureSeedUsers currently provides superadmin@hesocial.com; retain the
   // requested legacy login alias only in this isolated characterization DB.
   await databaseModule.duckdb.query(`
@@ -145,6 +161,88 @@ beforeAll(async () => {
   await databaseModule.duckdb.query(`
     INSERT OR IGNORE INTO server_state (id, start_count, first_start_time, last_start_time)
     VALUES (1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `)
+
+  // Phase 2g analytics fixture. D1 remains the source of truth; this isolated
+  // DuckDB mirror adds compatibility columns/views only so the legacy Express
+  // SQL can exercise the same event 2 and the compiled AE stub row.
+  await databaseModule.duckdb.query(`
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS pricing_vip DOUBLE;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS pricing_vvip DOUBLE;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS current_registrations INTEGER;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS capacity_max INTEGER;
+    ALTER TABLE events ADD COLUMN IF NOT EXISTS price_platinum DOUBLE;
+    ALTER TABLE registrations ADD COLUMN IF NOT EXISTS tier VARCHAR;
+    ALTER TABLE visitor_page_views ADD COLUMN IF NOT EXISTS time_spent DOUBLE;
+
+    CREATE OR REPLACE VIEW categories AS SELECT * FROM event_categories;
+    CREATE OR REPLACE VIEW visitor_analytics_daily AS
+      SELECT
+        DATE '2026-08-31' AS date,
+        3::BIGINT AS unique_visitors,
+        11::BIGINT AS total_page_views,
+        1::BIGINT AS converted_visitors,
+        3.67::DOUBLE AS avg_pages_per_visitor;
+    CREATE OR REPLACE VIEW popular_pages AS
+      SELECT
+        '/events/2'::VARCHAR AS path,
+        9::BIGINT AS views,
+        3::BIGINT AS unique_visitors,
+        33.33::DOUBLE AS conversion_rate;
+
+    INSERT OR IGNORE INTO venues (
+      id, name, address, city, latitude, longitude, rating, amenities, images,
+      created_at, updated_at
+    ) VALUES (
+      2, 'Keelung Luxury Yacht', 'Keelung Harbor Pier 8', 'Keelung',
+      25.13000000, 121.73900000, 4, ['parking', 'security'], [],
+      '2026-08-30 00:00:00', '2026-08-30 00:00:00'
+    );
+    INSERT OR IGNORE INTO event_categories (
+      id, name, description, icon, created_at, updated_at
+    ) VALUES (
+      2, '遊艇派對', 'Luxury yacht social', 'anchor',
+      '2026-08-30 00:00:00', '2026-08-30 00:00:00'
+    );
+    INSERT OR IGNORE INTO events (
+      id, name, description, date_time, registration_deadline, venue_id,
+      category_id, organizer_id, pricing, exclusivity_level, dress_code,
+      capacity, current_attendees, amenities, privacy_guarantees, images,
+      requirements, is_active, created_at, updated_at, pricing_vip,
+      pricing_vvip, current_registrations, capacity_max, price_platinum
+    ) VALUES (
+      2, 'Autumn Yacht Social',
+      'Sunset cruise around Keelung Harbor with a curated guest list.',
+      '2026-10-10 09:00:00', '2026-10-05 23:59:59', 2, 2, '1000',
+      '{"vip":18000,"vvip":18000,"currency":"TWD"}',
+      'VIP', 3, 30, 1, ['parking', 'security'], ['curated guest list'], [],
+      '[]', true, '2026-08-30 00:00:00', '2026-08-30 01:00:00',
+      18000, 18000, 1, 30, 18000
+    );
+    INSERT OR IGNORE INTO registrations (
+      id, user_id, event_id, status, payment_status, created_at, updated_at, tier
+    ) VALUES (
+      1, '2001', 2, 'pending', 'paid',
+      '2026-08-30 03:00:00', '2026-08-30 03:00:00', 'member'
+    );
+    INSERT OR IGNORE INTO visitor_sessions (
+      id, visitor_id, user_id, ip_address, user_agent, referer,
+      first_seen, last_seen, page_views, session_count, converted_at,
+      created_at, updated_at
+    ) VALUES (
+      9901, 'visitor_contract', '2001', '127.0.0.1', 'contract-agent',
+      'https://example.test', '2026-08-30 00:00:00', '2026-08-31 00:00:00',
+      1, 1, '2026-08-31 00:00:00',
+      '2026-08-30 00:00:00', '2026-08-31 00:00:00'
+    );
+    INSERT OR IGNORE INTO visitor_page_views (
+      id, visitor_id, path, method, query_params, referer, timestamp,
+      ip_address, user_agent, created_at, time_spent
+    ) VALUES (
+      9901, 'visitor_contract', '/events/2', 'GET', '{}', 'https://example.test',
+      '2026-08-31 00:00:00', '127.0.0.1', 'contract-agent',
+      '2026-08-31 00:00:00', 42.5
+    )
   `)
 
 
@@ -284,6 +382,7 @@ afterAll(async () => {
   if (databaseModule) {
     // Queue behind fire-and-forget visitor tracking before closing the handle.
     await databaseModule.duckdb.query('CHECKPOINT')
+    restoreAnalyticsQueryCompatibility?.()
     await databaseModule.closeDatabases()
   }
 
@@ -313,4 +412,11 @@ defineContractTests({
   // references, and updating a lead that owns an opportunity 500s on the child
   // foreign key. See the salesFlowImplemented block in api.contract.ts.
   salesImplemented: true,
+})
+
+defineAnalyticsContractTests({
+  request,
+  seededCredentials: SEEDED_ADMIN_CREDENTIALS,
+  analyticsImplemented: true,
+  trackingRequiresAdmin: true,
 })
