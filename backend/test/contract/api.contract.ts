@@ -27,6 +27,8 @@ export interface ContractRunner {
   eventsImplemented?: boolean
   registrationsImplemented?: boolean
   participantsImplemented?: boolean
+  salesImplemented?: boolean
+  salesFlowImplemented?: boolean
 }
 
 export const defineContractTests = (runner: ContractRunner): void => {
@@ -882,6 +884,752 @@ export const defineContractTests = (runner: ContractRunner): void => {
         expect(details.body).toEqual({
           success: false,
           error: 'Access denied - payment required to view participants',
+        })
+      })
+    })
+  }
+
+  if (runner.salesImplemented === true) {
+    // Reads, filters, updates, metrics, delete gating, and the read-only
+    // pipeline/team lists run against the shared sales fixture
+    // (backend-rust/d1/seed.sql plus its DuckDB mirror in
+    // express.contract.test.ts) so both targets are pinned.
+    describe('sales CRM (Phase 2f)', () => {
+      const authHeaders = (token: string) => ({ authorization: `Bearer ${token}` })
+      const authedJson = (token: string) => ({
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      })
+      const tokenFor = async (credentials: SeededCredentials) => {
+        const login = await postJson('/api/auth/login', credentials)
+        expect(login.response.status).toBe(200)
+        return login.body.data.token as string
+      }
+      const userIdOf = async (token: string) => {
+        const validated = await runner.request('/api/auth/validate', {
+          headers: authHeaders(token),
+        })
+        expect(validated.response.status).toBe(200)
+        return validated.body.data.user.id as string
+      }
+
+      it('rejects every unauthenticated sales CRM route', async () => {
+        const paths = [
+          '/api/sales/leads',
+          '/api/sales/leads/9001',
+          '/api/sales/opportunities',
+          '/api/sales/activities',
+          '/api/sales/metrics',
+          '/api/sales/pipeline/stages',
+          '/api/sales/team',
+        ]
+
+        for (const path of paths) {
+          const result = await runner.request(path)
+          expect(result.response.status).toBe(401)
+          expect(result.body).toEqual({ success: false, error: 'Access token required' })
+        }
+
+        const remove = await runner.request('/api/sales/leads/9003', { method: 'DELETE' })
+        expect(remove.response.status).toBe(401)
+        expect(remove.body).toEqual({ success: false, error: 'Access token required' })
+      })
+
+      it('lists leads with the assignee join, the filters, and the pagination envelope', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const adminId = await userIdOf(token)
+
+        const list = await runner.request('/api/sales/leads?page=1&limit=50&status=new', {
+          headers: authHeaders(token),
+        })
+        expect(list.response.status).toBe(200)
+        expect(list.body).toMatchObject({
+          success: true,
+          pagination: {
+            page: 1,
+            limit: 50,
+            total: expect.any(Number),
+            totalPages: expect.any(Number),
+          },
+        })
+        expect(list.body.data.map((row: any) => row.id)).toContain(9001)
+        expect(
+          list.body.data.every((row: any) => row.status === 'new'),
+        ).toBe(true)
+        expect(list.body.data[0]).toMatchObject({
+          assigned_to_first_name: 'Admin',
+          assigned_to_last_name: 'User',
+        })
+
+        const bySource = await runner.request('/api/sales/leads?source=event', {
+          headers: authHeaders(token),
+        })
+        expect(bySource.response.status).toBe(200)
+        expect(bySource.body.data.map((row: any) => row.id)).toEqual([9002])
+        expect(bySource.body.pagination.total).toBe(1)
+        expect(bySource.body.data[0]).toMatchObject({ status: 'closed_won', lead_score: 100 })
+
+        const byAssignee = await runner.request(
+          `/api/sales/leads?assignedTo=${encodeURIComponent(adminId)}&limit=50`,
+          { headers: authHeaders(token) },
+        )
+        expect(byAssignee.response.status).toBe(200)
+        expect(byAssignee.body.data.map((row: any) => row.id)).toContain(9001)
+        expect(
+          byAssignee.body.data.every((row: any) => row.assigned_to === adminId),
+        ).toBe(true)
+
+        const byTier = await runner.request('/api/sales/leads?membershipTier=Black%20Card', {
+          headers: authHeaders(token),
+        })
+        expect(byTier.response.status).toBe(200)
+        expect(
+          byTier.body.data.every((row: any) => row.interested_membership_tier === 'Black Card'),
+        ).toBe(true)
+
+        const emptyPage = await runner.request('/api/sales/leads?status=closed_lost', {
+          headers: authHeaders(token),
+        })
+        expect(emptyPage.body).toMatchObject({
+          success: true,
+          data: [],
+          pagination: { total: 0, totalPages: 0 },
+        })
+      })
+
+      it('reads a single lead and 404s an unknown id', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const adminId = await userIdOf(token)
+
+        const detail = await runner.request('/api/sales/leads/9001', {
+          headers: authHeaders(token),
+        })
+        expect(detail.response.status).toBe(200)
+        expect(detail.body).toEqual({
+          success: true,
+          data: expect.objectContaining({
+            id: 9001,
+            first_name: 'Seeded',
+            last_name: 'Contract',
+            email: 'crm-active@hesocial.test',
+            company: 'Contract Holdings',
+            job_title: 'Principal',
+            annual_income: 25000000,
+            net_worth: 120000000,
+            source: 'referral',
+            referral_code: 'CRM2F',
+            lead_score: 100,
+            status: 'new',
+            interested_membership_tier: 'Black Card',
+            budget_range: '5-10M',
+            timeline: 'this-quarter',
+            pain_points: 'Discreet networking',
+            notes: 'Active contract lead',
+            assigned_to: adminId,
+            assigned_to_first_name: 'Admin',
+            assigned_to_last_name: 'User',
+          }),
+        })
+
+        const missing = await runner.request('/api/sales/leads/424242', {
+          headers: authHeaders(token),
+        })
+        expect(missing.response.status).toBe(404)
+        expect(missing.body).toEqual({ success: false, error: 'Lead not found' })
+      })
+
+      it('updates a lead through the writable-column whitelist', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+
+        // Lead 9004 is deliberately childless: Express updates DuckDB rows by
+        // delete-and-reinsert, so touching a lead that owns an opportunity
+        // trips its own foreign key (pinned in the Rust-only block below).
+        const updated = await runner.request('/api/sales/leads/9004', {
+          method: 'PUT',
+          headers: authedJson(token),
+          body: JSON.stringify({
+            status: 'qualified',
+            notes: 'Escalated after the pricing review',
+            lead_score: 80,
+          }),
+        })
+        expect(updated.response.status).toBe(200)
+        expect(updated.body).toMatchObject({
+          success: true,
+          message: 'Lead updated successfully',
+          data: {
+            id: 9004,
+            status: 'qualified',
+            notes: 'Escalated after the pricing review',
+            lead_score: 80,
+          },
+        })
+
+        const detail = await runner.request('/api/sales/leads/9004', {
+          headers: authHeaders(token),
+        })
+        expect(detail.body.data).toMatchObject({ status: 'qualified', lead_score: 80 })
+
+        const missing = await runner.request('/api/sales/leads/424242', {
+          method: 'PUT',
+          headers: authedJson(token),
+          body: JSON.stringify({ status: 'qualified' }),
+        })
+        expect(missing.response.status).toBe(404)
+        expect(missing.body).toEqual({ success: false, error: 'Lead not found' })
+      })
+
+      it('moves an opportunity through the pipeline stages', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const adminId = await userIdOf(token)
+
+        const list = await runner.request('/api/sales/opportunities?stage=proposal&limit=50', {
+          headers: authHeaders(token),
+        })
+        expect(list.response.status).toBe(200)
+        expect(list.body).toMatchObject({
+          success: true,
+          pagination: { page: 1, limit: 50, total: expect.any(Number) },
+        })
+        expect(list.body.data).toEqual(expect.arrayContaining([
+          expect.objectContaining({
+            id: 9102,
+            lead_id: 9001,
+            name: 'Diamond Membership Renewal',
+            stage: 'proposal',
+            probability: 60,
+            value: 480000,
+            membership_tier: 'Diamond',
+            payment_terms: 'semi-annual',
+            assigned_to: adminId,
+            lead_first_name: 'Seeded',
+            lead_last_name: 'Contract',
+            lead_email: 'crm-active@hesocial.test',
+            assigned_to_first_name: 'Admin',
+          }),
+        ]))
+
+        // Opportunity 9103 has no activity child: Express rewrites the row by
+        // delete-and-reinsert, so a referenced opportunity trips its own key.
+        const before = await runner.request('/api/sales/opportunities?stage=negotiation', {
+          headers: authHeaders(token),
+        })
+        expect(
+          before.body.data.map((row: any) => row.id),
+        ).toEqual([9103])
+
+        const transition = await runner.request('/api/sales/opportunities/9103', {
+          method: 'PUT',
+          headers: authedJson(token),
+          body: JSON.stringify({ stage: 'closed_won', probability: 100 }),
+        })
+        expect(transition.response.status).toBe(200)
+        expect(transition.body).toMatchObject({
+          success: true,
+          message: 'Opportunity updated successfully',
+          data: { id: 9103, stage: 'closed_won', probability: 100, value: 120000 },
+        })
+
+        const retired = await runner.request('/api/sales/opportunities?stage=negotiation', {
+          headers: authHeaders(token),
+        })
+        expect(retired.body.data).toEqual([])
+
+        const missing = await runner.request('/api/sales/opportunities/424242', {
+          method: 'PUT',
+          headers: authedJson(token),
+          body: JSON.stringify({ stage: 'closed_won' }),
+        })
+        expect(missing.response.status).toBe(404)
+        expect(missing.body).toEqual({ success: false, error: 'Opportunity not found' })
+      })
+
+      it('lists activities and answers without a pagination envelope', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const adminId = await userIdOf(token)
+
+        const byLead = await runner.request('/api/sales/activities?leadId=9002&limit=10', {
+          headers: authHeaders(token),
+        })
+        expect(byLead.response.status).toBe(200)
+        expect(byLead.body.pagination).toBeUndefined()
+        expect(byLead.body.data).toEqual(expect.arrayContaining([
+          expect.objectContaining({
+            id: 9201,
+            lead_id: 9002,
+            opportunity_id: 9101,
+            activity_type: 'meeting',
+            subject: 'Founding seat presentation',
+            outcome: 'signed',
+            duration_minutes: 60,
+            created_by: adminId,
+            created_by_first_name: 'Admin',
+            created_by_last_name: 'User',
+          }),
+        ]))
+
+        const byOpportunity = await runner.request('/api/sales/activities?opportunityId=9102', {
+          headers: authHeaders(token),
+        })
+        expect(
+          byOpportunity.body.data.map((row: any) => row.id),
+        ).toEqual([9202])
+
+        const paged = await runner.request('/api/sales/activities?page=2&limit=2', {
+          headers: authHeaders(token),
+        })
+        expect(paged.body.data).toEqual([])
+      })
+
+      it('aggregates the dashboard metrics per reporting period', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+
+        const monthly = await runner.request('/api/sales/metrics', { headers: authHeaders(token) })
+        expect(monthly.response.status).toBe(200)
+        expect(monthly.body).toMatchObject({
+          success: true,
+          data: {
+            totalLeads: expect.any(Number),
+            qualifiedLeads: expect.any(Number),
+            totalOpportunities: expect.any(Number),
+            totalPipelineValue: expect.any(Number),
+            conversionRate: expect.any(Number),
+            averageDealSize: expect.any(Number),
+            // Pinned live behavior: the cycle length is a hard-coded default
+            // and all three revenue buckets echo the same won revenue.
+            salesCycleLength: 30,
+            winRate: expect.any(Number),
+            monthlyRevenue: expect.any(Number),
+            quarterlyRevenue: expect.any(Number),
+            yearlyRevenue: expect.any(Number),
+          },
+        })
+        expect(monthly.body.data.totalLeads).toBeGreaterThanOrEqual(1)
+        expect(monthly.body.data.qualifiedLeads).toBeGreaterThanOrEqual(1)
+
+        const yearly = await runner.request('/api/sales/metrics?period=yearly', {
+          headers: authHeaders(token),
+        })
+        expect(yearly.response.status).toBe(200)
+        expect(yearly.body.data.totalLeads).toBeGreaterThanOrEqual(monthly.body.data.totalLeads)
+        expect(yearly.body.data.totalOpportunities).toBeGreaterThanOrEqual(1)
+
+        // An unsupported period string drops the date filter entirely, so the
+        // 2020 fixture rows only surface in this bucket.
+        const unfiltered = await runner.request('/api/sales/metrics?period=weekly', {
+          headers: authHeaders(token),
+        })
+        expect(unfiltered.response.status).toBe(200)
+        expect(unfiltered.body.data.totalLeads).toBeGreaterThanOrEqual(
+          yearly.body.data.totalLeads + 1,
+        )
+        expect(unfiltered.body.data.totalOpportunities).toBeGreaterThanOrEqual(2)
+        expect(unfiltered.body.data.totalPipelineValue).toBeGreaterThanOrEqual(730000)
+        expect(unfiltered.body.data.wonOpportunities).toBeUndefined()
+        expect(unfiltered.body.data.conversionRate).toBeGreaterThanOrEqual(0)
+        expect(unfiltered.body.data.winRate).toBeLessThanOrEqual(100)
+      })
+
+      it('serves only the active pipeline stages in display order', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+
+        const stages = await runner.request('/api/sales/pipeline/stages', {
+          headers: authHeaders(token),
+        })
+        expect(stages.response.status).toBe(200)
+        expect(stages.body).toEqual({ success: true, data: expect.any(Array) })
+        expect(stages.body.data.map((row: any) => row.name)).toEqual([
+          'qualification',
+          'needs_analysis',
+          'proposal',
+          'negotiation',
+        ])
+        expect(stages.body.data[0]).toMatchObject({
+          id: 9401,
+          display_order: 1,
+          default_probability: 25,
+          is_active: true,
+        })
+      })
+
+      it('serves only the active sales team members with their joined profiles', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+
+        const team = await runner.request('/api/sales/team', { headers: authHeaders(token) })
+        expect(team.response.status).toBe(200)
+        expect(team.body.success).toBe(true)
+        expect(team.body.data).toHaveLength(1)
+        expect(team.body.data[0]).toMatchObject({
+          id: 9301,
+          role: 'sales_rep',
+          territory: 'Taipei',
+          quota_amount: 3000000,
+          is_active: true,
+          first_name: 'Admin',
+          last_name: 'User',
+          email: 'admin@hesocial.com',
+          manager_first_name: 'Test',
+          manager_last_name: 'Platinum',
+        })
+      })
+
+      it('admin-gates lead deletion and pins the rowCount blind spot', async () => {
+        const admin = await tokenFor(runner.seededCredentials)
+        const member = await tokenFor({
+          email: 'test.platinum@example.com',
+          password: 'test123',
+        })
+
+        const forbidden = await runner.request('/api/sales/leads/9003', {
+          method: 'DELETE',
+          headers: authHeaders(member),
+        })
+        expect(forbidden.response.status).toBe(403)
+        expect(forbidden.body).toEqual({ success: false, error: 'Admin access required' })
+
+        // Known live drift: the Express delete reads `result.rowCount`, which the
+        // DuckDB adapter never populates, so a no-match delete still reports 200.
+        const ghost = await runner.request('/api/sales/leads/424242', {
+          method: 'DELETE',
+          headers: authHeaders(admin),
+        })
+        expect(ghost.response.status).toBe(200)
+        expect(ghost.body).toEqual({ success: true, message: 'Lead deleted successfully' })
+
+        const deleted = await runner.request('/api/sales/leads/9003', {
+          method: 'DELETE',
+          headers: authHeaders(admin),
+        })
+        expect(deleted.response.status).toBe(200)
+        expect(deleted.body).toEqual({ success: true, message: 'Lead deleted successfully' })
+
+        const gone = await runner.request('/api/sales/leads/9003', {
+          headers: authHeaders(admin),
+        })
+        expect(gone.response.status).toBe(404)
+        expect(gone.body).toEqual({ success: false, error: 'Lead not found' })
+      })
+    })
+  }
+
+  if (runner.salesFlowImplemented === true) {
+    // Sales paths the Express target cannot execute at all today, so they are
+    // pinned against the Rust target only:
+    //   * INSERTs 500 because DuckDB gives `id INTEGER PRIMARY KEY` no implicit
+    //     sequence, so createLead/createOpportunity/createActivity always fail
+    //     with `NOT NULL constraint failed: sales_leads.id`;
+    //   * the leads `search` filter and the opportunities `membershipTier`
+    //     filter 500 on unqualified column names that are ambiguous against the
+    //     joined `users` row;
+    //   * updating a lead that owns an opportunity 500s because DuckDB applies
+    //     the child foreign key to the delete-and-reinsert of the parent row;
+    //   * D1 declares CHECK vocabularies and NOT NULL columns DuckDB lacks.
+    describe('sales CRM intended flow (Phase 2f)', () => {
+      const authHeaders = (token: string) => ({ authorization: `Bearer ${token}` })
+      const authedJson = (token: string) => ({
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      })
+      let sequence = 0
+      const tokenFor = async (credentials: SeededCredentials) => {
+        const login = await postJson('/api/auth/login', credentials)
+        expect(login.response.status).toBe(200)
+        return login.body.data.token as string
+      }
+      const userIdOf = async (token: string) => {
+        const validated = await runner.request('/api/auth/validate', {
+          headers: authHeaders(token),
+        })
+        return validated.body.data.user.id as string
+      }
+      const leadPayload = (userId: string, overrides: Record<string, unknown> = {}) => {
+        sequence += 1
+        return {
+          firstName: 'Crm',
+          lastName: 'Contract',
+          email: `sales-write-${Date.now()}-${sequence}@hesocial.test`,
+          phone: '+886900000123',
+          company: 'Contract Holdings',
+          jobTitle: 'Principal',
+          annualIncome: 25000000,
+          netWorth: 120000000,
+          source: 'referral',
+          referralCode: 'CRM2F',
+          interestedMembershipTier: 'Black Card',
+          budgetRange: '5-10M',
+          timeline: 'this-quarter',
+          painPoints: 'Discreet networking',
+          interests: ['fine dining', 'yachting'],
+          notes: 'Characterization lead',
+          assignedTo: userId,
+          ...overrides,
+        }
+      }
+      const createLead = async (token: string, userId: string) => {
+        const created = await runner.request('/api/sales/leads', {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify(leadPayload(userId)),
+        })
+        expect(created.response.status).toBe(201)
+        return created.body.data.id as number
+      }
+
+      it('creates a lead and applies the income/net-worth/tier score', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const userId = await userIdOf(token)
+
+        const created = await runner.request('/api/sales/leads', {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify(leadPayload(userId)),
+        })
+        expect(created.response.status).toBe(201)
+        expect(created.body.message).toBe('Lead created successfully')
+        expect(created.body.data).toMatchObject({
+          first_name: 'Crm',
+          last_name: 'Contract',
+          source: 'referral',
+          status: 'new',
+          // 40 (income >= 20M) + 40 (net worth >= 100M) + 20 (Black Card tier).
+          lead_score: 100,
+          interests: '["fine dining","yachting"]',
+          assigned_to: userId,
+        })
+        expect(created.body.data.id).toEqual(expect.any(Number))
+
+        const detail = await runner.request(`/api/sales/leads/${created.body.data.id}`, {
+          headers: authHeaders(token),
+        })
+        expect(detail.response.status).toBe(200)
+        expect(detail.body.data.assigned_to_first_name).toBe('Admin')
+
+        const updated = await runner.request(`/api/sales/leads/${created.body.data.id}`, {
+          method: 'PUT',
+          headers: authedJson(token),
+          body: JSON.stringify({ status: 'nurturing', next_follow_up_date: '2026-09-14' }),
+        })
+        expect(updated.response.status).toBe(200)
+        expect(updated.body).toMatchObject({
+          success: true,
+          message: 'Lead updated successfully',
+          data: { status: 'nurturing' },
+        })
+
+        // The worker also resolves the camelCase spellings the frontend types
+        // use; Express would have interpolated `leadScore` as a column name.
+        const camel = await runner.request(`/api/sales/leads/${created.body.data.id}`, {
+          method: 'PUT',
+          headers: authedJson(token),
+          body: JSON.stringify({ leadScore: 60, budgetRange: '3-5M' }),
+        })
+        expect(camel.response.status).toBe(200)
+        expect(camel.body.data).toMatchObject({
+          lead_score: 60,
+          budget_range: '3-5M',
+          status: 'nurturing',
+        })
+      })
+
+      it('scores a mid-tier lead on the tier signal alone', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const userId = await userIdOf(token)
+
+        const created = await runner.request('/api/sales/leads', {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify(leadPayload(userId, {
+            annualIncome: 6000000,
+            netWorth: 12000000,
+            interestedMembershipTier: 'Diamond',
+            interests: [],
+          })),
+        })
+        expect(created.response.status).toBe(201)
+        expect(created.body.data).toMatchObject({
+          lead_score: 15,
+          interests: '[]',
+        })
+      })
+
+      it('filters leads by the free-text search the Express route cannot run', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+
+        const bySearch = await runner.request('/api/sales/leads?search=seeded', {
+          headers: authHeaders(token),
+        })
+        expect(bySearch.response.status).toBe(200)
+        expect(bySearch.body.data.map((row: any) => row.id)).toContain(9001)
+      })
+
+      it('creates an opportunity for a lead', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const userId = await userIdOf(token)
+        const leadId = await createLead(token, userId)
+
+        const created = await runner.request('/api/sales/opportunities', {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify({
+            leadId,
+            name: 'Contract Platinum Membership',
+            description: 'Created through the contract',
+            stage: 'qualification',
+            probability: 30,
+            value: 1250000,
+            expectedCloseDate: '2026-12-01',
+            membershipTier: 'Platinum',
+            paymentTerms: 'annual-prepaid',
+            assignedTo: userId,
+          }),
+        })
+        expect(created.response.status).toBe(201)
+        expect(created.body).toMatchObject({
+          success: true,
+          message: 'Opportunity created successfully',
+          data: {
+            lead_id: leadId,
+            name: 'Contract Platinum Membership',
+            stage: 'qualification',
+            probability: 30,
+            value: 1250000,
+            membership_tier: 'Platinum',
+            assigned_to: userId,
+          },
+        })
+
+        const list = await runner.request('/api/sales/opportunities?stage=qualification&limit=50', {
+          headers: authHeaders(token),
+        })
+        expect(
+          list.body.data.some((row: any) => row.id === created.body.data.id),
+        ).toBe(true)
+
+        const byTier = await runner.request('/api/sales/opportunities?membershipTier=Black%20Card', {
+          headers: authHeaders(token),
+        })
+        expect(byTier.response.status).toBe(200)
+        expect(byTier.body.data.map((row: any) => row.id)).toEqual([9101])
+
+        const byAssignee = await runner.request(
+          `/api/sales/opportunities?assignedTo=${encodeURIComponent(userId)}&limit=50`,
+          { headers: authHeaders(token) },
+        )
+        expect(byAssignee.response.status).toBe(200)
+        expect(byAssignee.body.data.map((row: any) => row.id)).toContain(9101)
+        expect(
+          byAssignee.body.data.every((row: any) => row.assigned_to === userId),
+        ).toBe(true)
+      })
+
+      it('records an activity against the authenticated caller', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const userId = await userIdOf(token)
+        const leadId = await createLead(token, userId)
+
+        const created = await runner.request('/api/sales/activities', {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify({
+            leadId,
+            opportunityId: null,
+            activityType: 'call',
+            subject: 'Intro call',
+            description: 'Walked through the Diamond tier',
+            outcome: 'reached',
+            durationMinutes: 15,
+            scheduledAt: '2026-08-31T02:00:00.000Z',
+            completedAt: '2026-08-31T02:15:00.000Z',
+          }),
+        })
+        expect(created.response.status).toBe(201)
+        expect(created.body).toMatchObject({
+          success: true,
+          message: 'Activity created successfully',
+          data: {
+            lead_id: leadId,
+            activity_type: 'call',
+            subject: 'Intro call',
+            outcome: 'reached',
+            duration_minutes: 15,
+            created_by: userId,
+          },
+        })
+
+        const list = await runner.request(`/api/sales/activities?leadId=${leadId}`, {
+          headers: authHeaders(token),
+        })
+        expect(list.body.data.map((row: any) => row.id)).toEqual([created.body.data.id])
+      })
+
+      it('surfaces the D1 constraint vocabulary through the Express error envelope', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const userId = await userIdOf(token)
+
+        // D1 declares sales_leads.source NOT NULL where DuckDB leaves it
+        // nullable, and adds CHECK vocabularies DuckDB never had. Both land on
+        // the same 500 envelope Express uses for its own bind errors.
+        const missingSource = await runner.request('/api/sales/leads', {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify(leadPayload(userId, { source: undefined })),
+        })
+        expect(missingSource.response.status).toBe(500)
+        expect(missingSource.body).toEqual({ success: false, error: 'Failed to create lead' })
+
+        const badTier = await runner.request('/api/sales/leads', {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify(leadPayload(userId, { interestedMembershipTier: 'Gold' })),
+        })
+        expect(badTier.response.status).toBe(500)
+        expect(badTier.body).toEqual({ success: false, error: 'Failed to create lead' })
+
+        const badStatus = await runner.request('/api/sales/leads/9004', {
+          method: 'PUT',
+          headers: authedJson(token),
+          body: JSON.stringify({ status: 'hot' }),
+        })
+        expect(badStatus.response.status).toBe(500)
+        expect(badStatus.body).toEqual({ success: false, error: 'Failed to update lead' })
+
+        const badScore = await runner.request('/api/sales/leads/9004', {
+          method: 'PUT',
+          headers: authedJson(token),
+          body: JSON.stringify({ lead_score: 900 }),
+        })
+        expect(badScore.response.status).toBe(500)
+        expect(badScore.body).toEqual({ success: false, error: 'Failed to update lead' })
+
+        // `salesRepId` reaches the query as a bound value; Express interpolates
+        // it into the SQL string, which cannot carry a UUID at all.
+        const mine = await runner.request(
+          `/api/sales/metrics?period=weekly&salesRepId=${encodeURIComponent(userId)}`,
+          { headers: authedJson(token) },
+        )
+        expect(mine.response.status).toBe(200)
+        expect(mine.body.data.totalLeads).toBeGreaterThanOrEqual(3)
+
+        const nobody = await runner.request('/api/sales/metrics?period=weekly&salesRepId=999999', {
+          headers: authedJson(token),
+        })
+        expect(nobody.response.status).toBe(200)
+        expect(nobody.body.data.totalLeads).toBe(0)
+        expect(nobody.body.data.totalOpportunities).toBe(0)
+        expect(nobody.body.data.conversionRate).toBe(0)
+        expect(nobody.body.data.winRate).toBe(0)
+
+        // Lead 9002 owns an opportunity. Express 500s on this update with a
+        // foreign-key error; D1 updates the parent row in place.
+        const parentUpdate = await runner.request('/api/sales/leads/9002', {
+          method: 'PUT',
+          headers: authedJson(token),
+          body: JSON.stringify({ notes: 'Reparented without tripping the child key' }),
+        })
+        expect(parentUpdate.response.status).toBe(200)
+        expect(parentUpdate.body.data).toMatchObject({
+          id: 9002,
+          notes: 'Reparented without tripping the child key',
         })
       })
     })

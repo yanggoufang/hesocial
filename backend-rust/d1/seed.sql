@@ -182,3 +182,124 @@ INSERT OR IGNORE INTO event_privacy_overrides (
     1, 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 2, 1, 1, 1,
     '2026-08-30T03:05:00.000Z', '2026-08-30T03:05:00.000Z'
 );
+
+-- Phase 2f sales CRM fixture. Lead 9001 sits inside the current reporting
+-- window, 9002 is deliberately outside every period bucket, and 9003 is
+-- childless so the delete route can run without cascading. Lead 9004 is the
+-- update target (DuckDB cannot update a parent row that still has children,
+-- which is also why opportunity 9103 carries no activity row).
+-- Stage 9405 and team member 9302 are inactive and must be filtered out by the
+-- read routes.
+INSERT OR IGNORE INTO sales_leads (
+    id, first_name, last_name, email, phone, company, job_title,
+    annual_income, net_worth, source, referral_code, lead_score, status,
+    interested_membership_tier, budget_range, timeline, pain_points, interests,
+    notes, last_contact_date, next_follow_up_date, assigned_to, created_at, updated_at
+) VALUES
+    (
+        9001, 'Seeded', 'Contract', 'crm-active@hesocial.test', '+886900000001',
+        'Contract Holdings', 'Principal', 25000000, 120000000, 'referral', 'CRM2F',
+        100, 'new', 'Black Card', '5-10M', 'this-quarter', 'Discreet networking',
+        '["fine dining","yachting"]', 'Active contract lead',
+        NULL, '2026-09-07', 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    ),
+    (
+        9002, 'Legacy', 'Won', 'crm-won@hesocial.test', '+886900000002',
+        'Founding Member Co', 'Chair', 40000000, 200000000, 'event', NULL,
+        100, 'closed_won', 'Black Card', '10M+', 'closed', 'Privacy',
+        '["art", "yachting"]', 'Historical closed-won lead outside the window',
+        '2020-01-15', NULL, 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        '2020-01-01T00:00:00.000Z', '2020-01-20T00:00:00.000Z'
+    ),
+    (
+        9003, 'Deletable', 'Row', 'crm-deletable@hesocial.test', NULL,
+        NULL, NULL, NULL, NULL, 'website', NULL,
+        0, 'new', NULL, NULL, NULL, NULL,
+        '[]', 'Childless row reserved for the delete route',
+        NULL, NULL, NULL,
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    ),
+    (
+        9004, 'Updatable', 'Target', 'crm-updatable@hesocial.test', '+886900000004',
+        'Renewal Co', 'Director', 8000000, 40000000, 'website', NULL,
+        40, 'contacted', 'Platinum', '1-5M', 'next-quarter', 'Sparse network',
+        '["networking"]', 'Childless row reserved for the update route',
+        NULL, NULL, 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    );
+
+INSERT OR IGNORE INTO sales_opportunities (
+    id, lead_id, name, description, stage, probability, value,
+    expected_close_date, actual_close_date, membership_tier, payment_terms,
+    close_reason, assigned_to, created_at, updated_at
+) VALUES
+    (
+        9101, 9002, 'Legacy Black Card Founding Seat',
+        'Closed-won historical deal outside the reporting window',
+        'closed_won', 100, 250000, '2020-02-01', '2020-01-20',
+        'Black Card', 'annual-prepaid', 'Signed',
+        'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        '2020-01-01T00:00:00.000Z', '2020-01-20T00:00:00.000Z'
+    ),
+    (
+        9102, 9001, 'Diamond Membership Renewal',
+        'Open deal the contract reads through the stage filter',
+        'proposal', 60, 480000, '2026-12-01', NULL,
+        'Diamond', 'semi-annual', NULL,
+        'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    ),
+    (
+        9103, 9002, 'Negotiation Seat (childless)',
+        'Open deal with no logged activity, reserved for the stage-transition test',
+        'negotiation', 80, 120000, '2026-10-31', NULL,
+        'Platinum', 'one-time', NULL,
+        'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    );
+
+INSERT OR IGNORE INTO sales_activities (
+    id, lead_id, opportunity_id, activity_type, subject, description, outcome,
+    duration_minutes, scheduled_at, completed_at, created_by, created_at, updated_at
+) VALUES
+    (
+        9201, 9002, 9101, 'meeting', 'Founding seat presentation',
+        'Historical close meeting', 'signed', 60,
+        '2020-01-15T02:00:00.000Z', '2020-01-15T03:00:00.000Z',
+        'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        '2020-01-15T03:00:00.000Z', '2020-01-15T03:00:00.000Z'
+    ),
+    (
+        9202, 9001, 9102, 'call', 'Renewal discovery call',
+        'Confirmed the Diamond tier budget', 'reached', 30,
+        NULL, NULL,
+        'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    );
+
+INSERT OR IGNORE INTO sales_pipeline_stages (
+    id, name, description, display_order, default_probability, is_active,
+    color_code, created_at, updated_at
+) VALUES
+    (9401, 'qualification', 'Identify and validate the prospect', 1, 25, 1, '#94A3B8',
+     strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    (9402, 'needs_analysis', 'Document tier expectations and budget', 2, 40, 1, '#CBD5E1',
+     strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    (9403, 'proposal', 'Present the membership proposal', 3, 60, 1, '#F59E0B',
+     strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    (9404, 'negotiation', 'Negotiate terms and the close date', 4, 80, 1, '#10B981',
+     strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    (9405, 'archived_legacy', 'Retired stage that must stay hidden', 9, 0, 0, '#64748B',
+     strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+INSERT OR IGNORE INTO sales_team_members (
+    id, user_id, role, territory, commission_rate, quota_amount, is_active,
+    hire_date, manager_id, created_at, updated_at
+) VALUES
+    (9301, 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 'sales_rep', 'Taipei', 8.50, 3000000, 1,
+     '2024-03-01', '9c858901-8a57-4791-81fe-4c455b099bc9',
+     strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    (9302, '9c858901-8a57-4791-81fe-4c455b099bc9', 'sales_manager', 'Kaohsiung', 12.00, 9000000, 0,
+     '2022-06-01', NULL,
+     strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));

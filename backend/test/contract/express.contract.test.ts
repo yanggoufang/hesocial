@@ -147,6 +147,106 @@ beforeAll(async () => {
     VALUES (1, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `)
 
+
+  // Phase 2f sales CRM fixture. DuckDB has no autoincrement for
+  // `id INTEGER PRIMARY KEY`, so every seeded row carries an explicit id — the
+  // same ids the D1 seed uses. DuckDB also predates several D1 columns
+  // (last_contact_date, actual_close_date, close_reason, color_code,
+  // sales_activities.updated_at), so those are simply absent here.
+  await databaseModule.duckdb.query(`
+    INSERT OR IGNORE INTO sales_leads (
+      id, first_name, last_name, email, phone, company, job_title,
+      annual_income, net_worth, source, referral_code, lead_score, status,
+      interested_membership_tier, budget_range, timeline, pain_points,
+      interests, notes, assigned_to, created_at, updated_at
+    ) VALUES
+      (9001, 'Seeded', 'Contract', 'crm-active@hesocial.test', '+886900000001',
+       'Contract Holdings', 'Principal', 25000000, 120000000, 'referral', 'CRM2F',
+       100, 'new', 'Black Card', '5-10M', 'this-quarter', 'Discreet networking',
+       '["fine dining","yachting"]', 'Active contract lead',
+       (SELECT id FROM users WHERE email = 'admin@hesocial.com'),
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+      (9002, 'Legacy', 'Won', 'crm-won@hesocial.test', '+886900000002',
+       'Founding Member Co', 'Chair', 40000000, 200000000, 'event', NULL,
+       100, 'closed_won', 'Black Card', '10M+', 'closed', 'Privacy',
+       '["art", "yachting"]', 'Historical closed-won lead outside the window',
+       (SELECT id FROM users WHERE email = 'admin@hesocial.com'),
+       '2020-01-01 00:00:00', '2020-01-20 00:00:00'),
+      (9003, 'Deletable', 'Row', 'crm-deletable@hesocial.test', NULL, NULL, NULL,
+       NULL, NULL, 'website', NULL, 0, 'new', NULL, NULL, NULL, NULL,
+       '[]', 'Childless row reserved for the delete route', NULL,
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+      (9004, 'Updatable', 'Target', 'crm-updatable@hesocial.test', '+886900000004',
+       'Renewal Co', 'Director', 8000000, 40000000, 'website', NULL,
+       40, 'contacted', 'Platinum', '1-5M', 'next-quarter', 'Sparse network',
+       '["networking"]', 'Childless row reserved for the update route',
+       (SELECT id FROM users WHERE email = 'admin@hesocial.com'),
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+    INSERT OR IGNORE INTO sales_opportunities (
+      id, lead_id, name, description, stage, probability, value,
+      expected_close_date, membership_tier, payment_terms,
+      assigned_to, created_at, updated_at
+    ) VALUES
+      (9101, 9002, 'Legacy Black Card Founding Seat',
+       'Closed-won historical deal outside the reporting window',
+       'closed_won', 100, 250000, '2020-02-01', 'Black Card', 'annual-prepaid',
+       (SELECT id FROM users WHERE email = 'admin@hesocial.com'),
+       '2020-01-01 00:00:00', '2020-01-20 00:00:00'),
+      (9102, 9001, 'Diamond Membership Renewal',
+       'Open deal the contract reads through the stage filter',
+       'proposal', 60, 480000, '2026-12-01', 'Diamond', 'semi-annual',
+       (SELECT id FROM users WHERE email = 'admin@hesocial.com'),
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+      (9103, 9002, 'Negotiation Seat (childless)',
+       'Open deal with no logged activity, reserved for the stage-transition test',
+       'negotiation', 80, 120000, '2026-10-31', 'Platinum', 'one-time',
+       (SELECT id FROM users WHERE email = 'admin@hesocial.com'),
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+    INSERT OR IGNORE INTO sales_activities (
+      id, lead_id, opportunity_id, activity_type, subject, description, outcome,
+      duration_minutes, scheduled_at, completed_at, created_by, created_at
+    ) VALUES
+      (9201, 9002, 9101, 'meeting', 'Founding seat presentation',
+       'Historical close meeting', 'signed', 60,
+       '2020-01-15 02:00:00', '2020-01-15 03:00:00',
+       (SELECT id FROM users WHERE email = 'admin@hesocial.com'),
+       '2020-01-15 03:00:00'),
+      (9202, 9001, 9102, 'call', 'Renewal discovery call',
+       'Confirmed the Diamond tier budget', 'reached', 30,
+       NULL, NULL,
+       (SELECT id FROM users WHERE email = 'admin@hesocial.com'),
+       CURRENT_TIMESTAMP);
+
+    INSERT OR IGNORE INTO sales_pipeline_stages (
+      id, name, description, display_order, default_probability, is_active,
+      created_at, updated_at
+    ) VALUES
+      (9401, 'qualification', 'Identify and validate the prospect', 1, 25, true,
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+      (9402, 'needs_analysis', 'Document tier expectations and budget', 2, 40, true,
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+      (9403, 'proposal', 'Present the membership proposal', 3, 60, true,
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+      (9404, 'negotiation', 'Negotiate terms and the close date', 4, 80, true,
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+      (9405, 'archived_legacy', 'Retired stage that must stay hidden', 9, 0, false,
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+    INSERT OR IGNORE INTO sales_team_members (
+      id, user_id, role, territory, commission_rate, quota_amount, is_active,
+      hire_date, manager_id, created_at, updated_at
+    ) VALUES
+      (9301, (SELECT id FROM users WHERE email = 'admin@hesocial.com'), 'sales_rep',
+       'Taipei', 8.50, 3000000, true, '2024-03-01',
+       (SELECT id FROM users WHERE email = 'test.platinum@example.com'),
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+      (9302, (SELECT id FROM users WHERE email = 'test.platinum@example.com'),
+       'sales_manager', 'Kaohsiung', 12.00, 9000000, false, '2022-06-01', NULL,
+       CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `)
+
   const [{ default: app }, { default: createRoutes }] = await Promise.all([
     import('../../src/server.js'),
     import('../../src/routes/main.js'),
@@ -204,4 +304,13 @@ defineContractTests({
   // access join. The Express list also maps the DuckDB wrapper rather than
   // result.rows, so seeded dual-target participant tests would currently 500.
   participantsImplemented: false,
+  // The sales routes are mounted live on Express and the characterization temp
+  // DB creates all five sales tables, so the Phase 2f read/filter/update/delete/
+  // metrics/pipeline/team assertions run against the mirrored fixture on both
+  // targets. The follow-up block stays off here: Express cannot INSERT a sales
+  // row at all (DuckDB gives `id INTEGER PRIMARY KEY` no sequence), its leads
+  // `search` and opportunities `membershipTier` filters 500 on ambiguous column
+  // references, and updating a lead that owns an opportunity 500s on the child
+  // foreign key. See the salesFlowImplemented block in api.contract.ts.
+  salesImplemented: true,
 })

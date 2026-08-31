@@ -19,4 +19,6 @@ defineContractTests({
   eventsImplemented: true,
   registrationsImplemented: true,
   participantsImplemented: true,
+  salesImplemented: true,
+  salesFlowImplemented: true,
 })

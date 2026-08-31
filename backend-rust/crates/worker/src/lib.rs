@@ -10,7 +10,7 @@ use axum::http::header::{
 use axum::http::{HeaderMap, HeaderValue, Method, Request, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{get, post, put};
 use serde_json::json;
 use tower_service::Service;
 use worker::send::SendFuture;
@@ -23,6 +23,7 @@ mod handlers;
 mod oauth_handlers;
 mod participant_handlers;
 mod registration_handlers;
+mod sales_handlers;
 
 const DEFAULT_CORS_ORIGIN: &str = "http://localhost:3000";
 const EXTRA_CORS_ORIGINS: [&str; 2] = ["http://127.0.0.1:3000", "http://localhost:5000"];
@@ -270,6 +271,34 @@ fn router(state: AppState) -> Router {
         )
         .route("/api/categories", get(handlers::list_categories))
         .route("/api/venues", get(handlers::list_venues))
+        .route(
+            "/api/sales/leads",
+            get(sales_handlers::list_leads).post(sales_handlers::create_lead),
+        )
+        .route(
+            "/api/sales/leads/{id}",
+            get(sales_handlers::get_lead)
+                .put(sales_handlers::update_lead)
+                .delete(sales_handlers::delete_lead),
+        )
+        .route(
+            "/api/sales/opportunities",
+            get(sales_handlers::list_opportunities).post(sales_handlers::create_opportunity),
+        )
+        .route(
+            "/api/sales/opportunities/{id}",
+            put(sales_handlers::update_opportunity),
+        )
+        .route(
+            "/api/sales/activities",
+            get(sales_handlers::list_activities).post(sales_handlers::create_activity),
+        )
+        .route("/api/sales/metrics", get(sales_handlers::get_metrics))
+        .route(
+            "/api/sales/pipeline/stages",
+            get(sales_handlers::get_pipeline_stages),
+        )
+        .route("/api/sales/team", get(sales_handlers::get_sales_team))
         .nest("/api/auth", auth_routes(&state))
         .fallback(handlers::fallback)
         .layer(middleware::from_fn_with_state(

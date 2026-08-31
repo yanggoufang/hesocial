@@ -27,7 +27,15 @@ const newestMtime = (path: string): number => {
   }, stats.mtimeMs)
 }
 
-const newestRustSourceMtime = ['crates/core/src', 'crates/worker/src', 'd1', 'Cargo.toml', 'Cargo.lock']
+const newestRustSourceMtime = [
+  'crates/core/src',
+  'crates/worker/src',
+  'd1',
+  'Cargo.toml',
+  'Cargo.lock',
+  'wrangler.toml',
+  'wrangler.test.toml',
+]
   .map((relative) => newestMtime(resolve(rustDirectory, relative)))
   .reduce((newest, current) => Math.max(newest, current), 0)
 const shimMtime = statSync(workerShimPath).mtimeMs
