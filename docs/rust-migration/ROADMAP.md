@@ -47,6 +47,8 @@
 - Workers Free 10ms CPU 跑不動 bcrypt cost 12 → 必須 Paid(已決策)
 - 5 張死表不移植:`user_sessions`、`audit_logs`、`oauth_providers`、`financial_verifications`、`event_feedback`;另 `sales_targets`/`sales_commissions`/`user_preferences` 僅存在於 migration 檔(零 runtime 引用)同樣排除;**visitor 三表不存在於 D1**(鎖定決策 #3,Phase 6 直接做在 Analytics Engine/KV)
 - D1 不用舊的 `schema_migrations` 機制 — 未來 D1 schema 變更走 wrangler d1 migrations
+- public `/api/events` 的已知偏差(2026-08-31 Codex 審查後確認可接受):pricing 為合成 `{vip,vvip,general,currency}` 非舊自由格式 JSON;`amenities`/`privacyGuarantees`/`videoUrl` 為 null;SQLite `LIKE` 對 ASCII 不分大小寫(DuckDB 會分);`/api/health/status` 的 memory 為佔位 0MB、uptime 為 isolate 生命週期(worker 無 Node process 指標);數字參數解析涵蓋 trim/空字串,hex 等冷門 JS `Number()` 形式不支援
+- **Phase 4 必辦**:管理端點必須輸出原始 `price_platinum/price_diamond/price_black_card` 欄位 — `EventManagement.tsx:186` 與 `EventForm.tsx:77` 直接依賴
 - 前端 `participantService.ts` 相對路徑 `/api` 在 Render rewrite 下是壞的 → Worker 同 origin 後免費修好
 
 ## Phase 1 必辦清單(2026-08-30 Kimi 審查產出)
@@ -61,6 +63,7 @@
 
 ## 未決事項
 
+- **exclusivityLevel 過濾在 Rust 端暫不支援**(統一 schema 無對應欄位)— 前端 EventsPage 的級別選擇器送出的參數不會過濾、badges 顯示 null。需要產品決策:映射到 `required_membership_tiers`,或前端改版
 - git 歷史清洗(hesocial.duckdb 的 5 個歷史 commit)— 需 force push 決策
 - Google OAuth callback 的 state 改 HttpOnly cookie(passport→手寫 code flow)
 - refresh token 缺陷(重簽同一 payload)cutover 後修

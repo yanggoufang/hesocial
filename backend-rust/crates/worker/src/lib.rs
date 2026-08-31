@@ -1,22 +1,26 @@
 use axum::Router;
+use axum::body::Body;
 use axum::extract::State;
 use axum::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
-    ACCESS_CONTROL_ALLOW_ORIGIN, ORIGIN,
+    ACCESS_CONTROL_ALLOW_ORIGIN, ORIGIN, VARY,
 };
-use axum::http::{HeaderMap, HeaderValue};
-use axum::response::IntoResponse;
+use axum::http::{HeaderMap, HeaderValue, Method, Request, StatusCode};
+use axum::middleware::{self, Next};
+use axum::response::Response;
 use axum::routing::get;
-use hesocial_core::HealthResponse;
 use tower_service::Service;
 use worker::{Context, Env, HttpRequest, Result, event};
+
+mod handlers;
 
 const DEFAULT_CORS_ORIGIN: &str = "http://localhost:3000";
 const EXTRA_CORS_ORIGINS: [&str; 2] = ["http://127.0.0.1:3000", "http://localhost:5000"];
 
 #[derive(Clone)]
-struct AppState {
+pub struct AppState {
     allowed_origins: Vec<String>,
+    pub env: Env,
 }
 
 impl AppState {
@@ -38,7 +42,10 @@ impl AppState {
             }
         }
 
-        Self { allowed_origins }
+        Self {
+            allowed_origins,
+            env: env.clone(),
+        }
     }
 }
 
@@ -56,6 +63,7 @@ fn cors_headers(request_headers: &HeaderMap, state: &AppState) -> HeaderMap {
         ACCESS_CONTROL_ALLOW_HEADERS,
         HeaderValue::from_static("Content-Type,Authorization,X-Requested-With"),
     );
+    response_headers.insert(VARY, HeaderValue::from_static("Origin"));
 
     if let Some(origin) = request_headers
         .get(ORIGIN)
@@ -74,20 +82,42 @@ fn cors_headers(request_headers: &HeaderMap, state: &AppState) -> HeaderMap {
     response_headers
 }
 
-async fn health(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
-    let timestamp = worker::js_sys::Date::new_0()
-        .to_iso_string()
-        .as_string()
-        .unwrap_or_default();
-    let response = HealthResponse::healthy(timestamp);
+async fn cors_middleware(
+    State(state): State<AppState>,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
+    let cors = cors_headers(request.headers(), &state);
+    let mut response = if request.method() == Method::OPTIONS {
+        let mut response = Response::new(Body::empty());
+        *response.status_mut() = StatusCode::NO_CONTENT;
+        response
+    } else {
+        next.run(request).await
+    };
 
-    (cors_headers(&headers, &state), axum::Json(response))
+    {
+        let headers = response.headers_mut();
+        for (key, value) in &cors {
+            headers.insert(key, value.clone());
+        }
+    }
+
+    response
 }
 
 fn router(state: AppState) -> Router {
     Router::new()
-        .route("/api/health", get(health))
-        .route("/api/health/detailed", get(health))
+        .route("/api/health", get(handlers::health))
+        .route("/api/health/status", get(handlers::health_status))
+        .route("/api/events", get(handlers::list_events))
+        .route("/api/categories", get(handlers::list_categories))
+        .route("/api/venues", get(handlers::list_venues))
+        .fallback(handlers::fallback)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            cors_middleware,
+        ))
         .with_state(state)
 }
 

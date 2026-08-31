@@ -67,9 +67,10 @@ INSERT OR IGNORE INTO event_categories (
     id, name, slug, description, icon, color, target_membership_tiers,
     typical_duration_hours, typical_capacity, is_active, sort_order, created_at, updated_at
 ) VALUES
-    (1, '私人晚宴', 'private-dining', '獨家私人晚宴體驗，由米其林主廚精心設計', 'chef-hat', '#D4AF37', '["Platinum", "Diamond", "Black Card"]', 4, '{"min": 6, "max": 12}', 1, 1, '2026-08-30T00:00:00.000Z', '2026-08-30T00:00:00.000Z'),
-    (2, '遊艇派對', 'yacht-parties', '豪華遊艇上的頂級社交聚會', 'anchor', '#1E40AF', '["Diamond", "Black Card"]', 6, '{"min": 10, "max": 30}', 1, 2, '2026-08-30T00:00:00.000Z', '2026-08-30T00:00:00.000Z'),
-    (3, '藝術鑑賞', 'art-appreciation', '私人畫廊與藝術收藏品鑑會', 'palette', '#7C2D12', '["Platinum", "Diamond", "Black Card"]', 3, '{"min": 8, "max": 15}', 1, 3, '2026-08-30T00:00:00.000Z', '2026-08-30T00:00:00.000Z');
+    (1, '私人晚宴', 'dinner', '獨家私人晚宴體驗，由米其林主廚精心設計', 'chef-hat', '#D4AF37', '["Platinum", "Diamond", "Black Card"]', 4, '{"min": 6, "max": 12}', 1, 1, '2026-08-30T00:00:00.000Z', '2026-08-30T00:00:00.000Z'),
+    (2, '遊艇派對', 'yacht', '豪華遊艇上的頂級社交聚會', 'anchor', '#1E40AF', '["Diamond", "Black Card"]', 6, '{"min": 10, "max": 30}', 1, 2, '2026-08-30T00:00:00.000Z', '2026-08-30T00:00:00.000Z'),
+    (3, '藝術沙龍', 'art', '私人畫廊與藝術收藏品鑑會', 'palette', '#7C2D12', '["Platinum", "Diamond", "Black Card"]', 3, '{"min": 8, "max": 15}', 1, 3, '2026-08-30T00:00:00.000Z', '2026-08-30T00:00:00.000Z'),
+    (4, '商務社交', 'business', '高淨值專業人士的商務交流場合', 'briefcase', '#334155', '["Platinum", "Diamond", "Black Card"]', 2, '{"min": 15, "max": 40}', 1, 4, '2026-08-30T00:00:00.000Z', '2026-08-30T00:00:00.000Z');
 
 INSERT OR IGNORE INTO events (
     id, title, slug, description, detailed_description,

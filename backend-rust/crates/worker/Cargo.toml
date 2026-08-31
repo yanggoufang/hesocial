@@ -11,5 +11,7 @@ crate-type = ["cdylib"]
 [dependencies]
 axum.workspace = true
 hesocial-core = { package = "core", path = "../core" }
+serde.workspace = true
+serde_json.workspace = true
 tower-service.workspace = true
 worker.workspace = true

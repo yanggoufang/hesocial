@@ -7,6 +7,9 @@ use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
+pub mod events;
+pub mod pagination;
+
 pub const JWT_EXPIRY_SECONDS: u64 = 7 * 24 * 60 * 60;
 
 type HmacSha256 = Hmac<Sha256>;
@@ -152,10 +155,10 @@ impl HealthResponse {
     pub fn healthy(timestamp: String) -> Self {
         Self {
             success: true,
-            message: "API health check passed (DuckDB)",
+            message: "API health check passed (D1)",
             timestamp,
             version: "1.0.0",
-            database: "duckdb",
+            database: "d1",
         }
     }
 }
