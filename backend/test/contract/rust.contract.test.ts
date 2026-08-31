@@ -17,7 +17,11 @@ defineContractTests({
   request,
   seededCredentials: SEEDED_ADMIN_CREDENTIALS,
   authImplemented: true,
-  adminStatsExpectation: 'unauthorized',
+  // Phase 7: /api/admin/database/stats and /api/users/* are ported, so the
+  // shared 401/200 auth flow and the user-management block run here too.
+  adminStatsExpectation: 'authenticated',
+  adminImplemented: true,
+  adminListImplemented: true,
   eventsImplemented: true,
   registrationsImplemented: true,
   participantsImplemented: true,

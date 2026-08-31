@@ -1,3 +1,4 @@
+#![allow(clippy::result_large_err)]
 //! Visitor-tracking write path + Analytics-Engine-backed read endpoints
 //! (Phase 2g Stage 2).
 //!

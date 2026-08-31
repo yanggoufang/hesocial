@@ -19,11 +19,26 @@ export const SEEDED_ADMIN_CREDENTIALS: SeededCredentials = {
   password: 'admin123',
 }
 
+// Plain `user`-role account seeded on both targets (D1 seed.sql and Express
+// ensureSeedUsers) — used to pin the 403 guard responses.
+export const SEEDED_PLATINUM_CREDENTIALS: SeededCredentials = {
+  email: 'test.platinum@example.com',
+  password: 'test123',
+}
+
 export interface ContractRunner {
   request: ContractRequest
   seededCredentials: SeededCredentials
   authImplemented?: boolean
   adminStatsExpectation?: 'authenticated' | 'not-implemented' | 'unauthorized'
+  adminImplemented?: boolean
+  // Rust-only: Express's `GET /api/users` always 500s (DuckDB COUNT(*) comes
+  // back as BigInt and `Math.ceil(total / limit)` throws "Cannot mix BigInt
+  // and other types"), and `stats/overview` always 500s (DuckDB's date()
+  // takes one argument, not the SQLite two-argument spelling). The Rust port
+  // implements the intended behavior, so list/stats assertions run there
+  // only — same split as the participants contract.
+  adminListImplemented?: boolean
   eventsImplemented?: boolean
   registrationsImplemented?: boolean
   participantsImplemented?: boolean
@@ -185,6 +200,243 @@ export const defineContractTests = (runner: ContractRunner): void => {
           tables: expect.any(Array),
         },
       })
+    })
+  })
+
+  describe('user management (Phase 7)', () => {
+    const adminTest = it.skipIf(runner.adminImplemented !== true)
+    const adminListTest = it.skipIf(runner.adminListImplemented !== true)
+    const adminToken = async () => {
+      const login = await postJson('/api/auth/login', runner.seededCredentials)
+      expect(login.response.status).toBe(200)
+      return login.body.data.token as string
+    }
+    const authHeaders = (token: string) => ({ authorization: `Bearer ${token}` })
+    const authedJson = (token: string) => ({
+      authorization: `Bearer ${token}`,
+      'content-type': 'application/json',
+    })
+
+    adminTest('rejects anonymous and non-admin callers', async () => {
+      const anonymous = await runner.request('/api/users')
+      expect(anonymous.response.status).toBe(401)
+      expect(anonymous.body).toMatchObject({ success: false })
+
+      const login = await postJson('/api/auth/login', SEEDED_PLATINUM_CREDENTIALS)
+      expect(login.response.status).toBe(200)
+      const token = login.body.data.token as string
+
+      const list = await runner.request('/api/users', { headers: authHeaders(token) })
+      expect(list.response.status).toBe(403)
+      expect(list.body).toMatchObject({ success: false, error: 'Admin access required' })
+
+      const roleChange = await runner.request('/api/users/any-id/role', {
+        method: 'POST',
+        headers: authedJson(token),
+        body: JSON.stringify({ role: 'admin' }),
+      })
+      expect(roleChange.response.status).toBe(403)
+      expect(roleChange.body).toMatchObject({
+        success: false,
+        error: 'Super admin access required',
+      })
+    })
+
+    adminListTest('lists users with pagination, filters, and the raw row shape', async () => {
+      const token = await adminToken()
+
+      const list = await runner.request('/api/users', { headers: authHeaders(token) })
+      expect(list.response.status).toBe(200)
+      expect(list.body).toMatchObject({
+        success: true,
+        pagination: { page: 1, limit: 20 },
+      })
+      expect(Array.isArray(list.body.data)).toBe(true)
+      expect(list.body.pagination.total).toBeGreaterThanOrEqual(2)
+
+      const adminRow = list.body.data.find(
+        (user: any) => user.email === runner.seededCredentials.email,
+      )
+      expect(adminRow).toMatchObject({
+        role: 'super_admin',
+        membership_tier: 'Black Card',
+        verification_status: 'approved',
+        is_verified: true,
+      })
+      expect(Array.isArray(adminRow.interests)).toBe(true)
+
+      const byRole = await runner.request('/api/users?role=super_admin', {
+        headers: authHeaders(token),
+      })
+      expect(byRole.response.status).toBe(200)
+      expect(byRole.body.data.length).toBeGreaterThanOrEqual(1)
+      for (const user of byRole.body.data) {
+        expect(user.role).toBe('super_admin')
+      }
+
+      const bySearch = await runner.request('/api/users?search=hesocial', {
+        headers: authHeaders(token),
+      })
+      expect(bySearch.response.status).toBe(200)
+      expect(bySearch.body.data.map((user: any) => user.email)).toContain(
+        runner.seededCredentials.email,
+      )
+
+      const byVerification = await runner.request('/api/users?verificationStatus=approved', {
+        headers: authHeaders(token),
+      })
+      expect(byVerification.response.status).toBe(200)
+      for (const user of byVerification.body.data) {
+        expect(user.verification_status).toBe('approved')
+      }
+    })
+
+    adminListTest('returns the user statistics overview', async () => {
+      const token = await adminToken()
+
+      const stats = await runner.request('/api/users/stats/overview', {
+        headers: authHeaders(token),
+      })
+      expect(stats.response.status).toBe(200)
+      expect(stats.body).toMatchObject({
+        success: true,
+        data: {
+          totalUsers: expect.any(Number),
+          usersByRole: expect.any(Array),
+          usersByMembershipTier: expect.any(Array),
+          usersByVerificationStatus: expect.any(Array),
+          recentRegistrations: expect.any(Number),
+        },
+      })
+      expect(stats.body.data.totalUsers).toBeGreaterThanOrEqual(2)
+    })
+
+    adminTest('supports the full fetch/update/verify/role/delete lifecycle', async () => {
+      const token = await adminToken()
+
+      const email = `admin-contract-${Date.now()}@example.com`
+      const registered = await postJson('/api/auth/register', {
+        email,
+        password: 'contract-password-123',
+        firstName: 'Contract',
+        lastName: 'Target',
+        age: 33,
+        profession: 'Auditor',
+        annualIncome: 6000000,
+        netWorth: 31000000,
+        bio: 'lifecycle fixture',
+        interests: ['testing'],
+      })
+      expect(registered.response.status).toBe(201)
+      const userId = String(registered.body.data.user.id)
+
+      const fetched = await runner.request(`/api/users/${userId}`, {
+        headers: authHeaders(token),
+      })
+      expect(fetched.response.status).toBe(200)
+      expect(fetched.body).toMatchObject({
+        success: true,
+        data: { email, first_name: 'Contract' },
+      })
+
+      const updated = await runner.request(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: authedJson(token),
+        body: JSON.stringify({ firstName: 'Updated', interests: ['contracts'] }),
+      })
+      expect(updated.response.status).toBe(200)
+      expect(updated.body).toMatchObject({
+        success: true,
+        message: 'User updated successfully',
+      })
+
+      const refetched = await runner.request(`/api/users/${userId}`, {
+        headers: authHeaders(token),
+      })
+      expect(refetched.body.data.first_name).toBe('Updated')
+      expect(refetched.body.data.interests).toEqual(['contracts'])
+
+      const empty = await runner.request(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: authedJson(token),
+        body: JSON.stringify({ unknownKey: 1 }),
+      })
+      expect(empty.response.status).toBe(400)
+      expect(empty.body).toMatchObject({
+        success: false,
+        error: 'No valid fields to update',
+      })
+
+      const badVerify = await runner.request(`/api/users/${userId}/verify`, {
+        method: 'POST',
+        headers: authedJson(token),
+        body: JSON.stringify({ status: 'maybe' }),
+      })
+      expect(badVerify.response.status).toBe(400)
+      expect(badVerify.body).toMatchObject({
+        success: false,
+        error: 'Invalid verification status',
+      })
+
+      const verified = await runner.request(`/api/users/${userId}/verify`, {
+        method: 'POST',
+        headers: authedJson(token),
+        body: JSON.stringify({ status: 'approved' }),
+      })
+      expect(verified.response.status).toBe(200)
+      expect(verified.body).toMatchObject({
+        success: true,
+        message: 'User verified successfully',
+      })
+
+      const afterVerify = await runner.request(`/api/users/${userId}`, {
+        headers: authHeaders(token),
+      })
+      expect(afterVerify.body.data).toMatchObject({
+        verification_status: 'approved',
+        is_verified: true,
+      })
+
+      const badRole = await runner.request(`/api/users/${userId}/role`, {
+        method: 'POST',
+        headers: authedJson(token),
+        body: JSON.stringify({ role: 'manager' }),
+      })
+      expect(badRole.response.status).toBe(400)
+      expect(badRole.body).toMatchObject({ success: false, error: 'Invalid role' })
+
+      const promoted = await runner.request(`/api/users/${userId}/role`, {
+        method: 'POST',
+        headers: authedJson(token),
+        body: JSON.stringify({ role: 'admin' }),
+      })
+      expect(promoted.response.status).toBe(200)
+      expect(promoted.body).toMatchObject({
+        success: true,
+        message: 'User role updated successfully',
+      })
+
+      const missing = await runner.request(
+        '/api/users/00000000-0000-4000-8000-000000000000',
+        { headers: authHeaders(token) },
+      )
+      expect(missing.response.status).toBe(404)
+      expect(missing.body).toMatchObject({ success: false, error: 'User not found' })
+
+      const deleted = await runner.request(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: authHeaders(token),
+      })
+      expect(deleted.response.status).toBe(200)
+      expect(deleted.body).toMatchObject({
+        success: true,
+        message: 'User deleted successfully',
+      })
+
+      const gone = await runner.request(`/api/users/${userId}`, {
+        headers: authHeaders(token),
+      })
+      expect(gone.response.status).toBe(404)
     })
   })
 

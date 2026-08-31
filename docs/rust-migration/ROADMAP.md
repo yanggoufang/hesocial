@@ -35,7 +35,7 @@
 | 3 | `/api/auth/*` zone route cutover,觀察 48h | 待開始 — 前置:`wrangler secret put JWT_SECRET`、fresh D1 佈建(validate blocker 已於 2b 解除) |
 | 4 | events CRUD + approval flow(統一新 schema;管理端點必輸出原始 price_* 欄位) | ✅ 2c 完成(`2fa5002`,2026-08-31):公開詳情 + create/update/delete + approve/reject/publish;rust contract 13/13 |
 | 5 | registrations/waitlist(D1 `batch()` 原子重構) | ✅ 2d 完成(2026-08-31):register/cancel/my-registrations + 滿額 waitlist/晉升原子化;rust contract 17/17;stats 兩端同步釘 500 |
-| 6+ | participants → sales → analytics(Analytics Engine/KV)→ media/admin | participants 2e、sales CRM 2f、analytics 2g 已完成;media 2h 已實作(2026-08-31):event image/document + venue image upload、event/venue list、owner/admin delete,R2 `MEDIA` binding + D1 metadata + multipart/MIME/10MiB validation;admin 待開始 |
+| 6+ | participants → sales → analytics(Analytics Engine/KV)→ media/admin | participants 2e、sales CRM 2f、analytics 2g 已完成;media 2h 已實作(2026-08-31):event image/document + venue image upload、event/venue list、owner/admin delete,R2 `MEDIA` binding + D1 metadata + multipart/MIME/10MiB validation;admin 2i 已完成(2026-09-01):`/api/users/*` 七端點 + `/api/admin/database/stats`,requireAdmin/requireSuperAdmin 對齊,backup/restore/cleanup/periodic-backup/checkpoint 維持 501 fallback(鎖定決策 #5) |
 | 終 | DuckDB→D1 資料搬移、Render API 下線、`backend/` 歸檔 | 待開始 |
 
 ## 已知技術債/陷阱(移植時處理)

@@ -1,3 +1,4 @@
+#![allow(clippy::result_large_err)]
 //! `/api/sales/*` — the sales CRM port of
 //! `backend/src/routes/salesManagement.ts` + `salesController.ts`.
 //!

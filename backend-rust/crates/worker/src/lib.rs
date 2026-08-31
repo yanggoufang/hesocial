@@ -1,3 +1,4 @@
+#![allow(clippy::result_large_err)]
 use axum::Json;
 use axum::Router;
 use axum::body::Body;
@@ -16,6 +17,7 @@ use tower_service::Service;
 use worker::send::SendFuture;
 use worker::{Context, Env, HttpRequest, Result, event};
 
+mod admin_handlers;
 mod analytics_d1_handlers;
 mod analytics_handlers;
 mod auth;
@@ -375,6 +377,26 @@ fn router(state: AppState) -> Router {
         .route(
             "/api/analytics/engagement/members",
             get(analytics_d1_handlers::members_engagement),
+        )
+        .route("/api/users", get(admin_handlers::list_users))
+        .route(
+            "/api/users/stats/overview",
+            get(admin_handlers::user_stats_overview),
+        )
+        .route(
+            "/api/users/{id}",
+            get(admin_handlers::get_user)
+                .put(admin_handlers::update_user)
+                .delete(admin_handlers::delete_user),
+        )
+        .route("/api/users/{id}/verify", post(admin_handlers::verify_user))
+        .route(
+            "/api/users/{id}/role",
+            post(admin_handlers::update_user_role),
+        )
+        .route(
+            "/api/admin/database/stats",
+            get(admin_handlers::database_stats),
         )
         .nest("/api/auth", auth_routes(&state))
         .fallback(handlers::fallback)

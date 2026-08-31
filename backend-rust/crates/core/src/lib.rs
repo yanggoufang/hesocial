@@ -7,6 +7,7 @@ use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
+pub mod admin;
 pub mod analytics;
 pub mod auth;
 pub mod event_management;

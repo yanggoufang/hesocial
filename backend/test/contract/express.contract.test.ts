@@ -413,6 +413,16 @@ defineContractTests({
   // references, and updating a lead that owns an opportunity 500s on the child
   // foreign key. See the salesFlowImplemented block in api.contract.ts.
   salesImplemented: true,
+  // The user-management routes are mounted live on Express (userManagement.ts)
+  // and the seeded accounts cover both guard tiers, so the Phase 7 guard and
+  // lifecycle assertions run dual-target. The list and stats tests stay
+  // rust-only (adminListImplemented unset): Express 500s them on live bugs —
+  // the list divides DuckDB's BigInt COUNT(*) by a number (`Math.ceil(total /
+  // limit)` throws), and stats/overview uses SQLite's two-argument
+  // date('now', '-30 days') spelling DuckDB rejects. adminStatsExpectation
+  // stays unset: Express already answers /api/admin/database/stats with the
+  // authenticated 200 flow.
+  adminImplemented: true,
 })
 
 defineAnalyticsContractTests({

@@ -1,3 +1,4 @@
+#![allow(clippy::result_large_err)]
 //! D1-backed analytics read endpoints (Phase 2g Stage 3).
 //!
 //! The remaining five Express analytics endpoints read `events`,

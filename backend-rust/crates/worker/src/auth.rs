@@ -1,3 +1,4 @@
+#![allow(clippy::result_large_err)]
 use axum::Json;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
