@@ -12,6 +12,7 @@ pub mod event_management;
 pub mod events;
 pub mod oauth;
 pub mod pagination;
+pub mod participants;
 pub mod pbkdf2;
 pub mod registrations;
 

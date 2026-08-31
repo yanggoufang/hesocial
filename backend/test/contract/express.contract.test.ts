@@ -199,4 +199,9 @@ defineContractTests({
   // writes are non-transactional, and there is no waitlist promotion. Keeping
   // this false also preserves the characterization target at 6 pass/7 skip.
   registrationsImplemented: false,
+  // The temp DB has the three participant tables, but it does not reproduce
+  // the live handler's required user privacy columns or the registration_id
+  // access join. The Express list also maps the DuckDB wrapper rather than
+  // result.rows, so seeded dual-target participant tests would currently 500.
+  participantsImplemented: false,
 })

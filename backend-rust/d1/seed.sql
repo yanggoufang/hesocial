@@ -153,7 +153,32 @@ INSERT OR IGNORE INTO registrations (
     (
         1, 2, '9c858901-8a57-4791-81fe-4c455b099bc9',
         'pending', 'member', 0,
-        NULL, 'TWD', 'pending',
+        NULL, 'TWD', 'paid',
         0, 0, 0,
         '2026-08-30T03:00:00.000Z', '2026-08-30T03:00:00.000Z'
     );
+
+-- Phase 2e participant-privacy fixture. The Platinum viewer has a paid
+-- registration-backed access row. The administrator is the visible level-1
+-- participant, so contracts exercise masking without weakening user defaults.
+INSERT OR IGNORE INTO event_participant_access (
+    id, user_id, event_id, registration_id, has_access, access_granted_at,
+    payment_status, access_level, created_at, updated_at
+) VALUES
+    (
+        1, '9c858901-8a57-4791-81fe-4c455b099bc9', 2, 1, 1,
+        '2026-08-30T03:05:00.000Z', 'paid', '3',
+        '2026-08-30T03:05:00.000Z', '2026-08-30T03:05:00.000Z'
+    ),
+    (
+        2, 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 2, NULL, 1,
+        '2026-08-30T03:05:00.000Z', 'paid', '4',
+        '2026-08-30T03:05:00.000Z', '2026-08-30T03:05:00.000Z'
+    );
+
+INSERT OR IGNORE INTO event_privacy_overrides (
+    id, user_id, event_id, privacy_level, allow_contact, show_in_list, created_at, updated_at
+) VALUES (
+    1, 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 2, 1, 1, 1,
+    '2026-08-30T03:05:00.000Z', '2026-08-30T03:05:00.000Z'
+);

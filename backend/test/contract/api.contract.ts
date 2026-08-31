@@ -26,6 +26,7 @@ export interface ContractRunner {
   adminStatsExpectation?: 'authenticated' | 'not-implemented' | 'unauthorized'
   eventsImplemented?: boolean
   registrationsImplemented?: boolean
+  participantsImplemented?: boolean
 }
 
 export const defineContractTests = (runner: ContractRunner): void => {
@@ -735,6 +736,153 @@ export const defineContractTests = (runner: ContractRunner): void => {
         )
         expect(promoted.response.status).toBe(200)
         expect(promoted.body.data.status).toBe('pending')
+      })
+    })
+  }
+
+  if (runner.participantsImplemented === true) {
+    describe('participant privacy (Phase 2e)', () => {
+      const authHeaders = (token: string) => ({ authorization: `Bearer ${token}` })
+      const authedJson = (token: string) => ({
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      })
+      const tokenFor = async (credentials: SeededCredentials) => {
+        const login = await postJson('/api/auth/login', credentials)
+        expect(login.response.status).toBe(200)
+        return login.body.data.token as string
+      }
+
+      it('rejects an anonymous participant-list request', async () => {
+        const result = await runner.request('/api/events/2/participants')
+        expect(result.response.status).toBe(401)
+        expect(result.body).toEqual({ success: false, error: 'Access token required' })
+      })
+
+      it('lets a paid registered participant view a privacy-masked list', async () => {
+        const token = await tokenFor({
+          email: 'test.platinum@example.com',
+          password: 'test123',
+        })
+        const access = await runner.request('/api/events/2/participant-access', {
+          headers: authHeaders(token),
+        })
+        expect(access.response.status).toBe(200)
+        expect(access.body).toMatchObject({
+          success: true,
+          data: {
+            hasAccess: true,
+            paymentRequired: false,
+            paymentStatus: 'paid',
+            registrationStatus: 'pending',
+            accessLevel: {
+              canViewParticipants: true,
+              maxPrivacyLevelVisible: 3,
+              canSeeContactInfo: false,
+              canInitiateContact: true,
+              accessLevel: 3,
+            },
+          },
+        })
+
+        const result = await runner.request('/api/events/2/participants?page=1&limit=20', {
+          headers: authHeaders(token),
+        })
+        expect(result.response.status).toBe(200)
+        expect(result.body).toMatchObject({
+          success: true,
+          data: {
+            participants: [{
+              id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+              displayName: 'Admin U.',
+              membershipTier: 'Black Card',
+              privacyLevel: 1,
+              profession: 'Professional',
+              interests: ['system administration'],
+              ageRange: '40-44',
+              canContact: true,
+            }],
+            totalCount: 1,
+            paidParticipantCount: 2,
+            unpaidParticipantCount: 0,
+            participantCountByTier: { Platinum: 1, 'Black Card': 1 },
+          },
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        })
+        expect(result.body.data.participants[0].company).toBeUndefined()
+        expect(result.body.data.participants[0].bio).toBeUndefined()
+        expect(result.body.data.participants[0].contactInfo).toBeUndefined()
+      })
+
+      it('sets and gets only the authenticated owner privacy override', async () => {
+        const member = await tokenFor({
+          email: 'test.platinum@example.com',
+          password: 'test123',
+        })
+        const admin = await tokenFor(runner.seededCredentials)
+        const updated = await runner.request('/api/events/1/privacy-settings', {
+          method: 'PUT',
+          headers: authedJson(member),
+          body: JSON.stringify({ privacyLevel: 2, allowContact: false, showInList: false }),
+        })
+        expect(updated.response.status).toBe(200)
+        expect(updated.body).toEqual({
+          success: true,
+          message: 'Privacy settings updated successfully',
+        })
+
+        const own = await runner.request('/api/events/1/privacy-settings', {
+          headers: authHeaders(member),
+        })
+        expect(own.response.status).toBe(200)
+        expect(own.body).toEqual({
+          success: true,
+          data: { privacy_level: 2, allow_contact: false, show_in_list: false },
+        })
+
+        const otherUser = await runner.request('/api/events/1/privacy-settings', {
+          headers: authHeaders(admin),
+        })
+        expect(otherUser.response.status).toBe(200)
+        expect(otherUser.body).toEqual({
+          success: true,
+          data: { privacy_level: 5, allow_contact: true, show_in_list: true },
+        })
+      })
+
+      it('denies participant access without a paid event access record', async () => {
+        const token = await tokenFor({
+          email: 'test.platinum@example.com',
+          password: 'test123',
+        })
+        const result = await runner.request('/api/events/1/participant-access', {
+          headers: authHeaders(token),
+        })
+        expect(result.response.status).toBe(200)
+        expect(result.body).toMatchObject({
+          success: true,
+          data: {
+            hasAccess: false,
+            paymentRequired: true,
+            paymentStatus: 'none',
+            registrationStatus: 'none',
+            accessLevel: {
+              canViewParticipants: false,
+              maxPrivacyLevelVisible: 0,
+              canInitiateContact: false,
+            },
+          },
+        })
+
+        const details = await runner.request(
+          '/api/events/1/participants/f47ac10b-58cc-4372-a567-0e02b2c3d479',
+          { headers: authHeaders(token) },
+        )
+        expect(details.response.status).toBe(403)
+        expect(details.body).toEqual({
+          success: false,
+          error: 'Access denied - payment required to view participants',
+        })
       })
     })
   }
