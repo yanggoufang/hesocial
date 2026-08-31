@@ -1,0 +1,8 @@
+name = "hesocial-backend-rust"
+main = "crates/worker/build/worker/shim.mjs"
+compatibility_date = "2026-08-22"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hesocial-db"
+database_id = "00000000-0000-0000-0000-000000000000"

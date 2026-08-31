@@ -12,6 +12,7 @@
     "lint:fix": "eslint src test --ext .ts --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:contract:rust": "vitest run --config vitest.workers.config.ts",
     "test:coverage": "vitest run --coverage",
     "seed": "tsx src/database/seed.ts",
     "migrate": "tsx src/database/migrations/cli.ts",
@@ -52,6 +53,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.3",
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
     "@types/compression": "^1.7.3",
     "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.14",
@@ -73,7 +75,7 @@
     "supertest": "^6.3.3",
     "tsx": "^3.12.8",
     "typescript": "^5.2.2",
-    "vitest": "^0.34.6"
+    "vitest": "^4.1.0"
   },
   "engines": {
     "node": ">=22.0.0"

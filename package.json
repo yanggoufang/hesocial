@@ -25,6 +25,7 @@
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "cd frontend && npm run test",
     "test:backend": "cd backend && npm run test",
+    "test:contract:rust": "cd backend && npm run test:contract:rust",
     "test:rust": "cd backend-rust && cargo test -p core",
     "test:coverage": "npm run test:frontend:coverage && npm run test:backend:coverage",
     "test:frontend:coverage": "cd frontend && npm run test:coverage",

@@ -1,5 +1,7 @@
 -- HeSocial D1 seed - Rust migration Phase 0.5
 -- Idempotent: INSERT OR IGNORE everywhere, safe to re-run.
+-- Convention: no ';' inside string literals — the contract-test loader
+-- (backend/test/contract/rust.setup.ts) splits statements on ';'.
 --
 -- Accounts use the EXACT bcrypt hashes from
 -- backend/src/database/duckdb-connection.ts (ensureSeedUsers):
