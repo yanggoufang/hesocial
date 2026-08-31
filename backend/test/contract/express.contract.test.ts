@@ -12,6 +12,7 @@ import {
   type ContractRequest,
 } from './api.contract.js'
 import { defineAnalyticsContractTests } from './analytics.contract.js'
+import { defineMediaContractTests } from './media.contract.js'
 
 let server: Server | undefined
 let baseUrl: string | undefined
@@ -419,4 +420,13 @@ defineAnalyticsContractTests({
   seededCredentials: SEEDED_ADMIN_CREDENTIALS,
   analyticsImplemented: true,
   trackingRequiresAdmin: true,
+})
+
+// The characterization target has no isolated R2 credentials/binding. Its
+// live media behavior was read directly; the executable R2 flow runs against
+// Miniflare on the Rust target.
+defineMediaContractTests({
+  request,
+  seededCredentials: SEEDED_ADMIN_CREDENTIALS,
+  mediaImplemented: false,
 })

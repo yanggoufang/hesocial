@@ -10,7 +10,7 @@ use axum::http::header::{
 use axum::http::{HeaderMap, HeaderValue, Method, Request, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post, put};
+use axum::routing::{delete, get, post, put};
 use serde_json::json;
 use tower_service::Service;
 use worker::send::SendFuture;
@@ -22,6 +22,7 @@ mod auth;
 mod auth_handlers;
 mod event_handlers;
 mod handlers;
+mod media_handlers;
 mod oauth_handlers;
 mod participant_handlers;
 mod registration_handlers;
@@ -275,6 +276,30 @@ fn router(state: AppState) -> Router {
         )
         .route("/api/categories", get(handlers::list_categories))
         .route("/api/venues", get(handlers::list_venues))
+        .route(
+            "/api/media/events/{event_id}/images",
+            post(media_handlers::upload_event_images),
+        )
+        .route(
+            "/api/media/events/{event_id}/documents",
+            post(media_handlers::upload_event_documents),
+        )
+        .route(
+            "/api/media/events/{event_id}",
+            get(media_handlers::get_event_media),
+        )
+        .route(
+            "/api/media/venues/{venue_id}/images",
+            post(media_handlers::upload_venue_images),
+        )
+        .route(
+            "/api/media/venues/{venue_id}",
+            get(media_handlers::get_venue_media),
+        )
+        .route(
+            "/api/media/{media_id}",
+            delete(media_handlers::delete_media),
+        )
         .route(
             "/api/sales/leads",
             get(sales_handlers::list_leads).post(sales_handlers::create_lead),

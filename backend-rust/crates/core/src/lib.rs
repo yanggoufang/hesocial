@@ -11,6 +11,7 @@ pub mod analytics;
 pub mod auth;
 pub mod event_management;
 pub mod events;
+pub mod media;
 pub mod oauth;
 pub mod pagination;
 pub mod participants;

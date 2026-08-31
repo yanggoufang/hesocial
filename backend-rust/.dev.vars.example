@@ -9,3 +9,6 @@ GOOGLE_CLIENT_SECRET=
 # compiled-in stub fixture (no token/account id needed).
 CLOUDFLARE_ACCOUNT_ID=
 CLOUDFLARE_API_TOKEN=
+# Public custom domain or r2.dev origin for image URLs. R2 access itself uses
+# the MEDIA binding in wrangler.toml, not S3 credentials.
+R2_PUBLIC_URL=https://media.hesocial.com

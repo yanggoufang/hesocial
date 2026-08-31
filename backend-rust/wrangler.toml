@@ -12,11 +12,20 @@ NODE_ENV = "development"
 # secret (wrangler secret put / .dev.vars); ANALYTICS_QUERY_STUB=true swaps
 # every analytics read to a compiled-in stub for local dev / contract tests.
 CLOUDFLARE_ACCOUNT_ID = "replace-with-your-cloudflare-account-id"
+# Public custom domain (or r2.dev URL) used in image response fields. Private
+# documents remain R2 keys and are never exposed by the public list route.
+R2_PUBLIC_URL = "https://media.hesocial.com"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "hesocial-db"
 database_id = "00000000-0000-0000-0000-000000000000"
+
+# Phase media: direct Workers API access; no S3 credentials are needed in the
+# isolate because the binding itself grants access.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "hesocial-media"
 
 [[ratelimits]]
 name = "RATE_LIMITER"

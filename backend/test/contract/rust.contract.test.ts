@@ -5,6 +5,7 @@ import {
   type ContractRequest,
 } from './api.contract.js'
 import { defineAnalyticsContractTests } from './analytics.contract.js'
+import { defineMediaContractTests } from './media.contract.js'
 
 const request: ContractRequest = async (path, init) => {
   const response = await workerExports.default.fetch(`http://example.com${path}`, init)
@@ -29,4 +30,10 @@ defineAnalyticsContractTests({
   seededCredentials: SEEDED_ADMIN_CREDENTIALS,
   analyticsImplemented: true,
   trackingRequiresAdmin: false,
+})
+
+defineMediaContractTests({
+  request,
+  seededCredentials: SEEDED_ADMIN_CREDENTIALS,
+  mediaImplemented: true,
 })

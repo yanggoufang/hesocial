@@ -9,11 +9,17 @@ JWT_SECRET = "contract-harness-secret-0123456789abcdef"
 # Compile-in deterministic Analytics Engine rows for contract reads.
 ANALYTICS_QUERY_STUB = "true"
 CLOUDFLARE_ACCOUNT_ID = "contract-account"
+R2_PUBLIC_URL = "https://media.hesocial.test"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "hesocial-db"
 database_id = "00000000-0000-0000-0000-000000000000"
+
+# Miniflare supplies an isolated local R2 bucket to the contract harness.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "hesocial-media"
 
 [[ratelimits]]
 name = "RATE_LIMITER"
