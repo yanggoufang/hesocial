@@ -30,8 +30,8 @@
 |---|---|---|
 | 0 | backend-rust spike:workspace + `/api/health` parity + HS256/bcrypt 相容性 proof | ✅ 已完成(commit `3b6454b`) |
 | 0.5 | `d1/schema.sql` + `d1/seed.sql` + contract test 雙 target harness(express 先回歸綠) | ✅ schema/seed 已落地並實證;contract harness 併入 Phase 1 首項 |
-| 1 | contract 雙 target harness(前置:vitest 0.34→4 升級)→ 唯讀公開端點:`/api/health/*`、`GET /api/events`、`/categories`、`/venues` | 待開始 |
-| 2 | auth(register/login/profile/refresh/logout + bcrypt→PBKDF2)+ RBAC + rate limiting binding | 待開始 |
+| 1 | contract 雙 target harness(1b)+ 唯讀公開端點(1a) | ✅ 已完成(`883185e` + `88877c6`);rust contract target 實跑:2 passed + 3 skipped(auth 待 Phase 2) |
+| 2 | auth(register/login/profile/refresh/logout + bcrypt→PBKDF2)+ RBAC + rate limiting binding | 2a 已完成(2026-08-31):contract 3 條 auth 翻綠、adminStatsExpectation 升級為 `unauthorized`;剩 authenticated-200 那一段(Phase 7 端點移植後)與 Phase 3 cutover |
 | 3 | `/api/auth/*` zone route cutover,觀察 48h | 待開始 |
 | 4 | events CRUD + approval flow(統一新 schema) | 待開始 |
 | 5 | registrations/waitlist(D1 `batch()` 原子重構) | 待開始 |
@@ -63,6 +63,15 @@
 
 ## 未決事項
 
+- **Phase 3 cutover 前必辦:production secret**:`wrangler secret put JWT_SECRET`(worker 端缺它時所有簽發 token 的端點會 500,與 Express 在 production 啟動即硬失敗等價,是 fail-closed)。`JWT_EXPIRES_IN`(7d/12h/900s/30m/1w,預設 7d)與 `AUTH_RATE_LIMIT_DISABLED=true`(關掉 /api/auth/* 的 rate limiter)是選配 var;contract harness 用的 dummy secret 只寫在 `wrangler.test.toml`
+- **rate limiting 上限無法用 env 配置**:workerd 的 ratelimit binding 的 `simple.period` 只允許 10 或 60 秒(900s 不可行),數值上限寫死在 binding 設定。生產 `wrangler.toml` 用 **2 次/60s**(最壞 30 次/15min,對齊 Express 預設 20/15min 的量級;K3 審查指出原先 100/60 是 ~450x 的爆破預算放寬);契約測試會在同一分鐘打 4+ 次 auth,所以 `wrangler.test.toml` 刻意放寬為 100/60 — 兩檔分離是刻意的。路徑覆蓋整個 `/api/auth/*`(Express 只限 login/register,profile/refresh/logout 在 worker 共用同一 bucket,NAT 後 token-refresh 迴圈可能誤 429)。`AUTH_RATE_LIMIT_DISABLED=true` 是 env 開關;binding 缺失或 `limit()` 出錯時也 fail-open。要 env 化上限得改用 DO/KV 自計數
+- **Phase 3 cutover 前必辦(2):port `/api/auth/validate`** — 前端 boot 路徑耦合(`useAuth.tsx:46-56` 有 token 就呼叫,非 success 就 logout);501 會讓所有回訪用戶在切流後第一次載入頁面時被登出。端點很小(authenticate + `{user, valid:true}`),排入 Phase 2b
+- **Phase 3 cutover 前必辦(3):D1 佈建假設** — `password_algo` 等新欄位只存在於 `d1/schema.sql` 的 `CREATE TABLE`;cutover 必須對**全新 D1** 套 schema + 資料搬移,不能指向已存在舊表的 D1(否則 SELECT 不存在的欄位,所有登入與認證請求 500)
+- **`JWT_EXPIRES_IN` 設了但不合法時 silent fallback 到 7d**(Express 會採用該值)— 可接受的 fail-closed,但設定漂移無人會察覺;接受的拼法:`7d|12h|900s|30m|1w`(不含 `1h30m`/`1.5h`/負數)
+- **Rust 驗 JWT 時要求 `iat` 必填**(比 Express 嚴)— jsonwebtoken 預設必發 `iat`,interop fixture 已證實;之後遇到神秘 401 先想到這條(已記於此,不必另查)
+- **`/api/auth/*` 未移植的端點**:`PUT /api/auth/profile`(updateProfile)、`GET/POST /api/auth/validate`、`/api/auth/google*`(Phase 2b)、`/api/auth/linkedin*` — 目前都落進 501 fallback
+- **pbkdf2 在 worker 內走純 Rust(非 WebCrypto)**:與 host 共用 `core::pbkdf2` 單一實作,wire format 不可能漂移;代價是每次 hash 純 CPU 100k 輪 HMAC-SHA256(登入轉換時是 bcrypt verify + PBKDF2 兩次)。若 Paid plan CPU 觀察到壓力,再評估 WebCrypto `deriveBits` 雙實作 + fixture 互證
+- **register/login 的 JSON body 解析**:Rust 端非 JSON body / 非 JSON content-type 由 axum 的 Json rejection 回 400 純文字,Express 是 400 HTML;契約未覆蓋,留下
 - **exclusivityLevel 過濾在 Rust 端暫不支援**(統一 schema 無對應欄位)— 前端 EventsPage 的級別選擇器送出的參數不會過濾、badges 顯示 null。需要產品決策:映射到 `required_membership_tiers`,或前端改版
 - git 歷史清洗(hesocial.duckdb 的 5 個歷史 commit)— 需 force push 決策
 - Google OAuth callback 的 state 改 HttpOnly cookie(passport→手寫 code flow)

@@ -13,3 +13,8 @@ NODE_ENV = "development"
 binding = "DB"
 database_name = "hesocial-db"
 database_id = "00000000-0000-0000-0000-000000000000"
+
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 2, period = 60 }

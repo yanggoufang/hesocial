@@ -23,7 +23,7 @@ export interface ContractRunner {
   request: ContractRequest
   seededCredentials: SeededCredentials
   authImplemented?: boolean
-  adminStatsExpectation?: 'authenticated' | 'not-implemented'
+  adminStatsExpectation?: 'authenticated' | 'not-implemented' | 'unauthorized'
 }
 
 export const defineContractTests = (runner: ContractRunner): void => {
@@ -107,6 +107,16 @@ export const defineContractTests = (runner: ContractRunner): void => {
 
     it('protects database stats and permits an authenticated administrator', async () => {
       const unauthenticated = await runner.request('/api/admin/database/stats')
+
+      if (runner.adminStatsExpectation === 'unauthorized') {
+        // TODO(Phase 7): assert the authenticated-200 leg once the admin
+        // database stats endpoint is ported. The auth middleware already guards
+        // /api/admin/* ahead of the 501 fallback, so an unauthenticated caller
+        // must be rejected before it ever reaches the fallback.
+        expect([401, 403]).toContain(unauthenticated.response.status)
+        expect(unauthenticated.body).toMatchObject({ success: false })
+        return
+      }
 
       if (runner.adminStatsExpectation === 'not-implemented') {
         // TODO(Phase 2): upgrade this contract to the shared 401/200 auth flow.

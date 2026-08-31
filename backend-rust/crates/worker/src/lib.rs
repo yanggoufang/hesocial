@@ -1,21 +1,32 @@
+use axum::Json;
 use axum::Router;
 use axum::body::Body;
 use axum::extract::State;
+use axum::http::HeaderName;
 use axum::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN, ORIGIN, VARY,
 };
 use axum::http::{HeaderMap, HeaderValue, Method, Request, StatusCode};
 use axum::middleware::{self, Next};
-use axum::response::Response;
-use axum::routing::get;
+use axum::response::{IntoResponse, Response};
+use axum::routing::{get, post};
+use serde_json::json;
 use tower_service::Service;
+use worker::send::SendFuture;
 use worker::{Context, Env, HttpRequest, Result, event};
 
+mod auth;
+mod auth_handlers;
 mod handlers;
 
 const DEFAULT_CORS_ORIGIN: &str = "http://localhost:3000";
 const EXTRA_CORS_ORIGINS: [&str; 2] = ["http://127.0.0.1:3000", "http://localhost:5000"];
+
+const RATE_LIMITER_BINDING: &str = "RATE_LIMITER";
+const RATE_LIMITER_DISABLED_ENV: &str = "AUTH_RATE_LIMIT_DISABLED";
+const RATE_LIMITER_KEY_HEADER: HeaderName = HeaderName::from_static("cf-connecting-ip");
+const RATE_LIMITER_UNKEYED_CLIENT: &str = "unknown";
 
 #[derive(Clone)]
 pub struct AppState {
@@ -106,6 +117,66 @@ async fn cors_middleware(
     response
 }
 
+fn rate_limiter_disabled(state: &AppState) -> bool {
+    state
+        .env
+        .var(RATE_LIMITER_DISABLED_ENV)
+        .is_ok_and(|value| value.to_string() == "true")
+}
+
+fn too_many_requests() -> Response {
+    (
+        StatusCode::TOO_MANY_REQUESTS,
+        Json(json!({
+            "success": false,
+            "error": "Too many requests, please try again later."
+        })),
+    )
+        .into_response()
+}
+
+async fn apply_auth_rate_limit(state: AppState, request: Request<Body>, next: Next) -> Response {
+    if rate_limiter_disabled(&state) {
+        return next.run(request).await;
+    }
+
+    let Ok(limiter) = state.env.rate_limiter(RATE_LIMITER_BINDING) else {
+        return next.run(request).await;
+    };
+
+    let client = request
+        .headers()
+        .get(RATE_LIMITER_KEY_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .map_or_else(|| RATE_LIMITER_UNKEYED_CLIENT.to_owned(), str::to_owned);
+
+    match limiter.limit(client).await {
+        Ok(outcome) if !outcome.success => too_many_requests(),
+        _ => next.run(request).await,
+    }
+}
+
+async fn auth_rate_limit_middleware(
+    State(state): State<AppState>,
+    request: Request<Body>,
+    next: Next,
+) -> Response {
+    SendFuture::new(apply_auth_rate_limit(state, request, next)).await
+}
+
+fn auth_routes(state: &AppState) -> Router<AppState> {
+    Router::new()
+        .route("/register", post(auth_handlers::register))
+        .route("/login", post(auth_handlers::login))
+        .route("/profile", get(auth_handlers::profile))
+        .route("/refresh", post(auth_handlers::refresh))
+        .route("/logout", post(auth_handlers::logout))
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth_rate_limit_middleware,
+        ))
+}
+
 fn router(state: AppState) -> Router {
     Router::new()
         .route("/api/health", get(handlers::health))
@@ -113,6 +184,7 @@ fn router(state: AppState) -> Router {
         .route("/api/events", get(handlers::list_events))
         .route("/api/categories", get(handlers::list_categories))
         .route("/api/venues", get(handlers::list_venues))
+        .nest("/api/auth", auth_routes(&state))
         .fallback(handlers::fallback)
         .layer(middleware::from_fn_with_state(
             state.clone(),

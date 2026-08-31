@@ -2,6 +2,7 @@
 -- Source of truth: docs/rust-migration/ROADMAP.md
 --
 -- Locked decisions applied here:
+--   #1  users.password_algo routes bcrypt -> PBKDF2 lazy rehash on login
 --   #2  events uses the unified event-management shape
 --   #3  visitor_sessions / visitor_page_views / visitor_events are NOT here
 --       (analytics -> Cloudflare Analytics Engine / KV in Phase 6)
@@ -34,6 +35,7 @@ CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    password_algo TEXT NOT NULL DEFAULT 'bcrypt',
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     age INTEGER NOT NULL CHECK (age >= 18 AND age <= 100),

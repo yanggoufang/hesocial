@@ -19,6 +19,7 @@ use worker::send::SendFuture;
 use worker::wasm_bindgen::JsValue;
 
 use crate::AppState;
+use crate::auth::{authenticate, require_admin, require_super_admin};
 
 const EVENT_SELECT: &str = "SELECT e.id AS id, e.title AS name, e.description AS description, e.start_datetime AS \"dateTime\", e.registration_closes_at AS \"registrationDeadline\", e.price_platinum AS price_platinum, e.price_diamond AS price_diamond, e.price_black_card AS price_black_card, e.currency AS pricing_currency, e.dress_code AS \"dressCode\", e.capacity_max AS capacity, e.current_registrations AS \"currentAttendees\", e.gallery_images AS images, e.special_requirements AS requirements, e.created_at AS \"createdAt\", e.updated_at AS \"updatedAt\", v.name AS \"venueName\", v.address AS \"venueAddress\", v.city AS \"venueCity\", v.rating AS \"venueRating\", v.amenities AS \"venueAmenities\", ec.name AS \"categoryName\", ec.icon AS \"categoryIcon\", (u.first_name || ' ' || u.last_name) AS \"organizerName\" FROM events e JOIN venues v ON e.venue_id = v.id JOIN event_categories ec ON e.category_id = ec.id JOIN users u ON e.organizer_id = u.id";
 
@@ -279,9 +280,27 @@ async fn list_venues_inner(state: AppState, params: HashMap<String, String>) -> 
     success_with_data(rows.iter().map(venue_list_item_json).collect())
 }
 
-pub async fn fallback(request: Request<Body>) -> Response {
+pub async fn fallback(State(state): State<AppState>, request: Request<Body>) -> Response {
     let path = request.uri().path().to_owned();
     let method = request.method().as_str().to_owned();
+
+    if path == "/api/admin" || path.starts_with("/api/admin/") {
+        let guard = SendFuture::new(async {
+            authenticate(&state, request.headers())
+                .await
+                .and_then(|user| {
+                    if path == "/api/admin/restore" {
+                        require_super_admin(&user).map(|()| user)
+                    } else {
+                        require_admin(&user).map(|()| user)
+                    }
+                })
+        })
+        .await;
+        if let Err(response) = guard {
+            return response;
+        }
+    }
 
     if path.starts_with("/api") {
         return (

@@ -14,6 +14,6 @@ const request: ContractRequest = async (path, init) => {
 defineContractTests({
   request,
   seededCredentials: SEEDED_ADMIN_CREDENTIALS,
-  authImplemented: false,
-  adminStatsExpectation: 'not-implemented',
+  authImplemented: true,
+  adminStatsExpectation: 'unauthorized',
 })

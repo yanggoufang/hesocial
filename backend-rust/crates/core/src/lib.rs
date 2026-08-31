@@ -7,8 +7,10 @@ use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
+pub mod auth;
 pub mod events;
 pub mod pagination;
+pub mod pbkdf2;
 
 pub const JWT_EXPIRY_SECONDS: u64 = 7 * 24 * 60 * 60;
 
@@ -20,6 +22,7 @@ pub struct JwtPayload {
     pub user_id: String,
     pub email: String,
     pub membership_tier: String,
+    pub iat: u64,
     pub exp: u64,
 }
 
@@ -30,13 +33,54 @@ impl JwtPayload {
         membership_tier: impl Into<String>,
         issued_at: u64,
     ) -> Self {
+        Self::with_expiry(
+            user_id,
+            email,
+            membership_tier,
+            issued_at,
+            JWT_EXPIRY_SECONDS,
+        )
+    }
+
+    pub fn with_expiry(
+        user_id: impl Into<String>,
+        email: impl Into<String>,
+        membership_tier: impl Into<String>,
+        issued_at: u64,
+        expiry_seconds: u64,
+    ) -> Self {
         Self {
             user_id: user_id.into(),
             email: email.into(),
             membership_tier: membership_tier.into(),
-            exp: issued_at + JWT_EXPIRY_SECONDS,
+            iat: issued_at,
+            exp: issued_at + expiry_seconds,
         }
     }
+}
+
+pub fn parse_jwt_expiry(raw: &str) -> Option<u64> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    let digits = raw.chars().take_while(char::is_ascii_digit).count();
+    if digits == 0 {
+        return None;
+    }
+    let value = raw[..digits].parse::<u64>().ok()?;
+    if value == 0 {
+        return None;
+    }
+    let multiplier = match raw[digits..].trim() {
+        "" | "s" => 1,
+        "m" => 60,
+        "h" => 60 * 60,
+        "d" => 24 * 60 * 60,
+        "w" => 7 * 24 * 60 * 60,
+        _ => return None,
+    };
+    value.checked_mul(multiplier)
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -122,8 +166,16 @@ pub fn verify_password(password: &str, hash: &str) -> bool {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum ApiEnvelope<T> {
-    Success { success: bool, data: T },
-    Error { success: bool, error: String },
+    Success {
+        success: bool,
+        data: T,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        message: Option<String>,
+    },
+    Error {
+        success: bool,
+        error: String,
+    },
 }
 
 impl<T> ApiEnvelope<T> {
@@ -131,6 +183,15 @@ impl<T> ApiEnvelope<T> {
         Self::Success {
             success: true,
             data,
+            message: None,
+        }
+    }
+
+    pub fn success_with_message(data: T, message: impl Into<String>) -> Self {
+        Self::Success {
+            success: true,
+            data,
+            message: Some(message.into()),
         }
     }
 
@@ -183,6 +244,7 @@ mod tests {
         let verified = verify_jwt(&token, "test-secret", issued_at).expect("JWT should verify");
 
         assert_eq!(verified, payload);
+        assert_eq!(verified.iat, issued_at);
         assert_eq!(verified.exp, issued_at + 604_800);
 
         let encoded_payload = token.split('.').nth(1).expect("JWT payload segment");
@@ -197,6 +259,7 @@ mod tests {
                 "userId": "1000",
                 "email": "admin@hesocial.com",
                 "membershipTier": "Black Card",
+                "iat": issued_at,
                 "exp": issued_at + 604_800,
             })
         );
@@ -221,5 +284,92 @@ mod tests {
             serde_json::to_string(&error).expect("error envelope"),
             r#"{"success":false,"error":"Not found"}"#
         );
+    }
+
+    #[test]
+    fn auth_envelopes_carry_the_express_message_field() {
+        let with_message =
+            ApiEnvelope::success_with_message(json!({ "token": "jwt" }), "Login successful");
+        let error = ApiEnvelope::<serde_json::Value>::error("Invalid email or password");
+
+        assert_eq!(
+            serde_json::to_string(&with_message).expect("message envelope"),
+            r#"{"success":true,"data":{"token":"jwt"},"message":"Login successful"}"#
+        );
+        assert_eq!(
+            serde_json::to_string(&error).expect("error envelope"),
+            r#"{"success":false,"error":"Invalid email or password"}"#
+        );
+    }
+
+    #[test]
+    fn jsonwebtoken_signed_fixture_verifies_and_round_trips_bit_for_bit() {
+        let express_token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNDdhYzEwYi01OGNjLTQzNzItYTU2Ny0wZTAyYjJjM2Q0NzkiLCJlbWFpbCI6ImFkbWluQGhlc29jaWFsLmNvbSIsIm1lbWJlcnNoaXBUaWVyIjoiQmxhY2sgQ2FyZCIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNzAwMDYwNDgwfQ.7zCFaXQqWIEMI8-_k8Mh2rWKfGHUnIHP6bhMUohOqjc";
+        let issued_at = 1_700_000_000;
+
+        let claims =
+            verify_jwt(express_token, "test-secret", issued_at).expect("Express token verifies");
+        assert_eq!(
+            claims,
+            JwtPayload::with_expiry(
+                "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+                "admin@hesocial.com",
+                "Black Card",
+                issued_at,
+                60_480
+            )
+        );
+
+        let rust_signed = sign_jwt(
+            &JwtPayload::with_expiry(
+                "1000",
+                "admin@hesocial.com",
+                "Black Card",
+                issued_at,
+                60_480,
+            ),
+            "test-secret",
+        )
+        .expect("JWT should serialize");
+        assert_eq!(
+            rust_signed,
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMDAwIiwiZW1haWwiOiJhZG1pbkBoZXNvY2lhbC5jb20iLCJtZW1iZXJzaGlwVGllciI6IkJsYWNrIENhcmQiLCJpYXQiOjE3MDAwMDAwMDAsImV4cCI6MTcwMDA2MDQ4MH0.jS3uqD_FS5pUnpFhajJRfgcBPy1luxtB5vkyFeTDP1Q"
+        );
+    }
+
+    #[test]
+    fn jwt_expiry_accepts_the_jsonwebtoken_duration_spellings() {
+        assert_eq!(parse_jwt_expiry("7d"), Some(7 * 24 * 60 * 60));
+        assert_eq!(parse_jwt_expiry("12h"), Some(12 * 60 * 60));
+        assert_eq!(parse_jwt_expiry("900s"), Some(900));
+        assert_eq!(parse_jwt_expiry("30m"), Some(30 * 60));
+        assert_eq!(parse_jwt_expiry("1w"), Some(7 * 24 * 60 * 60));
+        assert_eq!(parse_jwt_expiry(" 7d "), Some(7 * 24 * 60 * 60));
+        assert_eq!(parse_jwt_expiry("604800"), Some(604_800));
+    }
+
+    #[test]
+    fn jwt_expiry_rejects_unsupported_or_degenerate_values() {
+        assert_eq!(parse_jwt_expiry(""), None);
+        assert_eq!(parse_jwt_expiry("d"), None);
+        assert_eq!(parse_jwt_expiry("0d"), None);
+        assert_eq!(parse_jwt_expiry("-5m"), None);
+        assert_eq!(parse_jwt_expiry("1h30m"), None);
+        assert_eq!(parse_jwt_expiry("fortnight"), None);
+        assert_eq!(parse_jwt_expiry("1.5h"), None);
+    }
+
+    #[test]
+    fn configured_expiry_changes_only_the_expiration_claim() {
+        let issued_at = 1_700_000_000;
+        let payload = JwtPayload::with_expiry("1000", "a@b.c", "Diamond", issued_at, 12 * 60 * 60);
+
+        assert_eq!(payload.iat, issued_at);
+        assert_eq!(payload.exp, issued_at + 12 * 60 * 60);
+
+        let token = sign_jwt(&payload, "test-secret").expect("JWT should serialize");
+        let claims = verify_jwt(&token, "test-secret", issued_at).expect("JWT should verify");
+        assert_eq!(claims.exp, issued_at + 12 * 60 * 60);
+        assert!(verify_jwt(&token, "test-secret", issued_at + 12 * 60 * 60).is_err());
     }
 }
