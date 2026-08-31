@@ -9,6 +9,7 @@ use sha2::Sha256;
 
 pub mod auth;
 pub mod events;
+pub mod oauth;
 pub mod pagination;
 pub mod pbkdf2;
 

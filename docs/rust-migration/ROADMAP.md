@@ -31,9 +31,9 @@
 | 0 | backend-rust spike:workspace + `/api/health` parity + HS256/bcrypt 相容性 proof | ✅ 已完成(commit `3b6454b`) |
 | 0.5 | `d1/schema.sql` + `d1/seed.sql` + contract test 雙 target harness(express 先回歸綠) | ✅ schema/seed 已落地並實證;contract harness 併入 Phase 1 首項 |
 | 1 | contract 雙 target harness(1b)+ 唯讀公開端點(1a) | ✅ 已完成(`883185e` + `88877c6`);rust contract target 實跑:2 passed + 3 skipped(auth 待 Phase 2) |
-| 2 | auth(register/login/profile/refresh/logout + bcrypt→PBKDF2)+ RBAC + rate limiting binding | 2a 已完成(2026-08-31):contract 3 條 auth 翻綠、adminStatsExpectation 升級為 `unauthorized`;剩 authenticated-200 那一段(Phase 7 端點移植後)與 Phase 3 cutover |
-| 3 | `/api/auth/*` zone route cutover,觀察 48h | 待開始 |
-| 4 | events CRUD + approval flow(統一新 schema) | 待開始 |
+| 2 | auth(register/login/profile/refresh/logout + bcrypt→PBKDF2)+ RBAC + rate limiting binding + Google OAuth | ✅ 完成:2a(`df26933`)+ 2b(Google OAuth 手寫 code flow、state HttpOnly cookie、`/api/auth/validate`、PUT profile、linkedin 501 stub);雙 target contract 6/6;`/api/auth/*` 全數移植 |
+| 3 | `/api/auth/*` zone route cutover,觀察 48h | 待開始 — 前置:`wrangler secret put JWT_SECRET`、fresh D1 佈建(validate blocker 已於 2b 解除) |
+| 4 | events CRUD + approval flow(統一新 schema;管理端點必輸出原始 price_* 欄位) | 2c 進行中 |
 | 5 | registrations/waitlist(D1 `batch()` 原子重構) | 待開始 |
 | 6+ | participants → sales → analytics(Analytics Engine/KV)→ media/admin | 待開始 |
 | 終 | DuckDB→D1 資料搬移、Render API 下線、`backend/` 歸檔 | 待開始 |
@@ -65,14 +65,15 @@
 
 - **Phase 3 cutover 前必辦:production secret**:`wrangler secret put JWT_SECRET`(worker 端缺它時所有簽發 token 的端點會 500,與 Express 在 production 啟動即硬失敗等價,是 fail-closed)。`JWT_EXPIRES_IN`(7d/12h/900s/30m/1w,預設 7d)與 `AUTH_RATE_LIMIT_DISABLED=true`(關掉 /api/auth/* 的 rate limiter)是選配 var;contract harness 用的 dummy secret 只寫在 `wrangler.test.toml`
 - **rate limiting 上限無法用 env 配置**:workerd 的 ratelimit binding 的 `simple.period` 只允許 10 或 60 秒(900s 不可行),數值上限寫死在 binding 設定。生產 `wrangler.toml` 用 **2 次/60s**(最壞 30 次/15min,對齊 Express 預設 20/15min 的量級;K3 審查指出原先 100/60 是 ~450x 的爆破預算放寬);契約測試會在同一分鐘打 4+ 次 auth,所以 `wrangler.test.toml` 刻意放寬為 100/60 — 兩檔分離是刻意的。路徑覆蓋整個 `/api/auth/*`(Express 只限 login/register,profile/refresh/logout 在 worker 共用同一 bucket,NAT 後 token-refresh 迴圈可能誤 429)。`AUTH_RATE_LIMIT_DISABLED=true` 是 env 開關;binding 缺失或 `limit()` 出錯時也 fail-open。要 env 化上限得改用 DO/KV 自計數
-- **Phase 3 cutover 前必辦(2):port `/api/auth/validate`** — 前端 boot 路徑耦合(`useAuth.tsx:46-56` 有 token 就呼叫,非 success 就 logout);501 會讓所有回訪用戶在切流後第一次載入頁面時被登出。端點很小(authenticate + `{user, valid:true}`),排入 Phase 2b
+- **`/api/auth/validate` 已移植(2b)** — 前端 boot 路徑耦合(`useAuth.tsx:46-56` 有 token 就呼叫,非 success 就 logout)已解除;rust 端刻意**不掛 rate limiter**(Express 也沒有,且 boot 時 429 會誤登出)
 - **Phase 3 cutover 前必辦(3):D1 佈建假設** — `password_algo` 等新欄位只存在於 `d1/schema.sql` 的 `CREATE TABLE`;cutover 必須對**全新 D1** 套 schema + 資料搬移,不能指向已存在舊表的 D1(否則 SELECT 不存在的欄位,所有登入與認證請求 500)
 - **`JWT_EXPIRES_IN` 設了但不合法時 silent fallback 到 7d**(Express 會採用該值)— 可接受的 fail-closed,但設定漂移無人會察覺;接受的拼法:`7d|12h|900s|30m|1w`(不含 `1h30m`/`1.5h`/負數)
 - **Rust 驗 JWT 時要求 `iat` 必填**(比 Express 嚴)— jsonwebtoken 預設必發 `iat`,interop fixture 已證實;之後遇到神秘 401 先想到這條(已記於此,不必另查)
-- **`/api/auth/*` 未移植的端點**:`PUT /api/auth/profile`(updateProfile)、`GET/POST /api/auth/validate`、`/api/auth/google*`(Phase 2b)、`/api/auth/linkedin*` — 目前都落進 501 fallback
+- **`/api/auth/*` 已全部移植(2b 後)**:含 `PUT /api/auth/profile`、`GET/POST /api/auth/validate`、`/api/auth/google*`(手寫 code flow)、`/api/auth/linkedin*`(501 stub)
 - **pbkdf2 在 worker 內走純 Rust(非 WebCrypto)**:與 host 共用 `core::pbkdf2` 單一實作,wire format 不可能漂移;代價是每次 hash 純 CPU 100k 輪 HMAC-SHA256(登入轉換時是 bcrypt verify + PBKDF2 兩次)。若 Paid plan CPU 觀察到壓力,再評估 WebCrypto `deriveBits` 雙實作 + fixture 互證
 - **register/login 的 JSON body 解析**:Rust 端非 JSON body / 非 JSON content-type 由 axum 的 Json rejection 回 400 純文字,Express 是 400 HTML;契約未覆蓋,留下
 - **exclusivityLevel 過濾在 Rust 端暫不支援**(統一 schema 無對應欄位)— 前端 EventsPage 的級別選擇器送出的參數不會過濾、badges 顯示 null。需要產品決策:映射到 `required_membership_tiers`,或前端改版
 - git 歷史清洗(hesocial.duckdb 的 5 個歷史 commit)— 需 force push 決策
-- Google OAuth callback 的 state 改 HttpOnly cookie(passport→手寫 code flow)
+- Google OAuth callback 的 state 已改 HttpOnly cookie(2b;passport→手寫 code flow);D1 `users` 的 `password_hash`/`age`/`profession`/`annual_income`/`net_worth` 已放寬為 nullable 以承接 OAuth 建檔(CHECK 對 NULL 放行,非 NULL 仍受約束)— 副作用:register 缺這些欄位時 rust 端會建檔成功(Express 在 NOT NULL 約束下 500),契約未覆蓋,記錄為已知偏差
+- **Google OAuth 殘餘差異(2b,K3 審查記錄)**:(a) Google 回 `error=`(如 access_denied)時 rust 轉導 `/login?error=oauth_failed`,Express 是 401 純文字 — rust 的 UX 較好但行為不同;(b) state cookie 的 `Secure` 旗標無條件開啟 — Chrome/Firefox 對 localhost 放行,但 **Safari dev 或任何非 localhost 的 http origin 會靜默丟 cookie,每次 callback 都失敗到 oauth_failed**;(c) `/google` + `/google/callback` 現在掛在 auth rate limiter 內,一次 OAuth 嘗試消耗 2/60s 生產預算,同分鐘重試會吃到裸 429 JSON 而非轉導;(d) validate 端點的 `interests` 已正規化為 JSON 陣列(與 2a 的 login/profile 一致;Express 原樣回傳字串);(e) state 比對非常數時間(128-bit CSPRNG + 600s TTL + 網路傳輸,遠端時序攻擊不可行,K3 判定僅需記錄)
 - refresh token 缺陷(重簽同一 payload)cutover 後修

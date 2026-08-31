@@ -34,14 +34,19 @@ CREATE TABLE IF NOT EXISTS server_state (
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    -- password_hash and the financial/profile columns are nullable so the
+    -- Google OAuth insert (Phase 2b) can mirror Express exactly: passport's
+    -- find-or-create writes NULL password_hash/age/profession/annual_income/
+    -- net_worth and the user fills them in via /complete-profile. The CHECKs
+    -- still apply to non-NULL values (SQLite treats NULL as passing).
+    password_hash VARCHAR(255),
     password_algo TEXT NOT NULL DEFAULT 'bcrypt',
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    age INTEGER NOT NULL CHECK (age >= 18 AND age <= 100),
-    profession VARCHAR(200) NOT NULL,
-    annual_income BIGINT NOT NULL CHECK (annual_income >= 5000000),
-    net_worth BIGINT NOT NULL CHECK (net_worth >= 30000000),
+    age INTEGER CHECK (age >= 18 AND age <= 100),
+    profession VARCHAR(200),
+    annual_income BIGINT CHECK (annual_income >= 5000000),
+    net_worth BIGINT CHECK (net_worth >= 30000000),
     membership_tier VARCHAR(20) NOT NULL CHECK (membership_tier IN ('Platinum', 'Diamond', 'Black Card')),
     privacy_level INTEGER NOT NULL DEFAULT 3 CHECK (privacy_level >= 1 AND privacy_level <= 5),
     is_verified INTEGER DEFAULT 0,

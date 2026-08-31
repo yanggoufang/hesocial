@@ -25,7 +25,9 @@ const EXISTING_EMAIL_SELECT: &str = "SELECT id FROM users WHERE email = ? AND de
 
 const REHASH_UPDATE: &str = "UPDATE users SET password_hash = ?, password_algo = ? WHERE id = ?";
 
-fn now_iso() -> String {
+const UPDATE_PROFILE: &str = "UPDATE users SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), age = COALESCE(?, age), profession = COALESCE(?, profession), bio = COALESCE(?, bio), interests = COALESCE(?, interests), privacy_level = COALESCE(?, privacy_level), updated_at = ? WHERE id = ?";
+
+pub(crate) fn now_iso() -> String {
     Date::new_0()
         .to_iso_string()
         .as_string()
@@ -82,7 +84,7 @@ fn registration_failed() -> Response {
     internal_error("Registration failed")
 }
 
-fn issue_token(state: &AppState, user: &UserRow) -> Option<String> {
+pub(crate) fn issue_token(state: &AppState, user: &UserRow) -> Option<String> {
     let secret = jwt_secret(state)?;
     let payload = JwtPayload::with_expiry(
         user.id.clone(),
@@ -299,4 +301,84 @@ pub async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Respon
         .into_response(),
         Err(response) => response,
     }
+}
+
+pub async fn validate(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let user = match SendFuture::new(authenticate(&state, &headers)).await {
+        Ok(user) => user,
+        Err(response) => return response,
+    };
+
+    Json(ApiEnvelope::success_with_message(
+        json!({ "user": user_json(&user), "valid": true }),
+        "Token is valid",
+    ))
+    .into_response()
+}
+
+pub async fn update_profile(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<Value>,
+) -> Response {
+    let user = match SendFuture::new(authenticate(&state, &headers)).await {
+        Ok(user) => user,
+        Err(response) => return response,
+    };
+
+    SendFuture::new(update_profile_inner(state, user, body)).await
+}
+
+async fn update_profile_inner(state: AppState, user: UserRow, body: Value) -> Response {
+    let db = match state.env.d1("DB") {
+        Ok(db) => db,
+        Err(_) => return internal_error("Failed to update profile"),
+    };
+
+    // Express: `interests ? JSON.stringify(interests) : null` (JS truthiness);
+    // every other field binds the raw value and COALESCE keeps the column on
+    // JSON null/absent.
+    let interests = match body.get("interests") {
+        Some(value) if js_truthy(value) => JsValue::from_str(&value.to_string()),
+        _ => JsValue::NULL,
+    };
+    let update = db.prepare(UPDATE_PROFILE).bind(&[
+        to_js(body.get("firstName").unwrap_or(&Value::Null)),
+        to_js(body.get("lastName").unwrap_or(&Value::Null)),
+        to_js(body.get("age").unwrap_or(&Value::Null)),
+        to_js(body.get("profession").unwrap_or(&Value::Null)),
+        to_js(body.get("bio").unwrap_or(&Value::Null)),
+        interests,
+        to_js(body.get("privacyLevel").unwrap_or(&Value::Null)),
+        JsValue::from_str(&now_iso()),
+        JsValue::from_str(&user.id),
+    ]);
+    let update = match update {
+        Ok(query) => query,
+        Err(_) => return internal_error("Failed to update profile"),
+    };
+    if update.run().await.is_err() {
+        return internal_error("Failed to update profile");
+    }
+
+    let updated = db
+        .prepare(user_select(USER_SELECT_BY_ID))
+        .bind(&[JsValue::from_str(&user.id)]);
+    let updated = match updated {
+        Ok(query) => query,
+        Err(_) => return internal_error("Failed to update profile"),
+    };
+    let updated: Option<UserRow> = match updated.first(None).await {
+        Ok(user) => user,
+        Err(_) => return internal_error("Failed to update profile"),
+    };
+    let Some(updated) = updated else {
+        return internal_error("Failed to update profile");
+    };
+
+    Json(ApiEnvelope::success_with_message(
+        json!({ "user": user_json(&updated) }),
+        "Profile updated successfully",
+    ))
+    .into_response()
 }

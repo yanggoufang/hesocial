@@ -31,12 +31,15 @@ pub struct UserRow {
     pub first_name: String,
     #[serde(rename = "lastName")]
     pub last_name: String,
-    pub age: i64,
-    pub profession: String,
+    // Nullable because Google-OAuth-created users are inserted with NULL
+    // financial/profile fields (they complete them via /complete-profile),
+    // exactly like the Express passport strategy.
+    pub age: Option<i64>,
+    pub profession: Option<String>,
     #[serde(rename = "annualIncome")]
-    pub annual_income: i64,
+    pub annual_income: Option<i64>,
     #[serde(rename = "netWorth")]
-    pub net_worth: i64,
+    pub net_worth: Option<i64>,
     #[serde(rename = "membershipTier")]
     pub membership_tier: String,
     #[serde(rename = "privacyLevel")]
@@ -216,6 +219,38 @@ mod tests {
         assert!(json.get("password_hash").is_none());
         assert_eq!(json.get("isVerified"), Some(&json!(false)));
         assert_eq!(json.get("interests"), Some(&Value::Null));
+    }
+
+    #[test]
+    fn user_json_serializes_null_google_oauth_fields_as_null() {
+        let row: UserRow = serde_json::from_value(json!({
+            "id": "11111111-2222-4333-8444-555555555555",
+            "email": "oauth@example.com",
+            "firstName": "OAuth",
+            "lastName": "User",
+            "age": null,
+            "profession": null,
+            "annualIncome": null,
+            "netWorth": null,
+            "membershipTier": "Platinum",
+            "privacyLevel": 3,
+            "isVerified": 0,
+            "verificationStatus": "pending",
+            "role": "user",
+            "profilePicture": "https://photo.example.com/p.jpg",
+            "bio": null,
+            "interests": "[]",
+            "createdAt": "2026-08-31T00:00:00.000Z",
+            "updatedAt": "2026-08-31T00:00:00.000Z"
+        }))
+        .expect("google-oauth user row should deserialize");
+
+        let json = user_json(&row);
+        assert_eq!(json.get("age"), Some(&Value::Null));
+        assert_eq!(json.get("profession"), Some(&Value::Null));
+        assert_eq!(json.get("annualIncome"), Some(&Value::Null));
+        assert_eq!(json.get("netWorth"), Some(&Value::Null));
+        assert_eq!(json.get("interests"), Some(&json!([])));
     }
 
     #[test]

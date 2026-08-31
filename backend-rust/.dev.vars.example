@@ -1,1 +1,5 @@
 JWT_SECRET=replace-with-a-local-development-secret
+# Optional: Google OAuth (Phase 2b). Both must be set or /api/auth/google*
+# returns the Express-parity 503. Values come from the Google Cloud console.
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

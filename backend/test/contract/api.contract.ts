@@ -89,6 +89,27 @@ export const defineContractTests = (runner: ContractRunner): void => {
       })
     })
 
+    authTest('validates a bearer token', async () => {
+      const login = await postJson('/api/auth/login', runner.seededCredentials)
+      const token = login.body.data.token as string
+
+      const valid = await runner.request('/api/auth/validate', {
+        headers: { authorization: `Bearer ${token}` },
+      })
+      expect(valid.response.status).toBe(200)
+      expect(valid.body).toMatchObject({
+        success: true,
+        data: {
+          user: { email: runner.seededCredentials.email },
+          valid: true,
+        },
+      })
+
+      const missing = await runner.request('/api/auth/validate')
+      expect(missing.response.status).toBe(401)
+      expect(missing.body).toMatchObject({ success: false })
+    })
+
     it('returns the public events list shape', async () => {
       const result = await runner.request('/api/events')
 

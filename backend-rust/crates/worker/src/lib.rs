@@ -19,6 +19,7 @@ use worker::{Context, Env, HttpRequest, Result, event};
 mod auth;
 mod auth_handlers;
 mod handlers;
+mod oauth_handlers;
 
 const DEFAULT_CORS_ORIGIN: &str = "http://localhost:3000";
 const EXTRA_CORS_ORIGINS: [&str; 2] = ["http://127.0.0.1:3000", "http://localhost:5000"];
@@ -57,6 +58,12 @@ impl AppState {
             allowed_origins,
             env: env.clone(),
         }
+    }
+
+    /// Express redirects OAuth results to `config.corsOrigins[0]`, i.e. the
+    /// first configured origin (the extras below are appended, never first).
+    pub fn frontend_origin(&self) -> &str {
+        &self.allowed_origins[0]
     }
 }
 
@@ -165,16 +172,36 @@ async fn auth_rate_limit_middleware(
 }
 
 fn auth_routes(state: &AppState) -> Router<AppState> {
-    Router::new()
+    let rate_limited = Router::new()
         .route("/register", post(auth_handlers::register))
         .route("/login", post(auth_handlers::login))
-        .route("/profile", get(auth_handlers::profile))
+        .route(
+            "/profile",
+            get(auth_handlers::profile).put(auth_handlers::update_profile),
+        )
         .route("/refresh", post(auth_handlers::refresh))
         .route("/logout", post(auth_handlers::logout))
+        .route("/google", get(oauth_handlers::google_start))
+        .route("/google/callback", get(oauth_handlers::google_callback))
+        .route("/linkedin", get(oauth_handlers::linkedin_unavailable))
+        .route(
+            "/linkedin/callback",
+            get(oauth_handlers::linkedin_unavailable),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             auth_rate_limit_middleware,
-        ))
+        ));
+
+    // /api/auth/validate stays outside the rate limiter: Express never limits
+    // it, and the frontend boot path (useAuth) calls it on every page load —
+    // a 429 there would log returning users out.
+    Router::new()
+        .route(
+            "/validate",
+            get(auth_handlers::validate).post(auth_handlers::validate),
+        )
+        .merge(rate_limited)
 }
 
 fn router(state: AppState) -> Router {
