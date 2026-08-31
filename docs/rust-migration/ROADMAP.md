@@ -33,8 +33,8 @@
 | 1 | contract 雙 target harness(1b)+ 唯讀公開端點(1a) | ✅ 已完成(`883185e` + `88877c6`);rust contract target 實跑:2 passed + 3 skipped(auth 待 Phase 2) |
 | 2 | auth(register/login/profile/refresh/logout + bcrypt→PBKDF2)+ RBAC + rate limiting binding + Google OAuth | ✅ 完成:2a(`df26933`)+ 2b(Google OAuth 手寫 code flow、state HttpOnly cookie、`/api/auth/validate`、PUT profile、linkedin 501 stub);雙 target contract 6/6;`/api/auth/*` 全數移植 |
 | 3 | `/api/auth/*` zone route cutover,觀察 48h | 待開始 — 前置:`wrangler secret put JWT_SECRET`、fresh D1 佈建(validate blocker 已於 2b 解除) |
-| 4 | events CRUD + approval flow(統一新 schema;管理端點必輸出原始 price_* 欄位) | ✅ 2c 完成(2026-08-31,commit 待補):公開詳情 + create/update/delete + approve/reject/publish;rust contract 13/13 |
-| 5 | registrations/waitlist(D1 `batch()` 原子重構) | 待開始 |
+| 4 | events CRUD + approval flow(統一新 schema;管理端點必輸出原始 price_* 欄位) | ✅ 2c 完成(`2fa5002`,2026-08-31):公開詳情 + create/update/delete + approve/reject/publish;rust contract 13/13 |
+| 5 | registrations/waitlist(D1 `batch()` 原子重構) | ✅ 2d 完成(2026-08-31):register/cancel/my-registrations + 滿額 waitlist/晉升原子化;rust contract 17/17;stats 兩端同步釘 500 |
 | 6+ | participants → sales → analytics(Analytics Engine/KV)→ media/admin | 待開始 |
 | 終 | DuckDB→D1 資料搬移、Render API 下線、`backend/` 歸檔 | 待開始 |
 
@@ -77,4 +77,4 @@
 - git 歷史清洗(hesocial.duckdb 的 5 個歷史 commit)— 需 force push 決策
 - Google OAuth callback 的 state 已改 HttpOnly cookie(2b;passport→手寫 code flow);D1 `users` 的 `password_hash`/`age`/`profession`/`annual_income`/`net_worth` 已放寬為 nullable 以承接 OAuth 建檔(CHECK 對 NULL 放行,非 NULL 仍受約束)— 副作用:register 缺這些欄位時 rust 端會建檔成功(Express 在 NOT NULL 約束下 500),契約未覆蓋,記錄為已知偏差
 - **Google OAuth 殘餘差異(2b,K3 審查記錄)**:(a) Google 回 `error=`(如 access_denied)時 rust 轉導 `/login?error=oauth_failed`,Express 是 401 純文字 — rust 的 UX 較好但行為不同;(b) state cookie 的 `Secure` 旗標無條件開啟 — Chrome/Firefox 對 localhost 放行,但 **Safari dev 或任何非 localhost 的 http origin 會靜默丟 cookie,每次 callback 都失敗到 oauth_failed**;(c) `/google` + `/google/callback` 現在掛在 auth rate limiter 內,一次 OAuth 嘗試消耗 2/60s 生產預算,同分鐘重試會吃到裸 429 JSON 而非轉導;(d) validate 端點的 `interests` 已正規化為 JSON 陣列(與 2a 的 login/profile 一致;Express 原樣回傳字串);(e) state 比對非常數時間(128-bit CSPRNG + 600s TTL + 網路傳輸,遠端時序攻擊不可行,K3 判定僅需記錄)
-- refresh token 缺陷(重簽同一 payload)cutover 後修
+- **registrations/waitlist 偏差(2d,主線深讀記錄;第二 AI 補審待 Kimi 額度歸隊)**:(a) **原子性**:Rust 用 `DB.batch()` + guarded SQL(容量守衛 INSERT+INCREMENT 互鎖、取消→晉升五段 batch 淨計數 -1+1=0),Express 每筆寫入獨立執行、可留半完成狀態 — Rust 較嚴格是刻意改善;(b) **滿額行為**:Express 一律 400 `Event is at full capacity`;Rust 在 `waitlist_enabled=1` 時排入 waitlist(對齊產品資料模型:event_waitlist 表、EventForm 開關、admin waitlist 端點),disabled 時保留 Express 400 — **產品行為變更,可逆,由使用者知悉**;(c) GET/PUT/DELETE /:id 採 owner-or-admin(Express 僅 owner;非 owner 一樣 404,已宣告);(d) `GET /stats/:eventId` 兩端都刻意 500(Express 查不存在的 `event_registrations`,Rust 逐字保留 drift,契約釘死);(e) waitlist position 為 MAX+1 不重編號(排序 token,會有洞);(f) 理論邊界:同毫秒 timestamp 的兩筆併發取消可能在晉升段 double-book(機率極低,Express 完全無原子性更糟,已知悉)

@@ -25,6 +25,7 @@ export interface ContractRunner {
   authImplemented?: boolean
   adminStatsExpectation?: 'authenticated' | 'not-implemented' | 'unauthorized'
   eventsImplemented?: boolean
+  registrationsImplemented?: boolean
 }
 
 export const defineContractTests = (runner: ContractRunner): void => {
@@ -129,6 +130,17 @@ export const defineContractTests = (runner: ContractRunner): void => {
           total: expect.any(Number),
           totalPages: expect.any(Number),
         },
+      })
+
+      // Known live drift: registrationRoutes.ts queries the nonexistent
+      // `event_registrations` table (the real table is `registrations`). Both
+      // targets deliberately pin the resulting 500 until that API is changed
+      // as a separately approved compatibility fix.
+      const registrationStats = await runner.request('/api/registrations/stats/2')
+      expect(registrationStats.response.status).toBe(500)
+      expect(registrationStats.body).toMatchObject({
+        success: false,
+        error: expect.any(String),
       })
     })
 
@@ -494,4 +506,236 @@ export const defineContractTests = (runner: ContractRunner): void => {
       expect(missing.body).toMatchObject({ success: false, error: 'Event not found' })
     })
   })
+
+  if (runner.registrationsImplemented === true) {
+    describe('registrations and waitlist (Phase 2d)', () => {
+      const authHeaders = (token: string) => ({ authorization: `Bearer ${token}` })
+      const authedJson = (token: string) => ({
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      })
+      const tokenFor = async (credentials: SeededCredentials) => {
+        const login = await postJson('/api/auth/login', credentials)
+        expect(login.response.status).toBe(200)
+        return login.body.data.token as string
+      }
+      const eventPayload = (title: string, capacityMax: number, waitlistEnabled = true) => ({
+        title,
+        description: `${title} description`,
+        detailedDescription: `${title} long-form description`,
+        categoryId: '1',
+        venueId: '1',
+        startDatetime: '2026-12-20T18:00:00.000Z',
+        endDatetime: '2026-12-20T22:00:00.000Z',
+        timezone: 'Asia/Taipei',
+        capacityMin: 1,
+        capacityMax,
+        pricePlatinum: 1000,
+        priceDiamond: 900,
+        priceBlackCard: 800,
+        currency: 'TWD',
+        requiredMembershipTiers: ['Platinum', 'Diamond', 'Black Card'],
+        requiredVerification: true,
+        dressCode: 'Smart Casual',
+        language: 'Traditional Chinese',
+        inclusions: [],
+        exclusions: [],
+        registrationOpensAt: '2026-08-01T00:00:00.000Z',
+        registrationClosesAt: '2026-12-15T23:59:59.000Z',
+        cancellationDeadline: '2026-12-18T23:59:59.000Z',
+        waitlistEnabled,
+        autoApproval: false,
+      })
+      const createPublishedEvent = async (
+        token: string,
+        title: string,
+        capacityMax: number,
+        waitlistEnabled = true,
+      ) => {
+        const created = await runner.request('/api/events', {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify(eventPayload(title, capacityMax, waitlistEnabled)),
+        })
+        expect(created.response.status).toBe(201)
+        const eventId = created.body.data.eventId as number
+        const approved = await runner.request(`/api/events/${eventId}/approve`, {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify({ approved: true }),
+        })
+        expect(approved.response.status).toBe(200)
+        const published = await runner.request(`/api/events/${eventId}/publish`, {
+          method: 'POST',
+          headers: authHeaders(token),
+        })
+        expect(published.response.status).toBe(200)
+        return eventId
+      }
+      const register = (token: string, eventId: number, specialRequests?: string) =>
+        runner.request(`/api/registrations/events/${eventId}`, {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify({ specialRequests }),
+        })
+      const eventDetail = (token: string, eventId: number) =>
+        runner.request(`/api/events/${eventId}`, { headers: authHeaders(token) })
+
+      it('rejects an unauthenticated registration before touching D1', async () => {
+        const result = await runner.request('/api/registrations/events/2', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: '{}',
+        })
+        expect(result.response.status).toBe(401)
+        expect(result.body).toEqual({ success: false, error: 'Access token required' })
+      })
+
+      it('registers atomically, exposes the UI fields, and rejects a duplicate', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const eventId = await createPublishedEvent(token, 'Registration Contract Gala', 4)
+        const created = await register(token, eventId, 'Window seat')
+
+        expect(created.response.status).toBe(201)
+        expect(created.body).toEqual({
+          success: true,
+          data: {
+            registrationId: expect.any(Number),
+            status: 'pending',
+            message: 'Registration submitted successfully. Pending approval.',
+          },
+        })
+
+        const detail = await eventDetail(token, eventId)
+        expect(detail.body.data.current_registrations).toBe(1)
+
+        const own = await runner.request('/api/registrations/user', {
+          headers: authHeaders(token),
+        })
+        expect(own.response.status).toBe(200)
+        expect(own.body.data).toEqual(expect.arrayContaining([
+          expect.objectContaining({
+            id: created.body.data.registrationId,
+            eventId,
+            eventName: 'Registration Contract Gala',
+            eventDateTime: '2026-12-20T18:00:00.000Z',
+            status: 'pending',
+            paymentStatus: 'pending',
+            specialRequests: 'Window seat',
+          }),
+        ]))
+
+        const updated = await runner.request(
+          `/api/registrations/${created.body.data.registrationId}`,
+          {
+            method: 'PUT',
+            headers: authedJson(token),
+            body: JSON.stringify({ specialRequests: 'Aisle seat' }),
+          },
+        )
+        expect(updated.response.status).toBe(200)
+        expect(updated.body).toEqual({ success: true, message: 'Registration updated successfully' })
+
+        const registration = await runner.request(
+          `/api/registrations/${created.body.data.registrationId}`,
+          { headers: authHeaders(token) },
+        )
+        expect(registration.response.status).toBe(200)
+        expect(registration.body.data).toMatchObject({ specialRequests: 'Aisle seat' })
+
+        const duplicate = await register(token, eventId)
+        expect(duplicate.response.status).toBe(400)
+        expect(duplicate.body).toEqual({
+          success: false,
+          error: 'You are already registered for this event',
+        })
+      })
+
+      it('waitlists at capacity without incrementing the event counter', async () => {
+        const admin = await tokenFor(runner.seededCredentials)
+        const member = await tokenFor({
+          email: 'test.platinum@example.com',
+          password: 'test123',
+        })
+        const eventId = await createPublishedEvent(admin, 'Waitlist Contract Gala', 1)
+        const counted = await register(admin, eventId)
+        expect(counted.body.data.status).toBe('pending')
+
+        const waitlisted = await register(member, eventId)
+        expect(waitlisted.response.status).toBe(201)
+        expect(waitlisted.body).toMatchObject({
+          success: true,
+          data: {
+            registrationId: expect.any(Number),
+            status: 'waitlisted',
+            message: 'Event is full. You have been added to the waitlist.',
+          },
+        })
+        expect((await eventDetail(admin, eventId)).body.data.current_registrations).toBe(1)
+
+        const hidden = await runner.request(
+          `/api/registrations/${counted.body.data.registrationId}`,
+          { headers: authHeaders(member) },
+        )
+        expect(hidden.response.status).toBe(404)
+
+        // Owner-or-admin: the owner and an administrator can both inspect it.
+        const ownerView = await runner.request(
+          `/api/registrations/${waitlisted.body.data.registrationId}`,
+          { headers: authHeaders(member) },
+        )
+        expect(ownerView.response.status).toBe(200)
+        const adminView = await runner.request(
+          `/api/registrations/${waitlisted.body.data.registrationId}`,
+          { headers: authHeaders(admin) },
+        )
+        expect(adminView.response.status).toBe(200)
+      })
+
+      it('cancels with a guarded decrement and atomically promotes the waitlist', async () => {
+        const admin = await tokenFor(runner.seededCredentials)
+        const member = await tokenFor({
+          email: 'test.platinum@example.com',
+          password: 'test123',
+        })
+
+        const emptyEventId = await createPublishedEvent(
+          admin,
+          'Cancellation Counter Contract Gala',
+          1,
+          false,
+        )
+        const sole = await register(admin, emptyEventId)
+        const cancelledSole = await runner.request(
+          `/api/registrations/${sole.body.data.registrationId}`,
+          { method: 'DELETE', headers: authHeaders(admin) },
+        )
+        expect(cancelledSole.response.status).toBe(200)
+        expect(cancelledSole.body).toEqual({
+          success: true,
+          message: 'Registration cancelled successfully',
+        })
+        expect((await eventDetail(admin, emptyEventId)).body.data.current_registrations).toBe(0)
+
+        const eventId = await createPublishedEvent(admin, 'Promotion Contract Gala', 1)
+        const counted = await register(admin, eventId)
+        const waiting = await register(member, eventId)
+        expect(waiting.body.data.status).toBe('waitlisted')
+
+        const cancelled = await runner.request(
+          `/api/registrations/${counted.body.data.registrationId}`,
+          { method: 'DELETE', headers: authHeaders(admin) },
+        )
+        expect(cancelled.response.status).toBe(200)
+        expect((await eventDetail(admin, eventId)).body.data.current_registrations).toBe(1)
+
+        const promoted = await runner.request(
+          `/api/registrations/${waiting.body.data.registrationId}`,
+          { headers: authHeaders(member) },
+        )
+        expect(promoted.response.status).toBe(200)
+        expect(promoted.body.data.status).toBe('pending')
+      })
+    })
+  }
 }

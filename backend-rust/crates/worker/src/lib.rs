@@ -21,6 +21,7 @@ mod auth_handlers;
 mod event_handlers;
 mod handlers;
 mod oauth_handlers;
+mod registration_handlers;
 
 const DEFAULT_CORS_ORIGIN: &str = "http://localhost:3000";
 const EXTRA_CORS_ORIGINS: [&str; 2] = ["http://127.0.0.1:3000", "http://localhost:5000"];
@@ -226,6 +227,24 @@ fn router(state: AppState) -> Router {
         .route(
             "/api/events/{id}/approve",
             post(event_handlers::approve_event),
+        )
+        .route(
+            "/api/registrations/stats/{event_id}",
+            get(registration_handlers::registration_stats),
+        )
+        .route(
+            "/api/registrations/user",
+            get(registration_handlers::get_user_registrations),
+        )
+        .route(
+            "/api/registrations/events/{event_id}",
+            post(registration_handlers::register_for_event),
+        )
+        .route(
+            "/api/registrations/{id}",
+            get(registration_handlers::get_registration)
+                .put(registration_handlers::update_registration)
+                .delete(registration_handlers::cancel_registration),
         )
         .route("/api/categories", get(handlers::list_categories))
         .route("/api/venues", get(handlers::list_venues))

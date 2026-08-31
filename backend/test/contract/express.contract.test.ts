@@ -195,4 +195,8 @@ afterAll(async () => {
 defineContractTests({
   request,
   seededCredentials: SEEDED_ADMIN_CREDENTIALS,
+  // Express has routes, but not the Phase 2d semantics: capacity returns 400,
+  // writes are non-transactional, and there is no waitlist promotion. Keeping
+  // this false also preserves the characterization target at 6 pass/7 skip.
+  registrationsImplemented: false,
 })

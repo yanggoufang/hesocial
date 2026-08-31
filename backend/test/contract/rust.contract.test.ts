@@ -17,4 +17,5 @@ defineContractTests({
   authImplemented: true,
   adminStatsExpectation: 'unauthorized',
   eventsImplemented: true,
+  registrationsImplemented: true,
 })
