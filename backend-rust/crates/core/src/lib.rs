@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
 pub mod auth;
+pub mod event_management;
 pub mod events;
 pub mod oauth;
 pub mod pagination;

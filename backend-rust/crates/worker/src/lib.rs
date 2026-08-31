@@ -18,6 +18,7 @@ use worker::{Context, Env, HttpRequest, Result, event};
 
 mod auth;
 mod auth_handlers;
+mod event_handlers;
 mod handlers;
 mod oauth_handlers;
 
@@ -208,7 +209,24 @@ fn router(state: AppState) -> Router {
     Router::new()
         .route("/api/health", get(handlers::health))
         .route("/api/health/status", get(handlers::health_status))
-        .route("/api/events", get(handlers::list_events))
+        .route(
+            "/api/events",
+            get(handlers::list_events).post(event_handlers::create_event),
+        )
+        .route(
+            "/api/events/{id}",
+            get(event_handlers::get_event)
+                .put(event_handlers::update_event)
+                .delete(event_handlers::delete_event),
+        )
+        .route(
+            "/api/events/{id}/publish",
+            post(event_handlers::publish_event),
+        )
+        .route(
+            "/api/events/{id}/approve",
+            post(event_handlers::approve_event),
+        )
         .route("/api/categories", get(handlers::list_categories))
         .route("/api/venues", get(handlers::list_venues))
         .nest("/api/auth", auth_routes(&state))

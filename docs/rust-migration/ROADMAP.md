@@ -33,7 +33,7 @@
 | 1 | contract 雙 target harness(1b)+ 唯讀公開端點(1a) | ✅ 已完成(`883185e` + `88877c6`);rust contract target 實跑:2 passed + 3 skipped(auth 待 Phase 2) |
 | 2 | auth(register/login/profile/refresh/logout + bcrypt→PBKDF2)+ RBAC + rate limiting binding + Google OAuth | ✅ 完成:2a(`df26933`)+ 2b(Google OAuth 手寫 code flow、state HttpOnly cookie、`/api/auth/validate`、PUT profile、linkedin 501 stub);雙 target contract 6/6;`/api/auth/*` 全數移植 |
 | 3 | `/api/auth/*` zone route cutover,觀察 48h | 待開始 — 前置:`wrangler secret put JWT_SECRET`、fresh D1 佈建(validate blocker 已於 2b 解除) |
-| 4 | events CRUD + approval flow(統一新 schema;管理端點必輸出原始 price_* 欄位) | 2c 進行中 |
+| 4 | events CRUD + approval flow(統一新 schema;管理端點必輸出原始 price_* 欄位) | ✅ 2c 完成(2026-08-31,commit 待補):公開詳情 + create/update/delete + approve/reject/publish;rust contract 13/13 |
 | 5 | registrations/waitlist(D1 `batch()` 原子重構) | 待開始 |
 | 6+ | participants → sales → analytics(Analytics Engine/KV)→ media/admin | 待開始 |
 | 終 | DuckDB→D1 資料搬移、Render API 下線、`backend/` 歸檔 | 待開始 |
@@ -48,6 +48,7 @@
 - 5 張死表不移植:`user_sessions`、`audit_logs`、`oauth_providers`、`financial_verifications`、`event_feedback`;另 `sales_targets`/`sales_commissions`/`user_preferences` 僅存在於 migration 檔(零 runtime 引用)同樣排除;**visitor 三表不存在於 D1**(鎖定決策 #3,Phase 6 直接做在 Analytics Engine/KV)
 - D1 不用舊的 `schema_migrations` 機制 — 未來 D1 schema 變更走 wrangler d1 migrations
 - public `/api/events` 的已知偏差(2026-08-31 Codex 審查後確認可接受):pricing 為合成 `{vip,vvip,general,currency}` 非舊自由格式 JSON;`amenities`/`privacyGuarantees`/`videoUrl` 為 null;SQLite `LIKE` 對 ASCII 不分大小寫(DuckDB 會分);`/api/health/status` 的 memory 為佔位 0MB、uptime 為 isolate 生命週期(worker 無 Node process 指標);數字參數解析涵蓋 trim/空字串,hex 等冷門 JS `Number()` 形式不支援
+- **events 管理/詳情偏差(2c,K3 審查記錄)**:(a) 公開詳情可見性 = `status='published' AND approval_status='approved'`(Express 是 `is_active=true`);(b) PUT 接受 camelCase 欄位 — 修正 Express 現行 bug(`EventForm` 送 camelCase 但 Express 的 snake-only whitelist 會 400,即前端更新活動對 Express 本來就是壞的);(c) 詳情路由對 admin 合併了原始欄位與管理行為,但**匿名者看不到 price_*/status** — 比 Express 被遮蔽的管理 handler 更嚴(那個 handler 會把 price_*/status 洩給匿名呼叫者);(d) 非數字 id → rust 404,Express 是 DuckDB cast error 500;(e) update 送陣列/物件到純量欄位 → rust 靜默存 NULL(`to_js` 行為),Express 是 bind error 500 — admin-only、低風險,已留程式碼註解;(f) delete 與 Express 同為硬刪( registrations/waitlist ON DELETE CASCADE 兜底)、requireSuperAdmin、報名數守衛逐行一致
 - **Phase 4 必辦**:管理端點必須輸出原始 `price_platinum/price_diamond/price_black_card` 欄位 — `EventManagement.tsx:186` 與 `EventForm.tsx:77` 直接依賴
 - 前端 `participantService.ts` 相對路徑 `/api` 在 Render rewrite 下是壞的 → Worker 同 origin 後免費修好
 

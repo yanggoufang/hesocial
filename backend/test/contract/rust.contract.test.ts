@@ -16,4 +16,5 @@ defineContractTests({
   seededCredentials: SEEDED_ADMIN_CREDENTIALS,
   authImplemented: true,
   adminStatsExpectation: 'unauthorized',
+  eventsImplemented: true,
 })

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cloudflareTest } from '@cloudflare/vitest-pool-workers'
@@ -13,6 +13,29 @@ if (!existsSync(workerShimPath)) {
   throw new Error(
     `Rust worker build is missing at ${workerShimPath}. `
     + 'Run `cd backend-rust && npx wrangler deploy --dry-run` before the Rust contract tests.',
+  )
+}
+
+const newestMtime = (path: string): number => {
+  const stats = statSync(path)
+  if (!stats.isDirectory()) {
+    return stats.mtimeMs
+  }
+  return readdirSync(path, { withFileTypes: true }).reduce((newest, entry) => {
+    const mtime = newestMtime(resolve(path, entry.name))
+    return Math.max(newest, mtime)
+  }, stats.mtimeMs)
+}
+
+const newestRustSourceMtime = ['crates/core/src', 'crates/worker/src', 'd1', 'Cargo.toml', 'Cargo.lock']
+  .map((relative) => newestMtime(resolve(rustDirectory, relative)))
+  .reduce((newest, current) => Math.max(newest, current), 0)
+const shimMtime = statSync(workerShimPath).mtimeMs
+
+if (shimMtime < newestRustSourceMtime) {
+  throw new Error(
+    `Rust worker build is stale at ${workerShimPath} (older than the Rust sources). `
+    + 'Run `cd backend-rust && npx wrangler deploy --dry-run` to rebuild, then re-run the Rust contract tests.',
   )
 }
 
