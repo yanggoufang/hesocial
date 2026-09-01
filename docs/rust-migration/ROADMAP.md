@@ -84,6 +84,44 @@
   ```
   已通過的生產抽檢:`/api/health`、`/api/events`、`/api/venues`、`/api/categories` 皆 200(空陣列,生產僅有 schema);`POST /api/auth/login` 回 401 而非 500,證明 `JWT_SECRET` 生效且 Turso 連通。**登入/付款/participants 的完整流程待生產有資料後才能抽檢**,目前僅由契約測試(有 seed 的本機 Turso)覆蓋。
 
+## 前端 Rust 化(決策 #9)— 路由與守衛盤點
+
+> 2026-09-01 盤點自 `frontend/src/App.tsx` 與 `frontend/src/components/RouteGuards.tsx`。這是後續每一輪委派的規格來源。框架選定 **Dioxus**(CSR);測試一律 Rust(`cargo test` / `wasm-bindgen-test` / WebDriver),不得引入 Playwright、Vitest 等 JS 測試工具,否則等於把 TypeScript 從後門請回來。
+
+24 條路由、10 種守衛、4 個權限維度(`requireAuth` / `requireRole` / `requireMembership` / `requireVerification`),各自搭配不同的 `fallbackPath`。
+
+| 守衛 | 條件 | 失敗導向 | 頁面 |
+|---|---|---|---|
+| 無 | — | — | `/`、`/login`、`/register`、`/events`、`/events/:id`、`/access-test` |
+| `UserRoute` | 已登入 | `/login` | `/profile`、`/profile/registrations`、`/events/:eventId/register`、`/events/:eventId/participants`、`/events/:eventId/privacy-settings` |
+| `VVIPRoute` | 已登入 + Diamond 以上 + 已驗證 | `/events` | `/vvip` |
+| `EventManagementRoute` | `role=admin` | `/login` | `/event-mgmt`、`/event-mgmt/categories`、`/event-mgmt/venues`、`/event-mgmt/media/:eventId` |
+| `AdminRoute` | `role=admin` | `/login` | `/admin`、`/admin/analytics`、`/admin/sales`、`/admin/system` |
+| `UserManagementRoute` | `role=admin` | **`/admin`** | `/admin/users` |
+| `BackupManagementRoute` | `role=super_admin` | **`/admin`** | `/admin/backups` |
+
+**最後兩列的失敗導向是 `/admin` 而非 `/login`** — 同為 admin 權限但導向不同。這類差異漏掉不會報錯,必須逐條寫成測試。
+
+### 不移植的部分
+
+- **`/admin/backups`(BackupManagement)** — 鎖定決策 #5 已把 backup/restore/checkpoint/periodic-backup 全部釘成 501,此頁在新後端無功能可用,本就該下線。
+- **`/access-test`(AccessTestPage)** — 開發期權限測試頁,待使用者確認是否保留。
+- **`DiamondRoute`、`BlackCardRoute`、`SuperAdminRoute`、`VerifiedUserRoute`** — 已定義但無任何路由使用,死程式碼。
+- **`three` / `@three-ts/orbit-controls` / `react-player` / `react-hook-form` / `@hookform/resolvers`** — 宣告於 `package.json` 但 0 個檔案使用。Rust/WASM 生態最難補的 3D、影片播放器、表單庫全是死依賴。
+
+### 實際工作量集中處
+
+- `framer-motion`(24 / 53 檔) — Rust 無等價物,改手寫 CSS transition 或 JS interop
+- `lucide-react`(32 / 53 檔) — 有 Rust port,機械替換
+
+### 必須寫成測試的已知陷阱
+
+```jsx
+<Route path="/complete-profile" element={<Navigate to="/profile" replace />} />
+```
+
+`<Navigate>` 會丟棄 query string。OAuth 回呼帶著 `?token=` 落在 `/complete-profile`,而 React 的子元件 effect 先於父元件執行 — 導向先發生,`AuthProvider` 才去讀 `window.location.search`,token 已消失,守衛判定未登入而踢回 `/login`,**全程無任何例外或 console 錯誤**。TS 版的修法是在模組初始化時就收走 token(`43cd01b` 之前的 `488df1a`);Rust 版必須有對應測試,不能只靠記得。
+
 ## 已知技術債/陷阱(移植時處理)
 
 - `database/duckdb-schema.sql` 在乾淨 DuckDB 上建不起表(ON DELETE 不支援、欄位重複、INTEGER id vs UUID 混用)— 測試目前用 regex 修補

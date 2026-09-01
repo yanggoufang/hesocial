@@ -1,0 +1,11 @@
+[application]
+name = "hesocial-frontend"
+out_dir = "dist"
+asset_dir = "assets"
+
+[web.app]
+title = "HeSocial - Luxury Social Events"
+
+[web.watcher]
+index_on_404 = true
+watch_path = ["src"]

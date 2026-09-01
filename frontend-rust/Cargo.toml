@@ -1,0 +1,33 @@
+[package]
+name = "hesocial-frontend"
+version = "0.1.0"
+edition = "2024"
+license = "UNLICENSED"
+rust-version = "1.88"
+publish = false
+
+[lib]
+name = "hesocial_frontend"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "hesocial-frontend"
+path = "src/main.rs"
+
+[dependencies]
+dioxus = { version = "=0.7.10", features = ["router"] }
+
+[dev-dependencies]
+dioxus = { version = "=0.7.10", features = ["router", "ssr"] }
+dioxus-ssr = "=0.7.10"
+wasm-bindgen-test = "=0.3.77"
+
+[features]
+default = ["web"]
+web = ["dioxus/web"]
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+thirtyfour = "=0.37.5"
+tiny_http = "=0.12.0"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
