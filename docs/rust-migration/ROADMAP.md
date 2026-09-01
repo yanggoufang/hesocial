@@ -11,13 +11,14 @@
 - API 路徑不變;用 Cloudflare zone route 逐系統切流,可即時回滾
 - Rust token 必須與 Express bit-for-bit 互通(HS256,`{userId,email,membershipTier}` + 7d)
 
-## 已鎖定的決策(2026-08-30 使用者拍板)
+## 已鎖定的決策(2026-08-30 使用者拍板，2026-09-01 補決策 #6)
 
 1. Workers Paid($5/mo)+ 密碼 bcrypt→PBKDF2 lazy rehash(首登時轉換,不強制重設)
 2. D1 `events` 直接統一成 event-management 形狀(title/slug/start_datetime),response JSON 逐字不變
 3. visitor tracking / analytics → Cloudflare Analytics Engine 或 KV(不進 D1,避開單寫入者瓶頸)
 4. 自訂網域可掛 Cloudflare → 走 zone route 灰度 cutover
 5. DuckDB 專屬端點(backup/restore/checkpoint/periodic-backup、deployment、emergency)→ 回 501,`BackupManagement.tsx` 下線
+6. **Cutover 拓撲選 B（2026-09-01 拍板）**：一次切全部 `/api` → `hesocial-backend-rust`，放棄 48h `/api/auth/*` 灰度。理由：無現成自訂網域/zone、users 雙庫分裂成本大於一次切風險；Phase 3 與「終」的資料搬移合併為全量 ETL，終只剩 Render 下線與 `backend/` 歸檔。回滾為 DNS/route 整站切回 Render。
 
 ## 驗收契約
 
@@ -39,16 +40,17 @@
 | 2g | analytics(Analytics Engine + D1) | ✅ 完成:Tracking 寫入(AE) + 5 個 D1 分析端點 + stub;rust contract 含 analytics/media 共 49/49 |
 | 2h | media(R2 + D1 metadata) | ✅ 完成(2026-08-31):event image/document + venue image upload、event/venue list、owner/admin delete;R2 `MEDIA` binding + multipart/MIME/10MiB;variant 暫以原圖 bytes 充當 |
 | 2i | admin(users + database stats) | ✅ 完成(2026-09-01):`/api/users/*` 七端點 + `/api/admin/database/stats`;requireAdmin/requireSuperAdmin 對齊;backup/restore/cleanup/periodic-backup/checkpoint 維持 501 fallback(鎖定決策 #5) |
-| 3 | cutover 灰度切流 | ⏳ 待基礎設施 — 見下方 Checklist(前置皆已解:validate blocker 2b、D1 新欄位假設、blocker #4 epa 已落地)。先切 `/api/auth/*` 觀察 48h，再逐系統擴大 |
-| 終 | DuckDB→D1 資料搬移、Render API 下線、`backend/` 歸檔 | 待開始 — 需 `backend-rust/d1/` 為唯一真相，舊 DuckDB 僅作 dump 來源 |
+| 3 | cutover 全量切流（決策 B） | ⏳ 待基礎設施 — 一次切全部 `/api` → Worker，全量 ETL 後切流，無 48h auth-only 灰度 |
+| 終 | Render API 下線、`backend/` 歸檔 | 待開始 — B 方案下與 Phase 3 全量 ETL 合併，終只剩下線與歸檔 |
 
-## Phase 3 Cutover Checklist(待使用者執行)
+## Phase 3 Cutover Checklist(待使用者執行) — 決策 B：一次切全部 `/api`
 
-> 移植端已封版(2a–2i 全綠，`cargo test` 109、`clippy -D warnings` clean、`wrangler deploy --dry-run` 1434 KiB、`rust contract` 49/49)。以下為基礎設施手續，須在全新 D1 上執行。
+> 移植端已封版(2a–2i 全綠，`cargo test` 109、`clippy -D warnings` clean、`wrangler deploy --dry-run` 1434 KiB、`rust contract` 49/49)。以下為基礎設施手續，須在全新 D1 上執行。決策 B 下無 48h 灰度，Phase 3 與「終」的全量資料搬移合併。
 
-- [ ] **1. 生產 Secret**
+- [ ] **1. 生產 Secret** — 須複製 Render 現用值（`render.yaml` 為 `generateValue: true`，新舊必須一致，否則舊 token 過不了新 Worker 的驗證）
   ```bash
   npx wrangler --cwd backend-rust secret put JWT_SECRET
+  # 複製 Render dashboard → hesocial-api → Environment → JWT_SECRET 的實際值
   # 選配: JWT_EXPIRES_IN 預設 7d，接受 7d/12h/900s/30m/1w；AUTH_RATE_LIMIT_DISABLED=true 可關 /api/auth/* limiter
   npx wrangler --cwd backend-rust secret put CLOUDFLARE_API_TOKEN  # 僅 analytics 真 AE 查詢需要
   ```
@@ -60,20 +62,28 @@
   # 將回傳的 database_id 貼回 backend-rust/wrangler.toml 的 [[d1_databases]]
   npx wrangler --cwd backend-rust d1 execute hesocial-db --file=d1/schema.sql
   npx wrangler --cwd backend-rust d1 execute hesocial-db --file=d1/seed.sql
-  # 若需搬遷現有 DuckDB 資料: 自行 dump 為 SQL 後 npx wrangler d1 execute --file=dump.sql
+  # 全量搬移：DuckDB → D1（見下方「全量 ETL」）
+  # 驗證：npx wrangler d1 execute hesocial-db --command "PRAGMA table_info(users)"  — 必須有 password_algo
   ```
 
 - [ ] **3. 同步 Vars**
   - `wrangler.toml` 的 `CLOUDFLARE_ACCOUNT_ID` / `R2_PUBLIC_URL` 改為實際值
+  - `CORS_ORIGINS` 必須包含 `https://hesocial-frontend.onrender.com`（現為 `http://localhost:3000`）
+  - `NODE_ENV=production`（現為 `development`，影響 OAuth Secure 與 analytics 行為）
   - `ANALYTICS_QUERY_STUB` 生產設 `false`(或移除)才走真 AE SQL API；本機/契約測試維持 `true`
 
-- [ ] **4. 發版與灰度**
+- [ ] **4. 發版與全量切流**（決策 B）
   ```bash
   npx wrangler --cwd backend-rust deploy
   ```
-  Cloudflare Dashboard → Zone → Workers Routes 新增：
-  `api.hesocial.com/api/auth/*` → `hesocial-backend-rust`
-  先只切 auth 觀察 48h，無回歸再依 `2c→2d→2e→2f→2g→2h→2i` 逐系統擴大。任一步可即時回滾(移除 route)。
+  Cloudflare Dashboard → Zone → Workers Routes 新增（需先綁自訂網域 `api.hesocial.com` 並開啟 CF proxy）：
+  `api.hesocial.com/api/*` → `hesocial-backend-rust`
+  前端 `VITE_API_URL` 改為 `https://api.hesocial.com/api` 並重新部署 `hesocial-frontend`。
+  回滾：移除該 route（或 DNS 切回 Render），即時生效。
+
+  全量 ETL（與切流同屬 Phase 3）：
+  - users/events/registrations/waitlist/event_participant_access/sales/media metadata 全量匯出 → 轉為 D1 SQL
+  - 驗證：列數一致、抽 3 帳號 Worker login 200、簽出 token 能打 Express `/api/auth/validate`
 
 - [ ] **5. 驗收**
   ```bash
