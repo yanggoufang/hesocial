@@ -1,8 +1,10 @@
-# hesocial-frontend (Dioxus CSR scaffold)
+# hesocial-frontend (Dioxus CSR)
 
-Rust/WASM replacement **scaffold** for `frontend/`. It proves the toolchain
-(Dioxus 0.7 CSR → static assets, Tailwind tokens, three Rust test layers).
-It does **not** port application pages.
+Rust/WASM replacement for `frontend/`. Round 1 proved the toolchain (Dioxus
+0.7 CSR → static assets, Tailwind tokens, three Rust test layers). Round 2
+ports the `/login` page only. Other application pages are not ported; `/`,
+`/register`, `/forgot-password`, and `/profile` exist as stubs so login
+links and the OAuth-callback regression can be exercised.
 
 Pinned crate versions are in `Cargo.toml` / `Cargo.lock`.
 
@@ -14,6 +16,9 @@ Pinned crate versions are in `Cargo.toml` / `Cargo.lock`.
 | `thirtyfour` | **0.37.5** | W3C WebDriver client with `WebDriver::managed()`: downloads a matching chromedriver, spawns it, and tears it down on `quit()`. Chosen over `fantoccini` for that lifecycle and Chrome capability helpers (`set_headless`, `set_no_sandbox`). Requires rustc **1.88+**. |
 | `wasm-bindgen-test` | **0.3.77** | Matches installed `wasm-bindgen` 0.2.127. |
 | `tiny_http` | **0.12.0** | In-test static file server. No long-lived `dx serve`. |
+| `gloo-net` | **0.6** | Wasm-only `fetch` for `POST /api/auth/login`. |
+| `serde` / `serde_json` | **1** | Login request/response JSON. |
+| `web-sys` | **0.3** | Wasm `window.location` + `localStorage`. |
 
 ## Prerequisites
 
@@ -93,7 +98,10 @@ cd frontend-rust
 cargo test --test logic
 ```
 
-Covers `toggle_label` / `next_toggled` in `src/logic.rs`. No browser, no wasm.
+Covers toggle helpers plus login error selection, `POST /api/auth/login`
+JSON parsing, Bearer header formatting, OAuth `?token=` extraction, and the
+claim-before-`/complete-profile`→`/profile` redirect ordering. No browser,
+no wasm.
 
 ### 2. Component (`wasm-bindgen-test`)
 
@@ -102,9 +110,10 @@ cd frontend-rust
 cargo test --target wasm32-unknown-unknown --test wasm
 ```
 
-Uses the runner set in `.cargo/config.toml`. Renders `Home` through
-`VirtualDom` + `dioxus-ssr` inside Node via `wasm-bindgen-test-runner`.
-Asserts the heading and toggle button appear in the markup.
+Uses the runner set in `.cargo/config.toml`. Renders `Home` and `/login`
+through `VirtualDom` + `dioxus-ssr` inside Node via `wasm-bindgen-test-runner`.
+Asserts Traditional Chinese copy, password masking, LinkedIn permanently
+disabled, and submit disabled while in flight.
 
 ### 3. WebDriver E2E (`thirtyfour`)
 
@@ -117,15 +126,20 @@ cargo test --test e2e -- --nocapture
 **Lifecycle (all inside the test, nothing left running):**
 
 1. Locate `dist/public/index.html` (or the `target/dx/.../web/public` fallback).
-2. Bind `tiny_http` on `127.0.0.1:0` in a background thread; serve the bundle
-   with `application/wasm` for `.wasm`.
-3. `WebDriver::managed(chrome)` downloads a chromedriver matching the installed
-   Chrome, spawns it, and launches headless Chrome (`--headless`, `--no-sandbox`,
-   `--disable-gpu`, `--disable-dev-shm-usage`).
-4. Load `/`, wait for `#scaffold-heading` == `HeSocial`, click `#toggle-btn`
-   (`Off` → `On`).
-5. `driver.quit()` closes the browser and the chromedriver subprocess. The
-   HTTP thread ends when the `cargo test` process exits.
+2. Bind `tiny_http` on `127.0.0.1:0`. The **thread owns the `Server`**. A
+   An `AtomicBool` stop flag plus `recv_timeout(50ms)` lets `shutdown()` join
+   the thread; the listener is then gone (proven by `harness_starts_and_stops_twice`).
+   `/api/auth/login` and `/api/auth/google` are stubbed in-process — the
+   test never calls a real backend.
+3. `WebDriver::managed(chrome)` downloads a matching chromedriver, spawns it,
+   and launches headless Chrome (`--headless`, `--no-sandbox`, `--disable-gpu`,
+   `--disable-dev-shm-usage`).
+4. Covers the home toggle, login copy, 401 error string, success →
+   `localStorage.hesocial_token` + navigate `/`, in-flight submit disable,
+   Google full-page navigation, password reveal, and OAuth
+   `/complete-profile?token=` claimed **before** the `/profile` redirect.
+5. `driver.quit()` closes the browser and chromedriver. `StaticHarness::shutdown`
+   joins the HTTP thread. Nothing is left running.
 
 `cargo test` (no filters) on the host also runs `--test logic` and `--test e2e`.
 The wasm layer is a different target and must be invoked separately.
@@ -138,14 +152,17 @@ frontend-rust/
   Dioxus.toml         # out_dir = dist, HTML title
   tailwind.config.js  # reused luxury tokens; content globs → src/**/*.rs
   tailwind.css        # Tailwind v3 input + luxury component classes
-  assets/tailwind.css # generated CSS consumed by asset!("/assets/tailwind.css")
+  assets/tailwind.css # generated; gitignored — do not commit
+  src/auth.rs         # login parse, token key, OAuth claim-before-redirect
   src/logic.rs        # pure toggle helpers
-  src/ui.rs           # Route + App + Home (heading + button)
-  src/main.rs         # dioxus::launch(App)
+  src/ui.rs           # Route + App + Login + stubs
+  src/main.rs         # claim_oauth_token_on_boot(); dioxus::launch(App)
   tests/logic.rs
   tests/wasm.rs
   tests/e2e.rs
 ```
 
-The trivial page is a heading plus a button that flips `Off`/`On`. Router is
-wired (`Route::Home` at `/`) so later page ports have a place to land.
+`/login` is a public route. OAuth tokens are claimed from `window.location`
+in `main` and at the start of `App`, **before** `Router` or the `/profile`
+guard run. That ordering is load-bearing: `/complete-profile` redirects to
+`/profile` and drops `?token=`.

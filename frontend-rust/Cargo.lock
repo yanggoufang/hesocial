@@ -1494,10 +1494,14 @@ version = "0.1.0"
 dependencies = [
  "dioxus",
  "dioxus-ssr",
+ "gloo-net",
+ "serde",
+ "serde_json",
  "thirtyfour",
  "tiny_http",
  "tokio",
  "wasm-bindgen-test",
+ "web-sys",
 ]
 
 [[package]]
