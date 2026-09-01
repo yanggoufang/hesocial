@@ -5,16 +5,32 @@ compatibility_date = "2026-08-30"
 # Workers Custom Domain on the account's only zone. `api.hesocial.com` from
 # the roadmap was never registered as a zone here; swapping to it later is
 # one more entry in this list, not a redeploy of anything else.
-routes = [{ pattern = "hesocial-api.ahexagram.com", custom_domain = true }]
+routes = [
+  { pattern = "hesocial.ahexagram.com", custom_domain = true },
+  # Kept so anything already pointed at the API-only hostname keeps working.
+  { pattern = "hesocial-api.ahexagram.com", custom_domain = true },
+]
 
 [build]
 command = "worker-build --release crates/worker"
 
+# The SPA ships from the same Worker, so the frontend and the API share an
+# origin: no CORS preflight, one domain, one deploy. Assets are matched first,
+# except under /api/* which always reaches the Worker — otherwise the SPA
+# fallback would answer unknown API paths with index.html instead of the JSON
+# 404 the contract expects. Build with VITE_API_URL=/api so the bundle calls
+# its own origin.
+[assets]
+directory = "../frontend/dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
+
 [vars]
-# Mirrors the Express service's CORS_ORIGINS in render.yaml. The first entry
-# is also the OAuth redirect target (`AppState::frontend_origin`), so the
-# production frontend has to stay first.
-CORS_ORIGINS = "https://hesocial-frontend.onrender.com,http://localhost:3000"
+# The SPA is same-origin now, so this is not what lets the site call the API.
+# It still matters because the first entry is the OAuth redirect target
+# (`AppState::frontend_origin`), and localhost keeps `npm run dev` working
+# against the deployed Worker.
+CORS_ORIGINS = "https://hesocial.ahexagram.com,http://localhost:3000"
 # Gates the `Secure` flag on the visitor cookie and the environment field in
 # /api/health/status.
 NODE_ENV = "production"
