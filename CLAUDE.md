@@ -47,7 +47,7 @@ cd frontend && npm run test -- <file-pattern>
 - **Backend**: Node.js 22 + Express + TypeScript, **ESM** (`"type": "module"`). Entry: `backend/src/server.ts`. Dev port: **5000**.
 - **Database**: **DuckDB** embedded file at repo root (`hesocial.duckdb`) — no external DB server. Schema: `database/duckdb-schema.sql`. Migrations managed via `backend/src/database/MigrationService.ts` (TS migrations live in `backend/src/database/migrations/*.migration.ts`).
 - **Storage**: Cloudflare R2 for media and DB backups (optional in dev).
-- **Hosting target**: Render (`render.yaml`) hosts the frontend static site and backend Node service. Cloudflare is not the app runtime in the committed config.
+- **Hosting target**: a single Cloudflare Worker (`backend-rust/wrangler.toml`) serves the Rust API and the React SPA from one origin at `hesocial.ahexagram.com`. Render is decommissioned.
 - **Auth**: JWT + Google OAuth 2.0.
 
 ### Backend wiring gotchas
@@ -101,7 +101,7 @@ A Husky `pre-commit` hook runs `validate:docs`, `lint:fix`, `typecheck`, and `np
 
 - **Do not start or restart servers automatically** — ask the user to do it.
 - Frontend deploys require a build (`npm run build:frontend`) before serving.
-- Production hosting source of truth is `render.yaml`; see [Deployment Targets](docs/DEPLOYMENT_TARGETS.md).
+- Production hosting source of truth is `backend-rust/wrangler.toml`; see [Deployment Targets](docs/DEPLOYMENT_TARGETS.md). Deploying needs `VITE_API_URL=/api npm run build:frontend` first — `frontend/dist` is gitignored.
 - Cloudflare references in this repo mean R2 storage/backups/media unless a future Worker/Pages config is added.
 - Never commit `.env`, `.credentials.json`, or the `statsig/` directory.
 

@@ -115,7 +115,7 @@ npm run test         # Run Vitest tests
 - **Full Mode**: `npm run dev` - Node/Express with DuckDB and optional Cloudflare R2 integration
 
 ### Production Hosting Source Of Truth
-- Frontend production target: Render static site `hesocial-frontend`
-- Backend production target: Render Node web service `hesocial-api`
+- Frontend production target: Worker static assets (`VITE_API_URL=/api npm run build:frontend`)
+- Backend production target: Cloudflare Worker `hesocial-backend-rust`
 - Cloudflare role: R2 storage/backups/media and possible external DNS/domain routing
 - See `docs/DEPLOYMENT_TARGETS.md` before assuming Cloudflare Workers, Pages Functions, or D1.

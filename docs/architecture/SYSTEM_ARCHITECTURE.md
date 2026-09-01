@@ -136,10 +136,10 @@ GET  /api/admin/backups    // Admin+ required
 
 ### Production Hosting
 
-The current committed production deployment target is Render:
+The current committed production deployment target is a Cloudflare Worker:
 
-- **Frontend**: Render static site `hesocial-frontend`, built from `frontend/dist`
-- **Backend**: Render Node web service `hesocial-api`, running the compiled Express server
+- **Frontend**: React SPA served as Worker static assets from `frontend/dist`
+- **Backend**: Rust Worker `hesocial-backend-rust`, compiled to wasm32
 - **Cloudflare**: R2 storage/backups/media, and possibly external DNS/domain routing outside this repo
 
 Cloudflare is not currently the frontend or backend runtime. The repo has no `wrangler.toml`, Worker entrypoint, Pages Functions directory, or D1 configuration. See [Deployment Targets](../DEPLOYMENT_TARGETS.md).

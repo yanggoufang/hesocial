@@ -40,7 +40,7 @@ This is a high-end social event platform targeting affluent individuals aged 45-
 - **Runtime**: Node.js 22.16.0 with Express framework
 - **Language**: TypeScript with ESM modules
 - **Database**: DuckDB as primary database with Cloudflare R2 persistence
-- **Hosting**: Render Node web service via `render.yaml`
+- **Hosting**: Cloudflare Worker via `backend-rust/wrangler.toml`
 - **Security**: Helmet, CORS, rate limiting, compression
 - **Logging**: Winston with Morgan middleware
 - **File Processing**: Multer with Sharp for image processing
@@ -54,8 +54,8 @@ This is a high-end social event platform targeting affluent individuals aged 45-
 - **Key Tables**: Users, Events, Venues, Event Categories, Registrations, Financial verification, Server state tracking
 
 ### Deployment Targets
-- **Frontend**: Render static site `hesocial-frontend`
-- **Backend**: Render Node web service `hesocial-api`
+- **Frontend**: React SPA served as Worker static assets
+- **Backend**: Rust Worker `hesocial-backend-rust`
 - **Cloudflare**: R2 storage/backups/media and possible external DNS/domain routing
 - **Not currently configured**: Cloudflare Workers, Cloudflare Pages Functions, D1, KV, Durable Objects
 

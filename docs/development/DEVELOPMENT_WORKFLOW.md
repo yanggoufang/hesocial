@@ -105,7 +105,7 @@ npm run migrate:validate  # Validate migration integrity
 
 ### Local Runtime Model
 
-Local development simulates the current Render-hosted production shape, not Cloudflare Workers or Cloudflare Pages Functions:
+Local development runs the legacy Node/Express stack. Production is a Cloudflare Worker; the contract suite (`npm run test:contract:rust`) is what exercises the real Worker under workerd:
 
 - Frontend runs with Vite or from the built `frontend/dist` static assets.
 - Backend runs as a Node/Express process.

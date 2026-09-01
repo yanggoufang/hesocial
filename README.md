@@ -44,15 +44,15 @@ hesocial/
 - **Backup System**: AWS SDK v3 with smart restore logic and automatic backups
 - **Authentication**: ✅ **Production Ready** - JWT + Google OAuth 2.0 with Passport.js
 - **Payments**: Stripe integration
-- **Hosting**: Render static site (`hesocial-frontend`) + Render Node web service (`hesocial-api`) via `render.yaml`
+- **Hosting**: one Cloudflare Worker serving both the Rust API and the React SPA (`backend-rust/wrangler.toml`)
 - **Infrastructure**: Cloudflare R2 for database persistence, backup management, and media storage
 
 ## Deployment Targets
 
-The current committed production deployment target is **Render**:
+The current committed production deployment target is a **Cloudflare Worker** at `https://hesocial.ahexagram.com`:
 
-- Frontend: Render static site `hesocial-frontend`, built from `frontend/dist`
-- Backend: Render Node web service `hesocial-api`, running `backend/dist/server.js`
+- Frontend: React SPA served as Worker static assets from `frontend/dist`
+- Backend: Rust (`workers-rs` + axum) compiled to wasm32, with Turso/libSQL as the database
 - Cloudflare: R2 storage/backups/media, and possibly external DNS/domain routing outside this repo
 
 Cloudflare is not currently configured as the frontend or backend runtime in this repository. There is no `wrangler.toml`, Worker entrypoint, Pages Functions directory, or D1 configuration. See [Deployment Targets](./docs/DEPLOYMENT_TARGETS.md).
