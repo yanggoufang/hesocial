@@ -1,8 +1,12 @@
 import axios from 'axios'
 import { API_BASE_URL } from './apiBase'
 
-// Configure axios defaults
-axios.defaults.baseURL = API_BASE_URL
+// Timeout only. `axios.defaults.baseURL` used to be set here, which was
+// invisible while VITE_API_URL was an absolute URL — every service built a
+// full URL and axios ignored the default. Once the API moved same-origin and
+// VITE_API_URL became "/api", the default started prefixing those full paths
+// again, so /api/auth/validate went out as /api/api/auth/validate and 501'd.
+// Every call site now carries API_BASE_URL explicitly, like the other services.
 axios.defaults.timeout = 10000
 
 // Add request interceptor to include auth token
@@ -255,7 +259,7 @@ class EventService {
         }
       })
       
-      const response = await axios.get(`/events?${params.toString()}`)
+      const response = await axios.get(`${API_BASE_URL}/events?${params.toString()}`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to fetch events')
@@ -264,7 +268,7 @@ class EventService {
 
   async getEvent(id: string): Promise<EventResponse<Event>> {
     try {
-      const response = await axios.get(`/events/${id}`)
+      const response = await axios.get(`${API_BASE_URL}/events/${id}`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to fetch event')
@@ -273,7 +277,7 @@ class EventService {
 
   async createEvent(eventData: CreateEventData): Promise<EventResponse<{ eventId: string; slug: string }>> {
     try {
-      const response = await axios.post('/events', eventData)
+      const response = await axios.post(`${API_BASE_URL}/events`, eventData)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to create event')
@@ -282,7 +286,7 @@ class EventService {
 
   async updateEvent(id: string, eventData: Partial<CreateEventData>): Promise<EventResponse<void>> {
     try {
-      const response = await axios.put(`/events/${id}`, eventData)
+      const response = await axios.put(`${API_BASE_URL}/events/${id}`, eventData)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to update event')
@@ -291,7 +295,7 @@ class EventService {
 
   async deleteEvent(id: string): Promise<EventResponse<void>> {
     try {
-      const response = await axios.delete(`/events/${id}`)
+      const response = await axios.delete(`${API_BASE_URL}/events/${id}`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to delete event')
@@ -300,7 +304,7 @@ class EventService {
 
   async publishEvent(id: string): Promise<EventResponse<void>> {
     try {
-      const response = await axios.post(`/events/${id}/publish`)
+      const response = await axios.post(`${API_BASE_URL}/events/${id}/publish`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to publish event')
@@ -309,7 +313,7 @@ class EventService {
 
   async approveEvent(id: string, approved: boolean): Promise<EventResponse<void>> {
     try {
-      const response = await axios.post(`/events/${id}/approve`, { approved })
+      const response = await axios.post(`${API_BASE_URL}/events/${id}/approve`, { approved })
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to approve/reject event')
@@ -326,7 +330,7 @@ class EventService {
         }
       })
       
-      const response = await axios.get(`/venues?${params.toString()}`)
+      const response = await axios.get(`${API_BASE_URL}/venues?${params.toString()}`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to fetch venues')
@@ -335,7 +339,7 @@ class EventService {
 
   async getVenue(id: string): Promise<EventResponse<Venue>> {
     try {
-      const response = await axios.get(`/venues/${id}`)
+      const response = await axios.get(`${API_BASE_URL}/venues/${id}`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to fetch venue')
@@ -344,7 +348,7 @@ class EventService {
 
   async createVenue(venueData: CreateVenueData): Promise<EventResponse<{ venueId: string }>> {
     try {
-      const response = await axios.post('/venues', venueData)
+      const response = await axios.post(`${API_BASE_URL}/venues`, venueData)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to create venue')
@@ -353,7 +357,7 @@ class EventService {
 
   async updateVenue(id: string, venueData: Partial<CreateVenueData>): Promise<EventResponse<void>> {
     try {
-      const response = await axios.put(`/venues/${id}`, venueData)
+      const response = await axios.put(`${API_BASE_URL}/venues/${id}`, venueData)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to update venue')
@@ -362,7 +366,7 @@ class EventService {
 
   async deleteVenue(id: string): Promise<EventResponse<void>> {
     try {
-      const response = await axios.delete(`/venues/${id}`)
+      const response = await axios.delete(`${API_BASE_URL}/venues/${id}`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to delete venue')
@@ -372,7 +376,7 @@ class EventService {
   // Category Management
   async getCategories(): Promise<EventResponse<EventCategory[]>> {
     try {
-      const response = await axios.get('/categories')
+      const response = await axios.get(`${API_BASE_URL}/categories`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to fetch categories')
@@ -381,7 +385,7 @@ class EventService {
 
   async getCategory(id: string): Promise<EventResponse<EventCategory>> {
     try {
-      const response = await axios.get(`/categories/${id}`)
+      const response = await axios.get(`${API_BASE_URL}/categories/${id}`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to fetch category')
@@ -390,7 +394,7 @@ class EventService {
 
   async createCategory(categoryData: CreateCategoryData): Promise<EventResponse<{ categoryId: string; slug: string }>> {
     try {
-      const response = await axios.post('/categories', categoryData)
+      const response = await axios.post(`${API_BASE_URL}/categories`, categoryData)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to create category')
@@ -399,7 +403,7 @@ class EventService {
 
   async updateCategory(id: string, categoryData: Partial<CreateCategoryData>): Promise<EventResponse<void>> {
     try {
-      const response = await axios.put(`/categories/${id}`, categoryData)
+      const response = await axios.put(`${API_BASE_URL}/categories/${id}`, categoryData)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to update category')
@@ -408,7 +412,7 @@ class EventService {
 
   async deleteCategory(id: string): Promise<EventResponse<void>> {
     try {
-      const response = await axios.delete(`/categories/${id}`)
+      const response = await axios.delete(`${API_BASE_URL}/categories/${id}`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to delete category')
@@ -418,7 +422,7 @@ class EventService {
   // Event Registration
   async registerForEvent(eventId: string, registrationData?: any): Promise<EventResponse<{ registrationId: string }>> {
     try {
-      const response = await axios.post(`/registrations/events/${eventId}`, registrationData || {})
+      const response = await axios.post(`${API_BASE_URL}/registrations/events/${eventId}`, registrationData || {})
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to register for event')
@@ -427,7 +431,7 @@ class EventService {
 
   async getUserRegistrations(): Promise<EventResponse<any[]>> {
     try {
-      const response = await axios.get('/registrations/user')
+      const response = await axios.get(`${API_BASE_URL}/registrations/user`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to fetch user registrations')
@@ -436,7 +440,7 @@ class EventService {
 
   async cancelRegistration(registrationId: string): Promise<EventResponse<void>> {
     try {
-      const response = await axios.delete(`/registrations/${registrationId}`)
+      const response = await axios.delete(`${API_BASE_URL}/registrations/${registrationId}`)
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Failed to cancel registration')

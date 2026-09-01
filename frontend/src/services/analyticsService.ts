@@ -169,7 +169,7 @@ class AnalyticsService {
   // Get events overview analytics
   async getEventsOverview(): Promise<ApiResponse<EventsOverviewResponse>> {
     try {
-      const response = await axios.get('/analytics/events/overview')
+      const response = await axios.get(`${API_BASE_URL}/analytics/events/overview`)
       return response.data
     } catch (error: any) {
       console.error('Analytics overview error:', error)
@@ -183,7 +183,7 @@ class AnalyticsService {
   // Get individual event performance
   async getEventPerformance(eventId: string): Promise<ApiResponse<EventPerformanceData>> {
     try {
-      const response = await axios.get(`/analytics/events/${eventId}/performance`)
+      const response = await axios.get(`${API_BASE_URL}/analytics/events/${eventId}/performance`)
       return response.data
     } catch (error: any) {
       console.error('Event performance error:', error)
@@ -197,7 +197,7 @@ class AnalyticsService {
   // Get revenue analytics
   async getRevenueAnalytics(): Promise<ApiResponse<RevenueData>> {
     try {
-      const response = await axios.get('/analytics/revenue/events')
+      const response = await axios.get(`${API_BASE_URL}/analytics/revenue/events`)
       return response.data
     } catch (error: any) {
       console.error('Revenue analytics error:', error)
@@ -211,7 +211,7 @@ class AnalyticsService {
   // Get member engagement analytics
   async getMemberEngagement(): Promise<ApiResponse<EngagementData>> {
     try {
-      const response = await axios.get('/analytics/engagement/members')
+      const response = await axios.get(`${API_BASE_URL}/analytics/engagement/members`)
       return response.data
     } catch (error: any) {
       console.error('Member engagement error:', error)
@@ -225,7 +225,7 @@ class AnalyticsService {
   // Export analytics data
   async exportAnalyticsData(format: 'csv' | 'excel' = 'csv'): Promise<ApiResponse<{ downloadUrl: string }>> {
     try {
-      const response = await axios.post('/analytics/export', { format })
+      const response = await axios.post(`${API_BASE_URL}/analytics/export`, { format })
       return response.data
     } catch (error: any) {
       console.error('Export analytics error:', error)
@@ -244,7 +244,7 @@ class AnalyticsService {
     systemHealth: string
   }>> {
     try {
-      const response = await axios.get('/analytics/realtime')
+      const response = await axios.get(`${API_BASE_URL}/analytics/realtime`)
       return response.data
     } catch (error: any) {
       console.error('Real-time metrics error:', error)
@@ -262,7 +262,7 @@ class AnalyticsService {
     metrics: string[] = ['events', 'revenue', 'registrations']
   ): Promise<ApiResponse<any>> {
     try {
-      const response = await axios.post('/analytics/custom-range', {
+      const response = await axios.post(`${API_BASE_URL}/analytics/custom-range`, {
         startDate,
         endDate,
         metrics
@@ -292,7 +292,7 @@ class AnalyticsService {
     }
   }>> {
     try {
-      const response = await axios.get(`/analytics/comparative`, {
+      const response = await axios.get(`${API_BASE_URL}/analytics/comparative`, {
         params: { period, comparison }
       })
       return response.data

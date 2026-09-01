@@ -1,6 +1,6 @@
 # Rust 遷移 Roadmap(Node/Express/DuckDB → Rust/workers-rs/Turso)
 
-> 本文件是遷移的單一真相來源。團隊決策日:2026-08-30;資料層於 2026-09-01 由 D1 改為 Turso/libSQL(決策 #7),前端亦改為納入遷移範圍(決策 #9)。
+> 本文件是遷移的單一真相來源。團隊決策日:2026-08-30;資料層於 2026-09-01 由 D1 改為 Turso/libSQL(決策 #7)。**最終目標是全專案 Rust 單一化,不留 TypeScript**(決策 #9)。
 
 ## 目標架構(已定案)
 
@@ -22,7 +22,7 @@
 
 7. **資料層改用 Turso/libSQL(2026-09-01 拍板)**:當日 Cloudflare D1 API 對本帳號全面回 `10000 Authentication error`(list、create、既有 DB 的 uuid GET 全掛,而同一顆 token 打 R2/Workers 正常),使用者表明本就不想用 D1(「一定是你們建議的,我早不用了」)並指示「不用D1 / 全部搬走」,範圍限本 repo。當日稍晚 D1 API 自行恢復,故那次故障是暫時性的(可能是免費方案配額)而非權限問題 — **但決策不變**(「不管如何DB請放tursor」),不得再提議改回 D1。`hesocial-db` 從未建立成功,因此**零資料搬移**,純程式碼改動。實作見 `crates/worker/src/db.rs`(commit `1e61c07`)。
 8. **visitor analytics 收回資料庫(2026-09-01)**:撤銷決策 #3。Analytics Engine 當初只是為了迴避 D1 的寫入瓶頸;D1 出局後它變成一個只能靠額外 Cloudflare API token 存取的第二資料源。三張 `visitor_*` 表改由 Express 既有的 `database/migrations/005_visitor_tracking.sql` 移植,兩端資料模型自此一致(commit `ef63946`)。副作用:`10089 需啟用 Analytics Engine` 這個部署阻礙隨 binding 消失而解除。
-9. **前端亦改寫為 Rust(2026-09-01 使用者指示)**:撤銷「前端維持 React/TS 不變」。尚未開始,且**不得阻擋後端工作**。現況量測:53 檔、15,510 行、22 頁、13 元件;`three`/`react-player`/`react-hook-form` 皆為死依賴(0 檔案使用),實際障礙是 `framer-motion`(24 檔,Rust 無等價物)與 `lucide-react`(32 檔,機械替換)。**最大風險是前端 0 測試**(`vitest run --passWithNoTests`),沒有後端那套 49 條契約斷言等級的安全網。
+9. **全專案單一化為 Rust(2026-09-01 使用者指示,已定案)**:撤銷「前端維持 React/TS 不變」。目標是**整個專案沒有 TypeScript** — 後端已達成,`frontend/` 的 React/TS 改寫為 Rust/WASM 是既定範圍而非待評估選項。剩餘 TS 有兩塊:(a) `frontend/` 15,510 行、22 頁、13 元件;(b) `backend/` 舊 Express,僅作為契約測試的對照組,待不再需要 parity 驗證後歸檔。前端現況量測:`three`/`react-player`/`react-hook-form` 皆為死依賴(0 檔案使用),實際工作量集中在 `framer-motion`(24 檔,Rust 無等價物,改手寫 CSS transition 或 JS interop)與 `lucide-react`(32 檔,機械替換)。已知風險:前端目前 0 測試(`vitest run --passWithNoTests`),沒有後端那套 49 條契約斷言的安全網 — 因此**補測試是這條軌的第一步,不是改框架**。此決策不阻擋後端工作,兩軌並行。
 
 ## 驗收契約
 
