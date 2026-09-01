@@ -32,11 +32,55 @@
 | 0.5 | `d1/schema.sql` + `d1/seed.sql` + contract test 雙 target harness(express 先回歸綠) | ✅ schema/seed 已落地並實證;contract harness 併入 Phase 1 首項 |
 | 1 | contract 雙 target harness(1b)+ 唯讀公開端點(1a) | ✅ 已完成(`883185e` + `88877c6`);rust contract target 實跑:2 passed + 3 skipped(auth 待 Phase 2) |
 | 2 | auth(register/login/profile/refresh/logout + bcrypt→PBKDF2)+ RBAC + rate limiting binding + Google OAuth | ✅ 完成:2a(`df26933`)+ 2b(Google OAuth 手寫 code flow、state HttpOnly cookie、`/api/auth/validate`、PUT profile、linkedin 501 stub);雙 target contract 6/6;`/api/auth/*` 全數移植 |
-| 3 | `/api/auth/*` zone route cutover,觀察 48h | 待開始 — 前置:`wrangler secret put JWT_SECRET`、fresh D1 佈建(validate blocker 已於 2b 解除) |
-| 4 | events CRUD + approval flow(統一新 schema;管理端點必輸出原始 price_* 欄位) | ✅ 2c 完成(`2fa5002`,2026-08-31):公開詳情 + create/update/delete + approve/reject/publish;rust contract 13/13 |
-| 5 | registrations/waitlist(D1 `batch()` 原子重構) | ✅ 2d 完成(2026-08-31):register/cancel/my-registrations + 滿額 waitlist/晉升原子化;rust contract 17/17;stats 兩端同步釘 500 |
-| 6+ | participants → sales → analytics(Analytics Engine/KV)→ media/admin | participants 2e、sales CRM 2f、analytics 2g 已完成;media 2h 已實作(2026-08-31):event image/document + venue image upload、event/venue list、owner/admin delete,R2 `MEDIA` binding + D1 metadata + multipart/MIME/10MiB validation;admin 2i 已完成(2026-09-01):`/api/users/*` 七端點 + `/api/admin/database/stats`,requireAdmin/requireSuperAdmin 對齊,backup/restore/cleanup/periodic-backup/checkpoint 維持 501 fallback(鎖定決策 #5) |
-| 終 | DuckDB→D1 資料搬移、Render API 下線、`backend/` 歸檔 | 待開始 |
+| 2c | events CRUD + approval flow(統一新 schema;管理端點必輸出原始 price_* 欄位) | ✅ 完成(`2fa5002`,2026-08-31):公開詳情 + create/update/delete + approve/reject/publish;rust contract 13/13 |
+| 2d | registrations/waitlist(D1 `batch()` 原子重構) | ✅ 完成(2026-08-31):register/cancel/my-registrations + 滿額 waitlist/晉升原子化;rust contract 17/17;stats 兩端同步釘 500;`POST /:id/payment` + `event_participant_access` seeding 於 `b43f94d` 補齊(blocker #4 已解) |
+| 2e | participants 隱私系統 | ✅ 完成:6 端點 + masking + 付費閘門 parity;`POST /:id/payment` 後 epa 正確轉 paid |
+| 2f | sales CRM | ✅ 完成:leads/opportunities/activities/metrics/pipeline/team + 2f 補審修正(`cde88ec`) — 負 limit 500、孤兒化批次、`Option<i64>`;rust contract 37/37 |
+| 2g | analytics(Analytics Engine + D1) | ✅ 完成:Tracking 寫入(AE) + 5 個 D1 分析端點 + stub;rust contract 含 analytics/media 共 49/49 |
+| 2h | media(R2 + D1 metadata) | ✅ 完成(2026-08-31):event image/document + venue image upload、event/venue list、owner/admin delete;R2 `MEDIA` binding + multipart/MIME/10MiB;variant 暫以原圖 bytes 充當 |
+| 2i | admin(users + database stats) | ✅ 完成(2026-09-01):`/api/users/*` 七端點 + `/api/admin/database/stats`;requireAdmin/requireSuperAdmin 對齊;backup/restore/cleanup/periodic-backup/checkpoint 維持 501 fallback(鎖定決策 #5) |
+| 3 | cutover 灰度切流 | ⏳ 待基礎設施 — 見下方 Checklist(前置皆已解:validate blocker 2b、D1 新欄位假設、blocker #4 epa 已落地)。先切 `/api/auth/*` 觀察 48h，再逐系統擴大 |
+| 終 | DuckDB→D1 資料搬移、Render API 下線、`backend/` 歸檔 | 待開始 — 需 `backend-rust/d1/` 為唯一真相，舊 DuckDB 僅作 dump 來源 |
+
+## Phase 3 Cutover Checklist(待使用者執行)
+
+> 移植端已封版(2a–2i 全綠，`cargo test` 109、`clippy -D warnings` clean、`wrangler deploy --dry-run` 1434 KiB、`rust contract` 49/49)。以下為基礎設施手續，須在全新 D1 上執行。
+
+- [ ] **1. 生產 Secret**
+  ```bash
+  npx wrangler --cwd backend-rust secret put JWT_SECRET
+  # 選配: JWT_EXPIRES_IN 預設 7d，接受 7d/12h/900s/30m/1w；AUTH_RATE_LIMIT_DISABLED=true 可關 /api/auth/* limiter
+  npx wrangler --cwd backend-rust secret put CLOUDFLARE_API_TOKEN  # 僅 analytics 真 AE 查詢需要
+  ```
+  未設 `JWT_SECRET` 時所有簽發 token 的端點 500(fail-closed，與 Express production 等價)。`wrangler.test.toml` 的 dummy secret 僅供契約測試。
+
+- [ ] **2. 全新 D1 佈建** — `password_algo` 等欄位只在 `d1/schema.sql` 的 `CREATE TABLE`，必對全新 DB 套用(舊表缺欄會全線 500)
+  ```bash
+  npx wrangler d1 create hesocial-db
+  # 將回傳的 database_id 貼回 backend-rust/wrangler.toml 的 [[d1_databases]]
+  npx wrangler --cwd backend-rust d1 execute hesocial-db --file=d1/schema.sql
+  npx wrangler --cwd backend-rust d1 execute hesocial-db --file=d1/seed.sql
+  # 若需搬遷現有 DuckDB 資料: 自行 dump 為 SQL 後 npx wrangler d1 execute --file=dump.sql
+  ```
+
+- [ ] **3. 同步 Vars**
+  - `wrangler.toml` 的 `CLOUDFLARE_ACCOUNT_ID` / `R2_PUBLIC_URL` 改為實際值
+  - `ANALYTICS_QUERY_STUB` 生產設 `false`(或移除)才走真 AE SQL API；本機/契約測試維持 `true`
+
+- [ ] **4. 發版與灰度**
+  ```bash
+  npx wrangler --cwd backend-rust deploy
+  ```
+  Cloudflare Dashboard → Zone → Workers Routes 新增：
+  `api.hesocial.com/api/auth/*` → `hesocial-backend-rust`
+  先只切 auth 觀察 48h，無回歸再依 `2c→2d→2e→2f→2g→2h→2i` 逐系統擴大。任一步可即時回滾(移除 route)。
+
+- [ ] **5. 驗收**
+  ```bash
+  npm run test:contract:rust   # 49/49
+  cargo test -p core            # 109
+  ```
+  生產抽檢: `POST /api/auth/login`、`GET /api/auth/validate`、`POST /api/registrations/{id}/payment`(admin)、`GET /api/events/{id}/participants`(paid 閘門 403→200)。
 
 ## 已知技術債/陷阱(移植時處理)
 
@@ -76,7 +120,7 @@
 - **`/api/auth/*` 已全部移植(2b 後)**:含 `PUT /api/auth/profile`、`GET/POST /api/auth/validate`、`/api/auth/google*`(手寫 code flow)、`/api/auth/linkedin*`(501 stub)
 - **pbkdf2 在 worker 內走純 Rust(非 WebCrypto)**:與 host 共用 `core::pbkdf2` 單一實作,wire format 不可能漂移;代價是每次 hash 純 CPU 100k 輪 HMAC-SHA256(登入轉換時是 bcrypt verify + PBKDF2 兩次)。若 Paid plan CPU 觀察到壓力,再評估 WebCrypto `deriveBits` 雙實作 + fixture 互證
 - **register/login 的 JSON body 解析**:Rust 端非 JSON body / 非 JSON content-type 由 axum 的 Json rejection 回 400 純文字,Express 是 400 HTML;契約未覆蓋,留下
-- **Phase 3 cutover 前必辦(4):`event_participant_access` 的 Rust 寫入路徑(2e 後補審 F1,cutover blocker)** — 該表目前**只有 Express 寫**(`registrationController.ts:147` 註冊建 pending、`:670` 付款更新);`backend-rust` 只讀不寫。註冊切流(2d)且 Express 退役後,新用戶註冊+付款**不會建 epa 列** → `participant_access` 永遠 Unpaid → 所有新註冊的 participants 端點永久 403、名單互不可見。必辦:Rust 端 register(建 pending 列)與付款狀態路徑補寫 epa;同時一併決定 F4 產品決策 — **取消報名不會撤銷已付 epa**(兩端皆然;付款→取消者保留名單可見與 paid 計數,「前任參與者仍在看」案例)。若產品要撤銷,cancel 路徑加 `updateParticipantAccess`;若接受,記錄於此
+- **Phase 3 cutover 前必辦(4):`event_participant_access` 的 Rust 寫入路徑(2e 後補審 F1,cutover blocker) — ✅ 已於 `b43f94d` 解決** — 原該表**只有 Express 寫**(`registrationController.ts:147` 註冊建 pending、`:670` 付款更新);`backend-rust` 只讀不寫，註冊切流後新用戶會永久 403。現 Rust 端 `register` 已 best-effort seeding pending 列 + `POST /api/registrations/{id}/payment`(admin) 同步 epa(`pending`→`paid` + `access_level`)，participants 付費閘門已打通。**F4 產品決策維持現狀:取消報名不會撤銷已付 epa**(兩端皆然；付款→取消者保留名單可見與 paid 計數，「前任參與者仍在看」案例)。若產品要撤銷，cancel 路徑加 `updateParticipantAccess`
 - **2d/2e 後補審已修(2026-09-01 K3 產出)**:2d 同毫秒晉升競態(晉升子查詢改 `ORDER BY position DESC, id DESC` — 剛接受列必為該 offered_at 中 position 最高,修掉幽靈 +1 與擱淺晉升)、併發重複報名 500→400(batch 錯後重查 existing)、2e detail 端點 LIMIT-1+find 的 404 bug(Express 原樣移植的破 port;改直接 by-id 查詢 + 同可見性謂詞 + 日誌歸屬到正確參與者)。**該宣告未修的移植偏差**:privacy `PUT` 僅布林時的 NOT NULL 衝突已修(COALESCE 子查詢),殘留:檢查順序(deadline→capacity→duplicate→tier→verification vs Rust 順序)與 blocked 字彙('confirmed'/'cancelled' vs 'approved'/'rejected')、fail-open malformed tiers、detail 首列外 404(已修)以外的 404-vs-500 軸(非數字 id Rust 404 vs Express 500)— 契約未釘,留宣言;`js_parse_int` 負數 limit 已 clamp 1..=100;privacyLevel 已加整數檢查
 - **exclusivityLevel 過濾在 Rust 端暫不支援**(統一 schema 無對應欄位)— 前端 EventsPage 的級別選擇器送出的參數不會過濾、badges 顯示 null。需要產品決策:映射到 `required_membership_tiers`,或前端改版
 - git 歷史清洗(hesocial.duckdb 的 5 個歷史 commit)— 需 force push 決策
