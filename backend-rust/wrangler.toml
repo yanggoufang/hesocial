@@ -8,10 +8,6 @@ command = "worker-build --release crates/worker"
 [vars]
 CORS_ORIGINS = "http://localhost:3000"
 NODE_ENV = "development"
-# Analytics Engine SQL API reads (Phase 2g). CLOUDFLARE_API_TOKEN stays a
-# secret (wrangler secret put / .dev.vars); ANALYTICS_QUERY_STUB=true swaps
-# every analytics read to a compiled-in stub for local dev / contract tests.
-CLOUDFLARE_ACCOUNT_ID = "ed01ccea0b8ee7138058c4378cc83e54"
 # Public custom domain (or r2.dev URL) used in image response fields. Private
 # documents remain R2 keys and are never exposed by the public list route.
 R2_PUBLIC_URL = "https://media.hesocial.com"
@@ -31,8 +27,3 @@ name = "RATE_LIMITER"
 namespace_id = "1001"
 simple = { limit = 2, period = 60 }
 
-# Visitor tracking write path (Phase 2g Stage 2): one AE data point per page
-# view / custom event. The dataset name matches core::analytics::DEFAULT_DATASET.
-[[analytics_engine_datasets]]
-binding = "TRACKING"
-dataset = "hesocial_visitors"

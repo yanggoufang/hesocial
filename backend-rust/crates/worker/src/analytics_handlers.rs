@@ -1,64 +1,22 @@
-#![allow(clippy::result_large_err)]
-//! Visitor-tracking write path + Analytics-Engine-backed read endpoints
-//! (Phase 2g Stage 2).
+//! Visitor tracking and analytics, backed by the `visitor_sessions` /
+//! `visitor_page_views` / `visitor_events` tables in Turso.
 //!
-//! The pure mapping, SQL builders, and Express-exact envelope shapers live in
-//! `core::analytics`; this module is the wasm/host boundary: it turns
-//! [`AnalyticsDataPoint`] into `AnalyticsEngineDataPointBuilder` writes on the
-//! `TRACKING` binding and POSTs SQL strings to the Analytics Engine SQL API.
+//! Phase 2g originally put the write path in Cloudflare Analytics Engine and
+//! read it back over the AE SQL API, because D1 could not absorb a write per
+//! page view. Dropping D1 removed that constraint, and with it the reasons to
+//! keep tracking in a second store reachable only with a separate Cloudflare
+//! API token. The tables here are the ones Express already writes
+//! (`database/migrations/005_visitor_tracking.sql`), so the two backends now
+//! agree on the data model as well as the responses.
 //!
-//! ## Write path
+//! Response shapes are unchanged: `crates/core`'s envelope shapers still take
+//! `{alias: value}` rows and still emit `*_ms` epoch numbers, so the SQL below
+//! converts stored ISO timestamps rather than the shapers changing.
 //!
-//! - `visitor_tracking_middleware` mirrors Express `app.use(visitorTracking)`:
-//!   every request is a page view. The visitor id is read from the
-//!   `X-Visitor-ID` header, then the `visitorId` cookie, then the `visitorId`
-//!   query param (Express precedence order). A missing id mints
-//!   `visitor_<uuid v4>` and sets the `visitorId` cookie on the response
-//!   (`Max-Age=1y; Path=/; SameSite=Lax`, `Secure` when `NODE_ENV=production`,
-//!   no `HttpOnly` — the frontend reads it). Tracking failures never block or
-//!   fail the response, exactly like the Express middleware.
-//! - `POST /api/analytics/events/track` accepts the frontend beacon
-//!   (`VisitorTracker.tsx`): `{visitor_id, event_type, event_data?}` plus the
-//!   new optional `session_id`. Validation mirrors the Express 400; success is
-//!   `{success: true, message}` with no `data` key.
-//!
-//! ## Query seam and the stub mechanism
-//!
-//! All reads go through [`AnalyticsBackend`] on [`AppState`], chosen once per
-//! request from env:
-//!
-//! - **Stub**: when env var `ANALYTICS_QUERY_STUB` is truthy
-//!   (`1`/`true`/`yes`, case-insensitive) the backend is compiled-in and
-//!   returns core's `ANALYTICS_QUERY_STUB` fixture rows for every query — no
-//!   file IO, no service bindings, no network. This is the documented stub
-//!   mechanism for local dev and Stage 4 contract tests.
-//! - **Live**: HTTPS POST to
-//!   `https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/analytics_engine/sql`
-//!   with `Authorization: Bearer CLOUDFLARE_API_TOKEN` and the SQL string as
-//!   the body; the response `{meta, data: [rows]}` parses into
-//!   [`AnalyticsQuery`].
-//! - **Unconfigured**: stub off and either env value missing — every query
-//!   fails and the handlers answer the Express 500 envelope.
-//!
-//! ## Documented deviations (vs Express)
-//!
-//! - `POST /events/track` is NOT behind `authenticateToken`/`requireAdmin`.
-//!   Express mounts the whole analytics router under the admin guard, but the
-//!   frontend beacon posts unauthenticated, so Express 401s its own beacon.
-//!   The port accepts the beacon as the frontend actually sends it; the GET
-//!   read endpoints keep the admin guard. Contract tests must special-case
-//!   this.
-//! - `blob10`/`double4` (linked user) stay empty on page views: AE is
-//!   append-only and Express's `linkVisitorToUser` rewrites past rows, which
-//!   AE cannot do. Porting the link call would also touch the frozen
-//!   `auth_handlers.rs`.
-//! - Invalid-JSON track bodies get axum's Json rejection (400 plain text),
-//!   not Express's 400 HTML — same class as the 2b register/login deviation.
-//! - Query params with repeated keys keep the LAST value in `blob9`
-//!   (`JSON.stringify(req.query)` makes an array in Express). Single-value
-//!   params — everything the frontend sends — are identical.
-//! - Non-admin-guarded tracking middleware does not resolve the user, so
-//!   `user_id` is `""` for all page views (see above).
+//! - Reads are admin-guarded; the tracking middleware and `POST
+//!   /api/analytics/events/track` are not (see the route table in `lib.rs`).
+//! - The middleware never resolves the user, so `user_id` stays NULL on the
+//!   session row until something else links it.
 
 use std::collections::HashMap;
 
@@ -70,135 +28,44 @@ use axum::http::{HeaderMap, HeaderName, HeaderValue, Request, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use hesocial_core::analytics::{
-    ANALYTICS_QUERY_STUB, AnalyticsDataPoint, AnalyticsQuery, CustomEventFields, DEFAULT_DATASET,
-    PageViewFields, conversion_envelope, conversion_sql, custom_event_data_point,
-    events_engagement_envelope, events_engagement_sql, limit_param, page_view_data_point,
-    period_days, popular_pages_envelope, popular_pages_sql, track_success_json,
+    AnalyticsQuery, INSERT_PAGE_VIEW_SQL, INSERT_VISITOR_EVENT_SQL, UPSERT_VISITOR_SESSION_SQL,
+    conversion_envelope, conversion_sql, events_engagement_envelope, events_engagement_sql,
+    limit_param, period_days, popular_pages_envelope, popular_pages_sql, track_success_json,
     validate_track_body, visitor_detail_envelope, visitor_page_views_sql, visitor_session_sql,
     visitors_daily_envelope, visitors_daily_sql, visitors_overview_envelope, visitors_overview_sql,
 };
 use serde_json::{Map, Value, json};
+use worker::Env;
 use worker::js_sys::Date;
 use worker::send::SendFuture;
 use worker::wasm_bindgen::JsValue;
-use worker::{AnalyticsEngineDataPointBuilder, Env, Fetch, Headers, Method, RequestInit};
 
 use crate::AppState;
 use crate::auth::{authenticate, require_admin};
-
-/// `[[analytics_engine_datasets]]` binding name in wrangler.toml.
-pub const TRACKING_BINDING: &str = "TRACKING";
-
-/// Env var that switches every analytics read to the compiled-in stub.
-pub const STUB_ENV_VAR: &str = "ANALYTICS_QUERY_STUB";
+use crate::auth_handlers::now_iso;
+use crate::db::{self, Val};
 
 const VISITOR_ID_HEADER: HeaderName = HeaderName::from_static("x-visitor-id");
+/// Client IP as Cloudflare presents it; Express read it off the socket.
+const CONNECTING_IP_HEADER: HeaderName = HeaderName::from_static("cf-connecting-ip");
 const VISITOR_COOKIE: &str = "visitorId";
 const COOKIE_MAX_AGE_SECS: u64 = 365 * 24 * 60 * 60;
 const COOKIE_MAX_AGE_MS: f64 = COOKIE_MAX_AGE_SECS as f64 * 1000.0;
 
 // ---------------------------------------------------------------------------
-// Query seam
+// Turso-backed reads
 // ---------------------------------------------------------------------------
 
-/// Injectable AE query seam, wired through [`AppState`]. An enum (not
-/// `Box<dyn>`) so the state stays `Clone` with no `async_trait` dependency.
-#[derive(Clone)]
-pub enum AnalyticsBackend {
-    /// `ANALYTICS_QUERY_STUB` truthy: compiled-in fixture, zero IO.
-    Stub,
-    /// Live AE SQL API over HTTPS.
-    Live {
-        account_id: String,
-        api_token: String,
-    },
-    /// Stub off and credentials missing: every query errors (Express 500s).
-    Unconfigured,
-}
-
-fn truthy(value: &str) -> bool {
-    matches!(
-        value.trim().to_ascii_lowercase().as_str(),
-        "1" | "true" | "yes"
-    )
-}
-
-impl AnalyticsBackend {
-    pub fn from_env(env: &Env) -> Self {
-        if env
-            .var(STUB_ENV_VAR)
-            .is_ok_and(|value| truthy(&value.to_string()))
-        {
-            return Self::Stub;
-        }
-        let account_id = env
-            .var("CLOUDFLARE_ACCOUNT_ID")
-            .map(|value| value.to_string())
-            .unwrap_or_default();
-        let api_token = env
-            .secret("CLOUDFLARE_API_TOKEN")
-            .map(|secret| secret.to_string())
-            .unwrap_or_default();
-        if account_id.is_empty() || api_token.is_empty() {
-            Self::Unconfigured
-        } else {
-            Self::Live {
-                account_id,
-                api_token,
-            }
-        }
-    }
-
-    /// Run one AE SQL statement; `Err(())` maps to the Express 500 envelope.
-    pub async fn query(&self, sql: String) -> Result<AnalyticsQuery, ()> {
-        match self {
-            Self::Stub => serde_json::from_str(ANALYTICS_QUERY_STUB).map_err(|_| ()),
-            Self::Unconfigured => Err(()),
-            Self::Live {
-                account_id,
-                api_token,
-            } => run_sql_api(account_id, api_token, &sql).await,
-        }
-    }
-}
-
-/// POST the SQL string to the Analytics Engine SQL API and parse the
-/// `{meta, data: [...]}` response.
-async fn run_sql_api(account_id: &str, api_token: &str, sql: &str) -> Result<AnalyticsQuery, ()> {
-    let url =
-        format!("https://api.cloudflare.com/client/v4/accounts/{account_id}/analytics_engine/sql");
-    let headers = Headers::new();
-    headers
-        .set("Authorization", &format!("Bearer {api_token}"))
-        .map_err(|_| ())?;
-    headers.set("Content-Type", "text/plain").map_err(|_| ())?;
-    let mut init = RequestInit::new();
-    init.with_method(Method::Post)
-        .with_headers(headers)
-        .with_body(Some(JsValue::from_str(sql)));
-    let request = worker::Request::new_with_init(&url, &init).map_err(|_| ())?;
-    let mut response = Fetch::Request(request).send().await.map_err(|_| ())?;
-    if response.status_code() != 200 {
-        return Err(());
-    }
-    response.json::<AnalyticsQuery>().await.map_err(|_| ())
-}
-
-// ---------------------------------------------------------------------------
-// AE write path
-// ---------------------------------------------------------------------------
-
-/// Convert a core [`AnalyticsDataPoint`] into a `TRACKING` binding write.
-/// Synchronous and fire-and-forget, like the Express insert's `.catch()`.
-fn write_data_point(env: &Env, point: &AnalyticsDataPoint) -> Result<(), ()> {
-    let dataset = env.analytics_engine(TRACKING_BINDING).map_err(|_| ())?;
-    let blobs: Vec<&str> = point.blobs.iter().map(String::as_str).collect();
-    AnalyticsEngineDataPointBuilder::new()
-        .blobs(blobs)
-        .doubles(point.doubles.iter().copied())
-        .indexes([point.index1.as_str()])
-        .write_to(&dataset)
-        .map_err(|_| ())
+/// Run one analytics query and wrap its rows in the envelope shapers' input
+/// type. Rows come back already untagged by the libSQL layer, so they are the
+/// same `{alias: value}` objects the Analytics Engine SQL API used to return
+/// and every shaper below is unchanged.
+async fn query_rows(state: &AppState, sql: String, binds: &[Value]) -> Result<AnalyticsQuery, ()> {
+    let db = db::Db::from_env(&state.env).map_err(|_| ())?;
+    let result = db.prepare(sql).bind(binds)?.all().await?;
+    Ok(AnalyticsQuery {
+        data: result.results::<Value>()?,
+    })
 }
 
 fn hex_value(byte: u8) -> Option<u8> {
@@ -341,26 +208,63 @@ async fn track_visitor(state: AppState, request: Request<Body>, next: Next) -> R
     let is_new_visitor = existing.is_none();
     let visitor_id = existing.unwrap_or_else(new_visitor_id);
 
-    let point = page_view_data_point(&PageViewFields {
-        visitor_id: &visitor_id,
-        // No session concept yet: core falls back to the visitor id.
-        session_id: "",
-        path: request.uri().path(),
-        method: request.method().as_str(),
-        referer: headers.get(REFERER).and_then(|value| value.to_str().ok()),
-        user_agent: headers
-            .get(USER_AGENT)
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("unknown"),
-        query_params_json: &query_params_json(raw_query),
-        timestamp_ms: Date::now(),
-        is_new_visitor,
-        // Express leaves time_spent NULL on the middleware insert; AE takes 0.
-        time_spent_seconds: 0.0,
-        user_id: "",
-    });
-    if write_data_point(&state.env, &point).is_err() {
-        worker::console_warn!("visitor tracking write failed; continuing");
+    let timestamp = now_iso();
+    let referer = headers
+        .get(REFERER)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default()
+        .to_owned();
+    let user_agent = headers
+        .get(USER_AGENT)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("unknown")
+        .to_owned();
+    let ip_address = headers
+        .get(CONNECTING_IP_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("unknown")
+        .to_owned();
+    let path = request.uri().path().to_owned();
+    let method = request.method().as_str().to_owned();
+    let query_params = query_params_json(raw_query);
+
+    // Batched so a visitor never gains a page-view row without the session
+    // counter moving with it. Tracking stays advisory: a failure is logged and
+    // the request continues, exactly as the Analytics Engine write did.
+    if let Ok(db) = db::Db::from_env(&state.env) {
+        let session = db.prepare(UPSERT_VISITOR_SESSION_SQL).bind(&[
+            Val::from_str(&visitor_id),
+            // The middleware never resolves the user, so the visitor stays
+            // anonymous here and NULLIF turns this into a NULL user_id.
+            Val::from_str(""),
+            Val::from_str(&ip_address),
+            Val::from_str(&user_agent),
+            Val::from_str(&referer),
+            Val::from_str(&timestamp),
+            Val::from_str(&timestamp),
+            Val::from_str(&timestamp),
+            Val::from_str(&timestamp),
+        ]);
+        let page_view = db.prepare(INSERT_PAGE_VIEW_SQL).bind(&[
+            Val::from_str(&visitor_id),
+            Val::from_str(&path),
+            Val::from_str(&method),
+            Val::from_str(&query_params),
+            Val::from_str(&referer),
+            Val::from_str(&timestamp),
+            // Express leaves time_spent unset on the middleware insert.
+            Val::from_f64(0.0),
+            Val::from_str(&ip_address),
+            Val::from_str(&user_agent),
+        ]);
+        match (session, page_view) {
+            (Ok(session), Ok(page_view)) => {
+                if db.batch(vec![session, page_view]).await.is_err() {
+                    worker::console_warn!("visitor tracking write failed; continuing");
+                }
+            }
+            _ => worker::console_warn!("visitor tracking bind failed; continuing"),
+        }
     }
 
     let mut response = next.run(request).await;
@@ -402,7 +306,7 @@ async fn run_envelope(
     shape: impl FnOnce(AnalyticsQuery) -> Value,
     error: &'static str,
 ) -> Response {
-    match state.analytics.query(sql).await {
+    match query_rows(state, sql, &[]).await {
         Ok(query) => Json(shape(query)).into_response(),
         Err(()) => server_error(error),
     }
@@ -427,7 +331,7 @@ async fn visitors_overview_inner(
     let days = period_days(params.get("days").map(String::as_str), 30);
     run_envelope(
         &state,
-        visitors_overview_sql(DEFAULT_DATASET, days),
+        visitors_overview_sql(days),
         |query| visitors_overview_envelope(days, &query),
         "Failed to retrieve visitor analytics",
     )
@@ -453,7 +357,7 @@ async fn visitors_daily_inner(
     let days = period_days(params.get("days").map(String::as_str), 30);
     run_envelope(
         &state,
-        visitors_daily_sql(DEFAULT_DATASET, days),
+        visitors_daily_sql(days),
         |query| visitors_daily_envelope(&query),
         "Failed to retrieve daily analytics",
     )
@@ -479,7 +383,7 @@ async fn popular_pages_inner(
     let limit = limit_param(params.get("limit").map(String::as_str), 20);
     run_envelope(
         &state,
-        popular_pages_sql(DEFAULT_DATASET, limit),
+        popular_pages_sql(limit),
         |query| popular_pages_envelope(&query),
         "Failed to retrieve page analytics",
     )
@@ -505,7 +409,7 @@ async fn conversion_inner(
     let days = period_days(params.get("days").map(String::as_str), 30);
     run_envelope(
         &state,
-        conversion_sql(DEFAULT_DATASET, days),
+        conversion_sql(days),
         |query| conversion_envelope(days, &query),
         "Failed to retrieve conversion analytics",
     )
@@ -525,11 +429,8 @@ async fn visitor_detail_inner(state: AppState, headers: HeaderMap, visitor_id: S
         return response;
     }
     // Express queries the session first and 404s before touching page views.
-    let session = match state
-        .analytics
-        .query(visitor_session_sql(DEFAULT_DATASET, &visitor_id))
-        .await
-    {
+    let binds = [Val::from_str(&visitor_id)];
+    let session = match query_rows(&state, visitor_session_sql(), &binds).await {
         Ok(session) => session,
         Err(()) => return server_error("Failed to retrieve visitor details"),
     };
@@ -540,11 +441,7 @@ async fn visitor_detail_inner(state: AppState, headers: HeaderMap, visitor_id: S
         )
             .into_response();
     }
-    let page_views = match state
-        .analytics
-        .query(visitor_page_views_sql(DEFAULT_DATASET, &visitor_id))
-        .await
-    {
+    let page_views = match query_rows(&state, visitor_page_views_sql(), &binds).await {
         Ok(page_views) => page_views,
         Err(()) => return server_error("Failed to retrieve visitor details"),
     };
@@ -570,7 +467,7 @@ async fn events_engagement_inner(
     let days = period_days(params.get("days").map(String::as_str), 30);
     run_envelope(
         &state,
-        events_engagement_sql(DEFAULT_DATASET, days),
+        events_engagement_sql(days),
         |query| events_engagement_envelope(days, &query),
         "Failed to retrieve event engagement analytics",
     )
@@ -596,24 +493,21 @@ async fn track_event_inner(state: AppState, body: Value) -> Response {
                 .into_response();
         }
     };
-    // New optional field the Express schema never had; core falls back to the
-    // visitor id when it is absent.
-    let session_id = body
-        .get("session_id")
-        .and_then(Value::as_str)
-        .unwrap_or_default();
-
-    let point = custom_event_data_point(&CustomEventFields {
-        visitor_id: &visitor_id,
-        session_id,
-        event_type: &event_type,
-        event_data_json: &event_data_json,
-        timestamp_ms: Date::now(),
-    });
-    // Express 500s when the insert throws; here only a missing binding or a
-    // build error can fail — the write itself is fire-and-forget.
-    if write_data_point(&state.env, &point).is_err() {
-        return server_error("Failed to track event");
+    let timestamp = now_iso();
+    let db = match db::Db::from_env(&state.env) {
+        Ok(db) => db,
+        Err(_) => return server_error("Failed to track event"),
+    };
+    let insert = db.prepare(INSERT_VISITOR_EVENT_SQL).bind(&[
+        Val::from_str(&visitor_id),
+        Val::from_str(&event_type),
+        Val::from_str(&event_data_json),
+        Val::from_str(&timestamp),
+    ]);
+    // Express 500s when the insert throws, and so does this.
+    match insert {
+        Ok(insert) if insert.run().await.is_ok() => {}
+        _ => return server_error("Failed to track event"),
     }
     Json(track_success_json()).into_response()
 }

@@ -435,3 +435,60 @@ CREATE INDEX IF NOT EXISTS idx_venue_media_venue_id ON venue_media(venue_id);
 CREATE INDEX IF NOT EXISTS idx_venue_media_type ON venue_media(type);
 CREATE INDEX IF NOT EXISTS idx_venue_media_uploaded_by ON venue_media(uploaded_by);
 CREATE INDEX IF NOT EXISTS idx_venue_media_created_at ON venue_media(created_at);
+
+-- Visitor tracking. Ported from the DuckDB tables Express writes
+-- (`database/migrations/005_visitor_tracking.sql`) rather than kept in
+-- Analytics Engine: AE was only chosen to dodge D1's write bottleneck, and
+-- with D1 gone the tracking belongs next to the data it reports on.
+-- `time_spent` has no DuckDB counterpart; it carries what the AE port tracked
+-- as `double3` and what `events/engagement` averages.
+CREATE TABLE IF NOT EXISTS visitor_sessions (
+    id INTEGER PRIMARY KEY,
+    visitor_id VARCHAR(50) NOT NULL UNIQUE,
+    user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    ip_address VARCHAR(45) NOT NULL,
+    user_agent TEXT NOT NULL,
+    referer TEXT,
+    first_seen TEXT NOT NULL,
+    last_seen TEXT NOT NULL,
+    page_views INTEGER NOT NULL DEFAULT 1,
+    session_count INTEGER NOT NULL DEFAULT 1,
+    converted_at TEXT,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+CREATE TABLE IF NOT EXISTS visitor_page_views (
+    id INTEGER PRIMARY KEY,
+    visitor_id VARCHAR(50) NOT NULL,
+    path VARCHAR(500) NOT NULL,
+    method VARCHAR(10) NOT NULL DEFAULT 'GET',
+    query_params TEXT,
+    referer TEXT,
+    timestamp TEXT NOT NULL,
+    time_spent REAL NOT NULL DEFAULT 0,
+    ip_address VARCHAR(45) NOT NULL,
+    user_agent TEXT NOT NULL,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+CREATE TABLE IF NOT EXISTS visitor_events (
+    id INTEGER PRIMARY KEY,
+    visitor_id VARCHAR(50) NOT NULL,
+    event_type VARCHAR(50) NOT NULL,
+    event_data TEXT,
+    timestamp TEXT NOT NULL,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_visitor_sessions_visitor_id ON visitor_sessions(visitor_id);
+CREATE INDEX IF NOT EXISTS idx_visitor_sessions_user_id ON visitor_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_visitor_sessions_last_seen ON visitor_sessions(last_seen);
+
+CREATE INDEX IF NOT EXISTS idx_visitor_page_views_visitor_id ON visitor_page_views(visitor_id);
+CREATE INDEX IF NOT EXISTS idx_visitor_page_views_timestamp ON visitor_page_views(timestamp);
+CREATE INDEX IF NOT EXISTS idx_visitor_page_views_path ON visitor_page_views(path);
+
+CREATE INDEX IF NOT EXISTS idx_visitor_events_visitor_id ON visitor_events(visitor_id);
+CREATE INDEX IF NOT EXISTS idx_visitor_events_type ON visitor_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_visitor_events_timestamp ON visitor_events(timestamp);

@@ -43,7 +43,6 @@ const RATE_LIMITER_UNKEYED_CLIENT: &str = "unknown";
 pub struct AppState {
     allowed_origins: Vec<String>,
     pub env: Env,
-    pub analytics: analytics_handlers::AnalyticsBackend,
 }
 
 impl AppState {
@@ -68,7 +67,6 @@ impl AppState {
         Self {
             allowed_origins,
             env: env.clone(),
-            analytics: analytics_handlers::AnalyticsBackend::from_env(env),
         }
     }
 

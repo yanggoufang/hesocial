@@ -66,113 +66,6 @@ use serde_json::{Map, Value, json};
 use crate::pagination::js_parse_f64;
 
 /// AE dataset the builders address. Final name is a Stage 3 wrangler decision.
-pub const DEFAULT_DATASET: &str = "hesocial_visitors";
-
-/// AE hard limits (25 blobs / 20 doubles / 1 index per data point).
-pub const MAX_BLOBS: usize = 25;
-pub const MAX_DOUBLES: usize = 20;
-
-const KIND_PAGE_VIEW: &str = "page_view";
-const KIND_CUSTOM_EVENT: &str = "custom_event";
-
-/// Pure representation of one AE data point, matching the write mapping table
-/// in the module docs. Stage 2 maps this onto
-/// `worker::AnalyticsEngineDataPointBuilder` field by field.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct AnalyticsDataPoint {
-    pub blobs: Vec<String>,
-    pub doubles: Vec<f64>,
-    /// The single indexed string (AE `index1`). Always the session id.
-    pub index1: String,
-}
-
-/// Inputs for a page-view data point — the fields the Express
-/// `visitorTracking` middleware persisted into `visitor_sessions` +
-/// `visitor_page_views`, plus the new session id.
-#[derive(Clone, Debug, Default)]
-pub struct PageViewFields<'a> {
-    pub visitor_id: &'a str,
-    /// Falls back to `visitor_id` when empty (Express had no sessions).
-    pub session_id: &'a str,
-    pub path: &'a str,
-    pub method: &'a str,
-    pub referer: Option<&'a str>,
-    pub user_agent: &'a str,
-    /// `JSON.stringify(req.query)` — stored verbatim, like Express.
-    pub query_params_json: &'a str,
-    pub timestamp_ms: f64,
-    pub is_new_visitor: bool,
-    pub time_spent_seconds: f64,
-    /// Set once `linkVisitorToUser` has run; empty while anonymous.
-    pub user_id: &'a str,
-}
-
-/// Inputs for a custom-event data point (`POST /api/analytics/events/track`).
-#[derive(Clone, Debug)]
-pub struct CustomEventFields<'a> {
-    pub visitor_id: &'a str,
-    pub session_id: &'a str,
-    pub event_type: &'a str,
-    /// `JSON.stringify(event_data || {})` — stored verbatim, like Express.
-    pub event_data_json: &'a str,
-    pub timestamp_ms: f64,
-}
-
-fn session_or_visitor<'a>(session_id: &'a str, visitor_id: &'a str) -> &'a str {
-    if session_id.is_empty() {
-        visitor_id
-    } else {
-        session_id
-    }
-}
-
-/// Build the AE data point for one page view. See the module doc table.
-pub fn page_view_data_point(fields: &PageViewFields<'_>) -> AnalyticsDataPoint {
-    let session_id = session_or_visitor(fields.session_id, fields.visitor_id);
-    AnalyticsDataPoint {
-        blobs: vec![
-            KIND_PAGE_VIEW.to_owned(),
-            fields.visitor_id.to_owned(),
-            session_id.to_owned(),
-            fields.path.to_owned(),
-            fields.method.to_owned(),
-            fields.referer.unwrap_or("").to_owned(),
-            fields.user_agent.to_owned(),
-            String::new(), // blob8 event_type: page views carry none
-            fields.query_params_json.to_owned(),
-            fields.user_id.to_owned(),
-        ],
-        doubles: vec![
-            fields.timestamp_ms,
-            f64::from(fields.is_new_visitor),
-            fields.time_spent_seconds,
-            f64::from(!fields.user_id.is_empty()),
-        ],
-        index1: session_id.to_owned(),
-    }
-}
-
-/// Build the AE data point for one custom event (`/events/track`).
-pub fn custom_event_data_point(fields: &CustomEventFields<'_>) -> AnalyticsDataPoint {
-    let session_id = session_or_visitor(fields.session_id, fields.visitor_id);
-    AnalyticsDataPoint {
-        blobs: vec![
-            KIND_CUSTOM_EVENT.to_owned(),
-            fields.visitor_id.to_owned(),
-            session_id.to_owned(),
-            String::new(), // blob4 path: custom events carry none
-            String::new(), // blob5 method
-            String::new(), // blob6 referer
-            String::new(), // blob7 user_agent
-            fields.event_type.to_owned(),
-            fields.event_data_json.to_owned(),
-            String::new(), // blob10 user_id: the track endpoint never links
-        ],
-        doubles: vec![fields.timestamp_ms, 0.0, 0.0, 0.0],
-        index1: session_id.to_owned(),
-    }
-}
-
 /// The track endpoint's body validation: `visitor_id` and `event_type` are
 /// required (Express 400 `visitor_id and event_type are required`).
 /// Returns `(visitor_id, event_type, event_data_json)`.
@@ -237,62 +130,68 @@ pub fn limit_param(raw: Option<&str>, fallback: u32) -> u32 {
 }
 
 /// Quote a string literal for AE SQL (single-quote doubling).
-fn sql_quote(text: &str) -> String {
-    format!("'{}'", text.replace('\\', "\\\\").replace('\'', "''"))
+/// Rolling-window cutoff. Emitted in the same `strftime` shape the writer
+/// stores, so the comparison is exact string ordering rather than a mix of
+/// `YYYY-MM-DDTHH:MM:SS.SSSZ` against `datetime()`'s space-separated form.
+fn window_cutoff(days: u32) -> String {
+    format!("strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-{days} days')")
 }
 
-/// Shared rolling-window predicate: `timestamp >= NOW() - INTERVAL 'N' DAY`.
-fn window_clause(days: u32) -> String {
-    format!("timestamp >= NOW() - INTERVAL '{days}' DAY")
+/// Stored ISO timestamp -> epoch milliseconds. The envelopes emit `*_ms`
+/// numbers, a shape the Analytics Engine port established and the frontend
+/// already consumes, so the conversion happens here rather than in the shaper.
+fn epoch_ms(column: &str) -> String {
+    format!("CAST((julianday({column}) - 2440587.5) * 86400000.0 AS INTEGER)")
 }
 
-/// GET /api/analytics/visitors — overview aggregates over the window.
-pub fn visitors_overview_sql(dataset: &str, days: u32) -> String {
+/// GET /api/analytics/visitors — `getVisitorAnalytics` in
+/// `backend/src/middleware/visitorTracking.ts`. `total_page_views` counts
+/// session rows, not page views; that is Express's behaviour, kept verbatim.
+pub fn visitors_overview_sql(days: u32) -> String {
     format!(
         "SELECT \
-           count(DISTINCT blob2) AS unique_visitors, \
-           sum(_sample_interval) AS total_page_views, \
-           count(DISTINCT if(blob10 != '', blob2, NULL)) AS converted_visitors, \
-           sum(_sample_interval) / count(DISTINCT blob2) AS avg_pages_per_visitor, \
-           sum(_sample_interval * double2) AS new_visitors \
-         FROM {dataset} \
-         WHERE blob1 = 'page_view' AND {window}",
-        window = window_clause(days),
+           COUNT(DISTINCT visitor_id) AS unique_visitors, \
+           COUNT(*) AS total_page_views, \
+           COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN visitor_id END) AS converted_visitors, \
+           AVG(page_views) AS avg_pages_per_visitor, \
+           COUNT(CASE WHEN first_seen >= {cutoff} THEN 1 END) AS new_visitors \
+         FROM visitor_sessions \
+         WHERE last_seen >= {cutoff}",
+        cutoff = window_cutoff(days),
     )
 }
 
-/// GET /api/analytics/visitors/daily — the `visitor_analytics_daily` view:
-/// date, unique_visitors, total_page_views, converted_visitors,
-/// avg_pages_per_visitor; window filter, newest first, LIMIT 100.
-pub fn visitors_daily_sql(dataset: &str, days: u32) -> String {
+/// GET /api/analytics/visitors/daily — the `visitor_analytics_daily` view from
+/// migration 005, with the route's window filter and LIMIT 100 folded in.
+pub fn visitors_daily_sql(days: u32) -> String {
     format!(
         "SELECT \
-           toStartOfDay(timestamp) AS date, \
-           count(DISTINCT blob2) AS unique_visitors, \
-           sum(_sample_interval) AS total_page_views, \
-           count(DISTINCT if(blob10 != '', blob2, NULL)) AS converted_visitors, \
-           sum(_sample_interval) / count(DISTINCT blob2) AS avg_pages_per_visitor \
-         FROM {dataset} \
-         WHERE blob1 = 'page_view' AND {window} \
-         GROUP BY date \
+           DATE(last_seen) AS date, \
+           COUNT(DISTINCT visitor_id) AS unique_visitors, \
+           SUM(page_views) AS total_page_views, \
+           COUNT(DISTINCT CASE WHEN user_id IS NOT NULL THEN visitor_id END) AS converted_visitors, \
+           AVG(page_views) AS avg_pages_per_visitor \
+         FROM visitor_sessions \
+         WHERE last_seen >= {cutoff} \
+         GROUP BY DATE(last_seen) \
          ORDER BY date DESC \
          LIMIT 100",
-        window = window_clause(days),
+        cutoff = window_cutoff(days),
     )
 }
 
-/// GET /api/analytics/pages/popular — the `popular_pages` view:
-/// path, views, unique_visitors, conversion_rate; LIMIT from the query param.
-pub fn popular_pages_sql(dataset: &str, limit: u32) -> String {
+/// GET /api/analytics/pages/popular — the `popular_pages` view, LIMIT from the
+/// query param.
+pub fn popular_pages_sql(limit: u32) -> String {
     format!(
         "SELECT \
-           blob4 AS path, \
-           sum(_sample_interval) AS views, \
-           count(DISTINCT blob2) AS unique_visitors, \
-           sum(_sample_interval * double4) / sum(_sample_interval) AS conversion_rate \
-         FROM {dataset} \
-         WHERE blob1 = 'page_view' \
-         GROUP BY path \
+           vpv.path AS path, \
+           COUNT(*) AS views, \
+           COUNT(DISTINCT vpv.visitor_id) AS unique_visitors, \
+           AVG(CASE WHEN vs.user_id IS NOT NULL THEN 1.0 ELSE 0.0 END) AS conversion_rate \
+         FROM visitor_page_views vpv \
+         LEFT JOIN visitor_sessions vs ON vpv.visitor_id = vs.visitor_id \
+         GROUP BY vpv.path \
          ORDER BY views DESC \
          LIMIT {limit}"
     )
@@ -301,74 +200,91 @@ pub fn popular_pages_sql(dataset: &str, limit: u32) -> String {
 /// GET /api/analytics/conversion — funnel counts; `conversion_rate` is rounded
 /// in the shaper (Express did `ROUND(..., 2)` in SQL — same value, fewer
 /// dialect assumptions).
-pub fn conversion_sql(dataset: &str, days: u32) -> String {
+pub fn conversion_sql(days: u32) -> String {
     format!(
         "SELECT \
-           count(DISTINCT blob2) AS total_visitors, \
-           count(DISTINCT if(startsWith(blob4, '/events/'), blob2, NULL)) AS event_viewers, \
-           count(DISTINCT if(blob10 != '', blob2, NULL)) AS registered_users \
-         FROM {dataset} \
-         WHERE blob1 = 'page_view' AND {window}",
-        window = window_clause(days),
+           COUNT(DISTINCT vs.visitor_id) AS total_visitors, \
+           COUNT(DISTINCT CASE WHEN vpv.path LIKE '/events/%' THEN vs.visitor_id END) AS event_viewers, \
+           COUNT(DISTINCT CASE WHEN vs.user_id IS NOT NULL THEN vs.visitor_id END) AS registered_users \
+         FROM visitor_sessions vs \
+         LEFT JOIN visitor_page_views vpv ON vs.visitor_id = vpv.visitor_id \
+         WHERE vs.last_seen >= {cutoff}",
+        cutoff = window_cutoff(days),
     )
 }
 
-/// GET /api/analytics/visitors/:visitorId — the session block, rebuilt from
-/// aggregates (first/last seen, page view count). Approximate under sampling.
-pub fn visitor_session_sql(dataset: &str, visitor_id: &str) -> String {
+/// GET /api/analytics/visitors/:visitorId — the session block. The visitor id
+/// is bound, not interpolated: it arrives straight off the URL path.
+pub fn visitor_session_sql() -> String {
     format!(
         "SELECT \
-           blob2 AS visitor_id, \
-           min(double1) AS first_seen_ms, \
-           max(double1) AS last_seen_ms, \
-           sum(_sample_interval) AS page_views, \
-           any(blob6) AS referer, \
-           any(blob7) AS user_agent \
-         FROM {dataset} \
-         WHERE blob1 = 'page_view' AND blob2 = {visitor} \
-         GROUP BY visitor_id",
-        visitor = sql_quote(visitor_id),
+           visitor_id, \
+           {first_seen} AS first_seen_ms, \
+           {last_seen} AS last_seen_ms, \
+           page_views, \
+           referer, \
+           user_agent \
+         FROM visitor_sessions \
+         WHERE visitor_id = ?",
+        first_seen = epoch_ms("first_seen"),
+        last_seen = epoch_ms("last_seen"),
     )
 }
 
 /// GET /api/analytics/visitors/:visitorId — the page_views block, newest
 /// first, LIMIT 100 like Express.
-pub fn visitor_page_views_sql(dataset: &str, visitor_id: &str) -> String {
+pub fn visitor_page_views_sql() -> String {
     format!(
         "SELECT \
-           blob4 AS path, \
-           blob5 AS method, \
-           blob9 AS query_params, \
-           blob6 AS referer, \
-           double1 AS timestamp_ms, \
-           double3 AS time_spent \
-         FROM {dataset} \
-         WHERE blob1 = 'page_view' AND blob2 = {visitor} \
-         ORDER BY timestamp_ms DESC \
+           path, \
+           method, \
+           query_params, \
+           referer, \
+           {timestamp} AS timestamp_ms, \
+           time_spent \
+         FROM visitor_page_views \
+         WHERE visitor_id = ? \
+         ORDER BY timestamp DESC \
          LIMIT 100",
-        visitor = sql_quote(visitor_id),
+        timestamp = epoch_ms("timestamp"),
     )
 }
 
 /// GET /api/analytics/events/engagement — per-day engagement over `/events%`
-/// paths: date, unique_visitors, total_page_views, event_page_views,
-/// registration_page_views, avg_time_spent.
-pub fn events_engagement_sql(dataset: &str, days: u32) -> String {
+/// paths.
+pub fn events_engagement_sql(days: u32) -> String {
     format!(
         "SELECT \
-           toStartOfDay(timestamp) AS date, \
-           count(DISTINCT blob2) AS unique_visitors, \
-           sum(_sample_interval) AS total_page_views, \
-           sum(if(startsWith(blob4, '/events/'), _sample_interval, 0)) AS event_page_views, \
-           sum(if(position(blob4, '/register') > 0 AND startsWith(blob4, '/events/'), _sample_interval, 0)) AS registration_page_views, \
-           sum(double3 * _sample_interval) / sum(_sample_interval) AS avg_time_spent \
-         FROM {dataset} \
-         WHERE blob1 = 'page_view' AND startsWith(blob4, '/events') AND {window} \
-         GROUP BY date \
+           DATE(vpv.timestamp) AS date, \
+           COUNT(DISTINCT vpv.visitor_id) AS unique_visitors, \
+           COUNT(vpv.id) AS total_page_views, \
+           COUNT(CASE WHEN vpv.path LIKE '/events/%' THEN 1 END) AS event_page_views, \
+           COUNT(CASE WHEN vpv.path LIKE '/events/%/register' THEN 1 END) AS registration_page_views, \
+           AVG(vpv.time_spent) AS avg_time_spent \
+         FROM visitor_page_views vpv \
+         WHERE vpv.timestamp >= {cutoff} \
+           AND vpv.path LIKE '/events%' \
+         GROUP BY DATE(vpv.timestamp) \
          ORDER BY date DESC",
-        window = window_clause(days),
+        cutoff = window_cutoff(days),
     )
 }
+
+// ---------------------------------------------------------------------------
+// Write path (replaces the Analytics Engine data points)
+// ---------------------------------------------------------------------------
+
+/// One page view. Paired with [`UPSERT_VISITOR_SESSION_SQL`] in a batch so the
+/// session counter and the row land together or not at all.
+pub const INSERT_PAGE_VIEW_SQL: &str = "INSERT INTO visitor_page_views (visitor_id, path, method, query_params, referer, timestamp, time_spent, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+/// Session upsert. `user_id` arrives as '' while the visitor is anonymous;
+/// `NULLIF` keeps the column NULL so the converted-visitor aggregates stay
+/// honest, and `converted_at` is stamped the first time an id appears.
+pub const UPSERT_VISITOR_SESSION_SQL: &str = "INSERT INTO visitor_sessions (visitor_id, user_id, ip_address, user_agent, referer, first_seen, last_seen, page_views, session_count, converted_at, created_at, updated_at) VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, 1, 1, NULL, ?, ?) ON CONFLICT(visitor_id) DO UPDATE SET last_seen = excluded.last_seen, page_views = visitor_sessions.page_views + 1, user_id = COALESCE(excluded.user_id, visitor_sessions.user_id), converted_at = CASE WHEN visitor_sessions.converted_at IS NULL AND excluded.user_id IS NOT NULL THEN excluded.last_seen ELSE visitor_sessions.converted_at END, referer = COALESCE(visitor_sessions.referer, excluded.referer), updated_at = excluded.updated_at";
+
+/// POST /api/analytics/events/track.
+pub const INSERT_VISITOR_EVENT_SQL: &str = "INSERT INTO visitor_events (visitor_id, event_type, event_data, timestamp) VALUES (?, ?, ?, ?)";
 
 // ---------------------------------------------------------------------------
 // Response shapers (AE SQL API rows -> Express envelopes)
@@ -384,13 +300,9 @@ pub struct AnalyticsQuery {
     pub data: Vec<Value>,
 }
 
-/// Stub fixture consumed by both the unit tests below and Stage 3's contract
-/// harness: one `visitor_analytics_daily`-shaped row inside the AE envelope.
-pub const ANALYTICS_QUERY_STUB: &str = r#"{"data":[{"date":"2026-08-31T00:00:00Z","unique_visitors":"3","total_page_views":11,"converted_visitors":1,"avg_pages_per_visitor":3.67}]}"#;
-
-/// Coerce an AE SQL API cell to f64 (numbers pass through, numeric strings
-/// parse the JS way).
-fn ae_number(value: &Value) -> f64 {
+/// Coerce a result cell to f64 (numbers pass through, numeric strings parse
+/// the JS way — SQLite hands back some aggregates as text).
+fn numeric(value: &Value) -> f64 {
     match value {
         Value::Number(number) => number.as_f64().unwrap_or(0.0),
         Value::String(text) => js_parse_f64(text).unwrap_or(0.0),
@@ -398,8 +310,8 @@ fn ae_number(value: &Value) -> f64 {
     }
 }
 
-fn ae_number_field(row: &Value, key: &str) -> f64 {
-    row.get(key).map(ae_number).unwrap_or(0.0)
+fn numeric_field(row: &Value, key: &str) -> f64 {
+    row.get(key).map(numeric).unwrap_or(0.0)
 }
 
 fn first_row(rows: &[Value]) -> Value {
@@ -430,11 +342,11 @@ pub fn visitors_overview_envelope(days: u32, query: &AnalyticsQuery) -> Value {
         "success": true,
         "data": {
             "period_days": days,
-            "unique_visitors": integral_json(ae_number_field(&row, "unique_visitors")),
-            "total_page_views": integral_json(ae_number_field(&row, "total_page_views")),
-            "converted_visitors": integral_json(ae_number_field(&row, "converted_visitors")),
-            "avg_pages_per_visitor": ae_number_field(&row, "avg_pages_per_visitor"),
-            "new_visitors": integral_json(ae_number_field(&row, "new_visitors")),
+            "unique_visitors": integral_json(numeric_field(&row, "unique_visitors")),
+            "total_page_views": integral_json(numeric_field(&row, "total_page_views")),
+            "converted_visitors": integral_json(numeric_field(&row, "converted_visitors")),
+            "avg_pages_per_visitor": numeric_field(&row, "avg_pages_per_visitor"),
+            "new_visitors": integral_json(numeric_field(&row, "new_visitors")),
         }
     })
 }
@@ -449,10 +361,10 @@ pub fn visitors_daily_envelope(query: &AnalyticsQuery) -> Value {
         .map(|row| {
             json!({
                 "date": row.get("date").cloned().unwrap_or(Value::Null),
-                "unique_visitors": integral_json(ae_number_field(row, "unique_visitors")),
-                "total_page_views": integral_json(ae_number_field(row, "total_page_views")),
-                "converted_visitors": integral_json(ae_number_field(row, "converted_visitors")),
-                "avg_pages_per_visitor": ae_number_field(row, "avg_pages_per_visitor"),
+                "unique_visitors": integral_json(numeric_field(row, "unique_visitors")),
+                "total_page_views": integral_json(numeric_field(row, "total_page_views")),
+                "converted_visitors": integral_json(numeric_field(row, "converted_visitors")),
+                "avg_pages_per_visitor": numeric_field(row, "avg_pages_per_visitor"),
             })
         })
         .collect();
@@ -467,9 +379,9 @@ pub fn popular_pages_envelope(query: &AnalyticsQuery) -> Value {
         .map(|row| {
             json!({
                 "path": row.get("path").cloned().unwrap_or(Value::Null),
-                "views": integral_json(ae_number_field(row, "views")),
-                "unique_visitors": integral_json(ae_number_field(row, "unique_visitors")),
-                "conversion_rate": ae_number_field(row, "conversion_rate"),
+                "views": integral_json(numeric_field(row, "views")),
+                "unique_visitors": integral_json(numeric_field(row, "unique_visitors")),
+                "conversion_rate": numeric_field(row, "conversion_rate"),
             })
         })
         .collect();
@@ -480,8 +392,8 @@ pub fn popular_pages_envelope(query: &AnalyticsQuery) -> Value {
 /// registered_users, conversion_rate}}` — rate computed and rounded here.
 pub fn conversion_envelope(days: u32, query: &AnalyticsQuery) -> Value {
     let row = first_row(&query.data);
-    let total = ae_number_field(&row, "total_visitors");
-    let registered = ae_number_field(&row, "registered_users");
+    let total = numeric_field(&row, "total_visitors");
+    let registered = numeric_field(&row, "registered_users");
     let rate = if total > 0.0 {
         round2(registered * 100.0 / total)
     } else {
@@ -492,7 +404,7 @@ pub fn conversion_envelope(days: u32, query: &AnalyticsQuery) -> Value {
         "data": {
             "period_days": days,
             "total_visitors": integral_json(total),
-            "event_viewers": integral_json(ae_number_field(&row, "event_viewers")),
+            "event_viewers": integral_json(numeric_field(&row, "event_viewers")),
             "registered_users": integral_json(registered),
             "conversion_rate": rate,
         }
@@ -507,11 +419,11 @@ pub fn events_engagement_envelope(days: u32, query: &AnalyticsQuery) -> Value {
         .map(|row| {
             json!({
                 "date": row.get("date").cloned().unwrap_or(Value::Null),
-                "unique_visitors": integral_json(ae_number_field(row, "unique_visitors")),
-                "total_page_views": integral_json(ae_number_field(row, "total_page_views")),
-                "event_page_views": integral_json(ae_number_field(row, "event_page_views")),
-                "registration_page_views": integral_json(ae_number_field(row, "registration_page_views")),
-                "avg_time_spent": ae_number_field(row, "avg_time_spent"),
+                "unique_visitors": integral_json(numeric_field(row, "unique_visitors")),
+                "total_page_views": integral_json(numeric_field(row, "total_page_views")),
+                "event_page_views": integral_json(numeric_field(row, "event_page_views")),
+                "registration_page_views": integral_json(numeric_field(row, "registration_page_views")),
+                "avg_time_spent": numeric_field(row, "avg_time_spent"),
             })
         })
         .collect();
@@ -529,9 +441,9 @@ pub fn visitor_detail_envelope(session: &AnalyticsQuery, page_views: &AnalyticsQ
     } else {
         json!({
             "visitor_id": session_row.get("visitor_id").cloned().unwrap_or(Value::Null),
-            "first_seen_ms": ae_number_field(&session_row, "first_seen_ms"),
-            "last_seen_ms": ae_number_field(&session_row, "last_seen_ms"),
-            "page_views": integral_json(ae_number_field(&session_row, "page_views")),
+            "first_seen_ms": numeric_field(&session_row, "first_seen_ms"),
+            "last_seen_ms": numeric_field(&session_row, "last_seen_ms"),
+            "page_views": integral_json(numeric_field(&session_row, "page_views")),
             "referer": session_row.get("referer").cloned().unwrap_or(Value::Null),
             "user_agent": session_row.get("user_agent").cloned().unwrap_or(Value::Null),
         })
@@ -545,8 +457,8 @@ pub fn visitor_detail_envelope(session: &AnalyticsQuery, page_views: &AnalyticsQ
                 "method": row.get("method").cloned().unwrap_or(Value::Null),
                 "query_params": row.get("query_params").cloned().unwrap_or(Value::Null),
                 "referer": row.get("referer").cloned().unwrap_or(Value::Null),
-                "timestamp_ms": ae_number_field(row, "timestamp_ms"),
-                "time_spent": ae_number_field(row, "time_spent"),
+                "timestamp_ms": numeric_field(row, "timestamp_ms"),
+                "time_spent": numeric_field(row, "time_spent"),
             })
         })
         .collect();
@@ -869,88 +781,6 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    fn page_view<'a>() -> PageViewFields<'a> {
-        PageViewFields {
-            visitor_id: "visitor_abc",
-            session_id: "",
-            path: "/events/42",
-            method: "GET",
-            referer: None,
-            user_agent: "Mozilla/5.0",
-            query_params_json: "{}",
-            timestamp_ms: 1_788_168_000_000.0,
-            is_new_visitor: true,
-            time_spent_seconds: 0.0,
-            user_id: "",
-        }
-    }
-
-    #[test]
-    fn page_view_points_follow_the_documented_layout_and_budget() {
-        let point = page_view_data_point(&page_view());
-
-        assert_eq!(point.blobs.len(), 10);
-        assert_eq!(point.doubles.len(), 4);
-        assert!(point.blobs.len() <= MAX_BLOBS);
-        assert!(point.doubles.len() <= MAX_DOUBLES);
-
-        assert_eq!(point.blobs[0], "page_view");
-        assert_eq!(point.blobs[1], "visitor_abc");
-        // No session id: falls back to the visitor id, and index1 = session.
-        assert_eq!(point.blobs[2], "visitor_abc");
-        assert_eq!(point.index1, "visitor_abc");
-        assert_eq!(point.blobs[3], "/events/42");
-        assert_eq!(point.blobs[4], "GET");
-        assert_eq!(point.blobs[5], ""); // missing referer -> empty blob
-        assert_eq!(point.blobs[6], "Mozilla/5.0");
-        assert_eq!(point.blobs[7], ""); // no event_type on page views
-        assert_eq!(point.blobs[8], "{}");
-        assert_eq!(point.blobs[9], ""); // anonymous
-
-        assert_eq!(point.doubles[0], 1_788_168_000_000.0);
-        assert_eq!(point.doubles[1], 1.0); // is_new_visitor
-        assert_eq!(point.doubles[2], 0.0); // time_spent
-        assert_eq!(point.doubles[3], 0.0); // not registered
-    }
-
-    #[test]
-    fn explicit_session_and_linked_user_flip_the_flag_fields() {
-        let mut fields = page_view();
-        fields.session_id = "sess-9";
-        fields.referer = Some("https://google.com");
-        fields.user_id = "f47ac10b";
-        fields.is_new_visitor = false;
-        fields.time_spent_seconds = 12.5;
-
-        let point = page_view_data_point(&fields);
-        assert_eq!(point.blobs[2], "sess-9");
-        assert_eq!(point.index1, "sess-9");
-        assert_eq!(point.blobs[5], "https://google.com");
-        assert_eq!(point.blobs[9], "f47ac10b");
-        assert_eq!(point.doubles[1], 0.0);
-        assert_eq!(point.doubles[2], 12.5);
-        assert_eq!(point.doubles[3], 1.0);
-    }
-
-    #[test]
-    fn custom_event_points_fill_the_event_slots() {
-        let point = custom_event_data_point(&CustomEventFields {
-            visitor_id: "visitor_abc",
-            session_id: "sess-1",
-            event_type: "cta_click",
-            event_data_json: r#"{"button":"register"}"#,
-            timestamp_ms: 42.0,
-        });
-
-        assert_eq!(point.blobs[0], "custom_event");
-        assert_eq!(point.blobs[7], "cta_click");
-        assert_eq!(point.blobs[8], r#"{"button":"register"}"#);
-        assert_eq!(point.blobs[3], "");
-        assert_eq!(point.index1, "sess-1");
-        assert_eq!(point.doubles, vec![42.0, 0.0, 0.0, 0.0]);
-        assert!(point.blobs.len() <= MAX_BLOBS);
-    }
-
     #[test]
     fn track_body_validation_mirrors_the_express_400() {
         assert!(validate_track_body(&json!({})).is_err());
@@ -995,64 +825,68 @@ mod tests {
     }
 
     #[test]
-    fn overview_sql_targets_the_window_and_dataset() {
-        let sql = visitors_overview_sql(DEFAULT_DATASET, 30);
-        assert!(sql.contains("FROM hesocial_visitors"));
-        assert!(sql.contains("timestamp >= NOW() - INTERVAL '30' DAY"));
-        assert!(sql.contains("blob1 = 'page_view'"));
-        assert!(sql.contains("count(DISTINCT blob2) AS unique_visitors"));
-        assert!(sql.contains("sum(_sample_interval * double2) AS new_visitors"));
+    fn overview_sql_targets_the_window_over_sessions() {
+        let sql = visitors_overview_sql(30);
+        assert!(sql.contains("FROM visitor_sessions"));
+        assert!(sql.contains("'now', '-30 days'"));
+        assert!(sql.contains("COUNT(DISTINCT visitor_id) AS unique_visitors"));
+        assert!(sql.contains("COUNT(CASE WHEN first_seen >="));
+        assert!(sql.contains("AS new_visitors"));
     }
 
     #[test]
     fn daily_sql_buckets_by_day_newest_first() {
-        let sql = visitors_daily_sql(DEFAULT_DATASET, 7);
-        assert!(sql.contains("toStartOfDay(timestamp) AS date"));
-        assert!(sql.contains("GROUP BY date"));
+        let sql = visitors_daily_sql(7);
+        assert!(sql.contains("DATE(last_seen) AS date"));
+        assert!(sql.contains("GROUP BY DATE(last_seen)"));
         assert!(sql.contains("ORDER BY date DESC"));
         assert!(sql.contains("LIMIT 100"));
-        assert!(sql.contains("INTERVAL '7' DAY"));
+        assert!(sql.contains("'-7 days'"));
     }
 
     #[test]
     fn popular_pages_sql_groups_by_path_with_limit() {
-        let sql = popular_pages_sql(DEFAULT_DATASET, 20);
-        assert!(sql.contains("blob4 AS path"));
+        let sql = popular_pages_sql(20);
+        assert!(sql.contains("vpv.path AS path"));
+        assert!(sql.contains("LEFT JOIN visitor_sessions"));
         assert!(sql.contains("ORDER BY views DESC"));
         assert!(sql.contains("LIMIT 20"));
     }
 
     #[test]
     fn engagement_sql_scopes_to_event_paths() {
-        let sql = events_engagement_sql(DEFAULT_DATASET, 30);
-        assert!(sql.contains("startsWith(blob4, '/events')"));
+        let sql = events_engagement_sql(30);
+        assert!(sql.contains("vpv.path LIKE '/events%'"));
+        assert!(sql.contains("vpv.path LIKE '/events/%/register'"));
         assert!(sql.contains("avg_time_spent"));
         assert!(sql.contains("registration_page_views"));
     }
 
+    /// The visitor id arrives off the URL path, so it is bound rather than
+    /// interpolated — there is no quoting for an injection to escape.
     #[test]
-    fn visitor_sql_quotes_the_identifier() {
-        let sql = visitor_session_sql(DEFAULT_DATASET, "visitor_1' OR '1'='1");
-        assert!(sql.contains("blob2 = 'visitor_1'' OR ''1''=''1'"));
-        let views = visitor_page_views_sql(DEFAULT_DATASET, "visitor_1");
-        assert!(views.contains("ORDER BY timestamp_ms DESC"));
+    fn visitor_sql_binds_the_identifier() {
+        let sql = visitor_session_sql();
+        assert!(sql.contains("WHERE visitor_id = ?"));
+        assert!(sql.contains("AS first_seen_ms"));
+        assert!(sql.contains("AS last_seen_ms"));
+        let views = visitor_page_views_sql();
+        assert!(views.contains("WHERE visitor_id = ?"));
+        assert!(views.contains("ORDER BY timestamp DESC"));
         assert!(views.contains("LIMIT 100"));
     }
 
+    /// The three write statements replace the Analytics Engine data points.
     #[test]
-    fn stub_fixture_deserializes_and_daily_envelope_matches_the_view_columns() {
-        let query: AnalyticsQuery =
-            serde_json::from_str(ANALYTICS_QUERY_STUB).expect("stub fixture parses");
-
-        let envelope = visitors_daily_envelope(&query);
-        assert_eq!(envelope["success"], json!(true));
-        let row = &envelope["data"][0];
-        // AE returns some aggregates as strings; the shaper coerces to numbers.
-        assert_eq!(row["date"], json!("2026-08-31T00:00:00Z"));
-        assert_eq!(row["unique_visitors"], json!(3));
-        assert_eq!(row["total_page_views"], json!(11));
-        assert_eq!(row["converted_visitors"], json!(1));
-        assert_eq!(row["avg_pages_per_visitor"], json!(3.67));
+    fn write_statements_target_the_visitor_tables() {
+        assert!(UPSERT_VISITOR_SESSION_SQL.contains("INSERT INTO visitor_sessions"));
+        assert!(UPSERT_VISITOR_SESSION_SQL.contains("ON CONFLICT(visitor_id) DO UPDATE"));
+        assert!(
+            UPSERT_VISITOR_SESSION_SQL.contains("page_views = visitor_sessions.page_views + 1")
+        );
+        assert!(UPSERT_VISITOR_SESSION_SQL.contains("NULLIF(?, '')"));
+        assert!(INSERT_PAGE_VIEW_SQL.contains("INSERT INTO visitor_page_views"));
+        assert!(INSERT_VISITOR_EVENT_SQL.contains("INSERT INTO visitor_events"));
     }
 
     #[test]

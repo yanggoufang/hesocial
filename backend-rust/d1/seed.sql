@@ -303,3 +303,87 @@ INSERT OR IGNORE INTO sales_team_members (
     (9302, '9c858901-8a57-4791-81fe-4c455b099bc9', 'sales_manager', 'Kaohsiung', 12.00, 9000000, 0,
      '2022-06-01', NULL,
      strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+-- Visitor tracking fixture. Timestamps are relative so the rolling `days`
+-- windows never age out of them. `visitor_contract` is the id the analytics
+-- contract fetches by path, and is the one converted visitor (linked to the
+-- Platinum member) so conversion_rate and converted_visitors are non-zero.
+-- Two distinct days keep the daily/engagement arrays non-empty.
+INSERT OR IGNORE INTO visitor_sessions (
+    id, visitor_id, user_id, ip_address, user_agent, referer,
+    first_seen, last_seen, page_views, session_count, converted_at
+) VALUES
+    (
+        1, 'visitor_contract', '9c858901-8a57-4791-81fe-4c455b099bc9',
+        '203.0.113.10', 'Mozilla/5.0 (contract harness)', 'https://hesocial.com/',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-3 days'),
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 days'),
+        4, 2,
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-2 days')
+    ),
+    (
+        2, 'visitor_anon_1', NULL,
+        '203.0.113.11', 'Mozilla/5.0 (contract harness)', NULL,
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-2 days'),
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-2 days'),
+        2, 1,
+        NULL
+    ),
+    (
+        3, 'visitor_anon_2', NULL,
+        '203.0.113.12', 'Mozilla/5.0 (contract harness)', NULL,
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 days'),
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 days'),
+        1, 1,
+        NULL
+    );
+
+INSERT OR IGNORE INTO visitor_page_views (
+    id, visitor_id, path, method, query_params, referer,
+    timestamp, time_spent, ip_address, user_agent
+) VALUES
+    (
+        1, 'visitor_contract', '/events', 'GET', '{}', 'https://hesocial.com/',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-3 days'), 12.5,
+        '203.0.113.10', 'Mozilla/5.0 (contract harness)'
+    ),
+    (
+        2, 'visitor_contract', '/events/2', 'GET', '{}', '/events',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-3 days'), 48.0,
+        '203.0.113.10', 'Mozilla/5.0 (contract harness)'
+    ),
+    (
+        3, 'visitor_contract', '/events/2/register', 'GET', '{}', '/events/2',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 days'), 95.25,
+        '203.0.113.10', 'Mozilla/5.0 (contract harness)'
+    ),
+    (
+        4, 'visitor_contract', '/', 'GET', '{}', NULL,
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 days'), 5.0,
+        '203.0.113.10', 'Mozilla/5.0 (contract harness)'
+    ),
+    (
+        5, 'visitor_anon_1', '/events', 'GET', '{}', NULL,
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-2 days'), 8.0,
+        '203.0.113.11', 'Mozilla/5.0 (contract harness)'
+    ),
+    (
+        6, 'visitor_anon_1', '/events/2', 'GET', '{}', '/events',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-2 days'), 30.0,
+        '203.0.113.11', 'Mozilla/5.0 (contract harness)'
+    ),
+    (
+        7, 'visitor_anon_2', '/', 'GET', '{}', NULL,
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 days'), 3.5,
+        '203.0.113.12', 'Mozilla/5.0 (contract harness)'
+    );
+
+INSERT OR IGNORE INTO visitor_events (id, visitor_id, event_type, event_data, timestamp) VALUES
+    (
+        1, 'visitor_contract', 'event_view', '{"event_id":2}',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-3 days')
+    ),
+    (
+        2, 'visitor_contract', 'registration_attempt', '{"event_id":2}',
+        strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 days')
+    );
