@@ -1,33 +1,12 @@
-#![allow(clippy::result_large_err)]
-//! D1-backed analytics read endpoints (Phase 2g Stage 3).
+//! Analytics read endpoints served from the operational tables.
 //!
-//! The remaining five Express analytics endpoints read `events`,
-//! `registrations` and `users` — tables that live in D1 (visitor data never
-//! touches D1; it went to Analytics Engine in Stages 1-2). The pure SQL and
-//! envelope shapers live in `core::analytics` (see its "D1-backed analytics
-//! (Stage 3)" section for the column mapping and every deviation); this
-//! module is only the wasm/host boundary: admin guard, D1 bind/execute, and
-//! the Express error envelopes.
+//! These five aggregate `events`, `registrations` and `users` — the business
+//! tables — as opposed to `analytics_handlers`, which serves the visitor
+//! tracking tables. Both now read the same Turso database; the split is by
+//! subject, not by store, and predates the move off Analytics Engine.
 //!
-//! All five GETs keep the Express admin guard (`authenticate` +
-//! `require_admin`), same split as Stage 2: only the beacon
-//! `POST /events/track` is unauthenticated.
-//!
-//! ## Documented deviations (vs Express) — full list in core::analytics
-//!
-//! - Old-DuckDB-only columns (`pricing_vip`, `pricing_vvip`,
-//!   `registrations.tier`, `date_time`, `current_attendees`, `capacity`) map
-//!   onto the D1 event-management schema instead of reproducing dead 500
-//!   paths (`events/performance` 500s against DuckDB too — those columns
-//!   never existed there either).
-//! - `categories` -> `event_categories` in `events/:id/performance`.
-//! - The `'2025-07'`/`100.0` hardcodes in `revenue/events` and
-//!   `engagement/members` are REPRODUCED VERBATIM: they are cosmetic labels
-//!   on all-time aggregates, exactly as half-dead in Express as they are
-//!   here. Dropping them would break response parity.
-//! - Timestamp predicates compare the ISO-8601 TEXT columns against
-//!   `strftime('%Y-%m-%dT%H:%M:%fZ', 'now')` instead of DuckDB's
-//!   `CURRENT_TIMESTAMP` — same instant, matching storage format.
+//! The SQL and the envelope shapers live in `core::analytics`; this module is
+//! only the wasm/host boundary: admin guard, bind/execute, and error mapping.
 
 use std::collections::HashMap;
 

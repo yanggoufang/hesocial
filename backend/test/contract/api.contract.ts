@@ -1239,7 +1239,7 @@ export const defineContractTests = (runner: ContractRunner): void => {
   if (runner.salesImplemented === true) {
     // Reads, filters, updates, metrics, delete gating, and the read-only
     // pipeline/team lists run against the shared sales fixture
-    // (backend-rust/d1/seed.sql plus its DuckDB mirror in
+    // (backend-rust/sql/seed.sql plus its DuckDB mirror in
     // express.contract.test.ts) so both targets are pinned.
     describe('sales CRM (Phase 2f)', () => {
       const authHeaders = (token: string) => ({ authorization: `Bearer ${token}` })

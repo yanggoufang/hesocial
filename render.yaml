@@ -28,8 +28,12 @@ services:
     buildCommand: npm ci --include=dev && npm run build:frontend
     staticPublishPath: ./frontend/dist
     envVars:
+      # Points at the Rust worker on Cloudflare, not the Node service below.
+      # That service still exists but every data endpoint 500s: Render's free
+      # disk is ephemeral and the DuckDB file did not survive a restart, with
+      # no usable backup in R2 to restore from.
       - key: VITE_API_URL
-        value: https://hesocial-api.onrender.com/api
+        value: https://hesocial-api.ahexagram.com/api
       - key: VITE_ENVIRONMENT
         value: production
     routes:

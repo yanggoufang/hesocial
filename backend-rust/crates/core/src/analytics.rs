@@ -472,7 +472,7 @@ pub fn visitor_detail_envelope(session: &AnalyticsQuery, page_views: &AnalyticsQ
 // The remaining five Express analytics endpoints read `events`,
 // `registrations` and `users` — tables that ARE in D1 (locked decision #3
 // only exiled the visitor tables to AE). The SQL below is SQLite-flavored and
-// schema-checked against `backend-rust/d1/schema.sql`; the envelope shapers
+// schema-checked against `backend-rust/sql/schema.sql`; the envelope shapers
 // pass D1 rows through untouched, exactly like Express passed DuckDB rows
 // through `convertBigIntToNumber` (an identity for non-BigInt values — D1
 // already returns JS numbers).

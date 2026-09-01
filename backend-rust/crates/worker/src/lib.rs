@@ -18,7 +18,7 @@ use worker::send::SendFuture;
 use worker::{Context, Env, HttpRequest, Result, event};
 
 mod admin_handlers;
-mod analytics_d1_handlers;
+mod analytics_db_handlers;
 mod analytics_handlers;
 mod auth;
 mod auth_handlers;
@@ -363,23 +363,23 @@ fn router(state: AppState) -> Router {
         )
         .route(
             "/api/analytics/events/overview",
-            get(analytics_d1_handlers::events_overview),
+            get(analytics_db_handlers::events_overview),
         )
         .route(
             "/api/analytics/events/performance",
-            get(analytics_d1_handlers::events_performance),
+            get(analytics_db_handlers::events_performance),
         )
         .route(
             "/api/analytics/events/{id}/performance",
-            get(analytics_d1_handlers::event_performance_detail),
+            get(analytics_db_handlers::event_performance_detail),
         )
         .route(
             "/api/analytics/revenue/events",
-            get(analytics_d1_handlers::revenue_events),
+            get(analytics_db_handlers::revenue_events),
         )
         .route(
             "/api/analytics/engagement/members",
-            get(analytics_d1_handlers::members_engagement),
+            get(analytics_db_handlers::members_engagement),
         )
         .route("/api/users", get(admin_handlers::list_users))
         .route(

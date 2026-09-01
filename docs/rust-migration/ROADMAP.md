@@ -1,14 +1,14 @@
-# Rust 遷移 Roadmap(Node/Express/DuckDB → Rust/workers-rs/D1)
+# Rust 遷移 Roadmap(Node/Express/DuckDB → Rust/workers-rs/Turso)
 
-> 本文件是遷移的單一真相來源。團隊決策日:2026-08-30。前端維持 React/TS 不變,只遷移後端。
+> 本文件是遷移的單一真相來源。團隊決策日:2026-08-30;資料層於 2026-09-01 由 D1 改為 Turso/libSQL(決策 #7),前端亦改為納入遷移範圍(決策 #9)。
 
 ## 目標架構(已定案)
 
 - 平台:Cloudflare Workers(workers-rs + axum,default-features = false)
-- 資料庫:Cloudflare D1(取代 DuckDB;解決 edge 上 DuckDB 不持久、每次要從 R2 拷回的問題)
+- 資料庫:**Turso/libSQL**,經 Hrana HTTP v2 pipeline 存取(取代 DuckDB;解決 edge 上 DuckDB 不持久、每次要從 R2 拷回的問題)。原定 D1,2026-09-01 改用 Turso — 見決策 #7
 - 媒體:R2(不變)
 - Repo 佈局:`backend-rust/` workspace = `crates/core`(host-native domain,`cargo test` 可測)+ `crates/worker`(wasm32 glue)
-- API 路徑不變;用 Cloudflare zone route 逐系統切流,可即時回滾
+- API 路徑不變;用 Cloudflare Workers Custom Domain 切流,可即時回滾
 - Rust token 必須與 Express bit-for-bit 互通(HS256,`{userId,email,membershipTier}` + 7d)
 
 ## 已鎖定的決策(2026-08-30 使用者拍板，2026-09-01 補決策 #6)
@@ -19,6 +19,10 @@
 4. 自訂網域可掛 Cloudflare → 走 zone route 灰度 cutover
 5. DuckDB 專屬端點(backup/restore/checkpoint/periodic-backup、deployment、emergency)→ 回 501,`BackupManagement.tsx` 下線
 6. **Cutover 拓撲選 B（2026-09-01 拍板）**：一次切全部 `/api` → `hesocial-backend-rust`，放棄 48h `/api/auth/*` 灰度。理由：無現成自訂網域/zone、users 雙庫分裂成本大於一次切風險；Phase 3 與「終」的資料搬移合併為全量 ETL，終只剩 Render 下線與 `backend/` 歸檔。回滾為 DNS/route 整站切回 Render。
+
+7. **資料層改用 Turso/libSQL(2026-09-01 拍板)**:當日 Cloudflare D1 API 對本帳號全面回 `10000 Authentication error`(list、create、既有 DB 的 uuid GET 全掛,而同一顆 token 打 R2/Workers 正常),使用者表明本就不想用 D1(「一定是你們建議的,我早不用了」)並指示「不用D1 / 全部搬走」,範圍限本 repo。當日稍晚 D1 API 自行恢復,故那次故障是暫時性的(可能是免費方案配額)而非權限問題 — **但決策不變**(「不管如何DB請放tursor」),不得再提議改回 D1。`hesocial-db` 從未建立成功,因此**零資料搬移**,純程式碼改動。實作見 `crates/worker/src/db.rs`(commit `1e61c07`)。
+8. **visitor analytics 收回資料庫(2026-09-01)**:撤銷決策 #3。Analytics Engine 當初只是為了迴避 D1 的寫入瓶頸;D1 出局後它變成一個只能靠額外 Cloudflare API token 存取的第二資料源。三張 `visitor_*` 表改由 Express 既有的 `database/migrations/005_visitor_tracking.sql` 移植,兩端資料模型自此一致(commit `ef63946`)。副作用:`10089 需啟用 Analytics Engine` 這個部署阻礙隨 binding 消失而解除。
+9. **前端亦改寫為 Rust(2026-09-01 使用者指示)**:撤銷「前端維持 React/TS 不變」。尚未開始,且**不得阻擋後端工作**。現況量測:53 檔、15,510 行、22 頁、13 元件;`three`/`react-player`/`react-hook-form` 皆為死依賴(0 檔案使用),實際障礙是 `framer-motion`(24 檔,Rust 無等價物)與 `lucide-react`(32 檔,機械替換)。**最大風險是前端 0 測試**(`vitest run --passWithNoTests`),沒有後端那套 49 條契約斷言等級的安全網。
 
 ## 驗收契約
 
@@ -40,57 +44,45 @@
 | 2g | analytics(Analytics Engine + D1) | ✅ 完成:Tracking 寫入(AE) + 5 個 D1 分析端點 + stub;rust contract 含 analytics/media 共 49/49 |
 | 2h | media(R2 + D1 metadata) | ✅ 完成(2026-08-31):event image/document + venue image upload、event/venue list、owner/admin delete;R2 `MEDIA` binding + multipart/MIME/10MiB;variant 暫以原圖 bytes 充當 |
 | 2i | admin(users + database stats) | ✅ 完成(2026-09-01):`/api/users/*` 七端點 + `/api/admin/database/stats`;requireAdmin/requireSuperAdmin 對齊;backup/restore/cleanup/periodic-backup/checkpoint 維持 501 fallback(鎖定決策 #5) |
-| 3 | cutover 全量切流（決策 B） | ⏳ 待基礎設施 — 一次切全部 `/api` → Worker，全量 ETL 後切流，無 48h auth-only 灰度 |
-| 終 | Render API 下線、`backend/` 歸檔 | 待開始 — B 方案下與 Phase 3 全量 ETL 合併，終只剩下線與歸檔 |
+| 3 | cutover 全量切流（決策 B） | 🟡 進行中 — Worker 已上線於 `hesocial-api.ahexagram.com`,secrets/schema 就緒;**尚差前端 `VITE_API_URL` 改指與重新部署**。全量 ETL 取消(生產無資料可搬) |
+| 終 | Render API 下線、`backend/` 歸檔 | 待開始 — Render 的 `hesocial-api` 目前每個資料端點皆 500(容器磁碟為暫時性,生產 R2 bucket 無備份),等前端切過來即可下線 |
 
-## Phase 3 Cutover Checklist(待使用者執行) — 決策 B：一次切全部 `/api`
+## Phase 3 Cutover Checklist — 決策 B：一次切全部 `/api`
 
-> 移植端已封版(2a–2i 全綠，`cargo test` 109、`clippy -D warnings` clean、`wrangler deploy --dry-run` 1434 KiB、`rust contract` 49/49)。以下為基礎設施手續，須在全新 D1 上執行。決策 B 下無 48h 灰度，Phase 3 與「終」的全量資料搬移合併。
+> 移植端已封版(2a–2i 全綠，`cargo test -p core` 106、`clippy -D warnings` clean、`wrangler deploy --dry-run` 1542 KiB、`rust contract` 49/49)。**全量 ETL 已取消** — Render 上的 DuckDB 因容器磁碟為暫時性而已遺失,生產 bucket `hesocial-duckdb` 內 0 個物件,`hesocial-duckdb-dev` 僅有 2025-06/07 的三個 12 KB 空檔與一個 0 byte 檔,無可還原資料。
 
-- [ ] **1. 生產 Secret** — 須複製 Render 現用值（`render.yaml` 為 `generateValue: true`，新舊必須一致，否則舊 token 過不了新 Worker 的驗證）
+- [x] **1. 生產 Secret**(2026-09-01 完成)
+  - `JWT_SECRET` — **新生成,未沿用 Render 的值**。原本要求一致是為了讓既有 token 存活,但生產 Turso 一個使用者都沒有,Render 簽的 token 通過簽章後仍會查無此人回 401,抄過來買不到任何東西。程式碼每次請求重讀此值,換發只需 `wrangler secret put`,無須改碼。
+  - `TURSO_AUTH_TOKEN` — `turso db tokens create hesocial` 產生的 **per-DB、不過期** token。不用 `gwebcdb-mint` 的 group token:那顆通吃全部 7 個資料庫且預設 1 天到期,而 Workers isolate 沒有續期機制。輪替用 `turso db tokens invalidate hesocial`。
+
+- [x] **2. Turso 佈建**(2026-09-01 完成)
   ```bash
-  npx wrangler --cwd backend-rust secret put JWT_SECRET
-  # 複製 Render dashboard → hesocial-api → Environment → JWT_SECRET 的實際值
-  # 選配: JWT_EXPIRES_IN 預設 7d，接受 7d/12h/900s/30m/1w；AUTH_RATE_LIMIT_DISABLED=true 可關 /api/auth/* limiter
-  npx wrangler --cwd backend-rust secret put CLOUDFLARE_API_TOKEN  # 僅 analytics 真 AE 查詢需要
+  turso db create hesocial --group default
+  turso db shell hesocial < backend-rust/sql/schema.sql   # 20 張表
   ```
-  未設 `JWT_SECRET` 時所有簽發 token 的端點 500(fail-closed，與 Express production 等價)。`wrangler.test.toml` 的 dummy secret 僅供契約測試。
+  **只灌 schema,不灌 seed** — `sql/seed.sql` 內含 `admin@hesocial.com` / `test.platinum@example.com` 等公開在 repo 的測試憑證,灌入生產等同帶入已知密碼。初始資料另議(參考資料 / 管理員帳號 / 示範資料三類要分開處理)。
 
-- [ ] **2. 全新 D1 佈建** — `password_algo` 等欄位只在 `d1/schema.sql` 的 `CREATE TABLE`，必對全新 DB 套用(舊表缺欄會全線 500)
-  ```bash
-  npx wrangler d1 create hesocial-db
-  # 將回傳的 database_id 貼回 backend-rust/wrangler.toml 的 [[d1_databases]]
-  npx wrangler --cwd backend-rust d1 execute hesocial-db --file=d1/schema.sql
-  npx wrangler --cwd backend-rust d1 execute hesocial-db --file=d1/seed.sql
-  # 全量搬移：DuckDB → D1（見下方「全量 ETL」）
-  # 驗證：npx wrangler d1 execute hesocial-db --command "PRAGMA table_info(users)"  — 必須有 password_algo
-  ```
+- [x] **3. 同步 Vars**(2026-09-01 完成)
+  - `TURSO_URL = libsql://hesocial-yanggf8.aws-ap-northeast-1.turso.io`
+  - `CORS_ORIGINS` 首位為 `https://hesocial-frontend.onrender.com`(首位同時是 OAuth 轉址目標 `AppState::frontend_origin`)
+  - `NODE_ENV=production`(影響 visitor cookie 的 `Secure` 旗標與 `/api/health/status` 的 environment 欄位)
+  - `CLOUDFLARE_ACCOUNT_ID` / `ANALYTICS_QUERY_STUB` / `CLOUDFLARE_API_TOKEN` 隨決策 #8 一併移除
 
-- [ ] **3. 同步 Vars**
-  - `wrangler.toml` 的 `CLOUDFLARE_ACCOUNT_ID` / `R2_PUBLIC_URL` 改為實際值
-  - `CORS_ORIGINS` 必須包含 `https://hesocial-frontend.onrender.com`（現為 `http://localhost:3000`）
-  - `NODE_ENV=production`（現為 `development`，影響 OAuth Secure 與 analytics 行為）
-  - `ANALYTICS_QUERY_STUB` 生產設 `false`(或移除)才走真 AE SQL API；本機/契約測試維持 `true`
-
-- [ ] **4. 發版與全量切流**（決策 B）
+- [x] **4a. 發版與 API 網域**(2026-09-01 完成)
   ```bash
   npx wrangler --cwd backend-rust deploy
   ```
-  Cloudflare Dashboard → Zone → Workers Routes 新增（需先綁自訂網域 `api.hesocial.com` 並開啟 CF proxy）：
-  `api.hesocial.com/api/*` → `hesocial-backend-rust`
-  前端 `VITE_API_URL` 改為 `https://api.hesocial.com/api` 並重新部署 `hesocial-frontend`。
-  回滾：移除該 route（或 DNS 切回 Render），即時生效。
+  `routes = [{ pattern = "hesocial-api.ahexagram.com", custom_domain = true }]`。ROADMAP 原訂的 `api.hesocial.com` 在此帳號並無對應 zone(帳號上唯一 zone 為 `ahexagram.com`,其 apex 與 `www` 皆無記錄,既有 Worker route 只有無關的 `ziwei.ahexagram.com/zw/*`)。加上 `routes` 後 wrangler 自動停用 `workers.dev`,公開網址一併關閉。
 
-  全量 ETL（與切流同屬 Phase 3）：
-  - users/events/registrations/waitlist/event_participant_access/sales/media metadata 全量匯出 → 轉為 D1 SQL
-  - 驗證：列數一致、抽 3 帳號 Worker login 200、簽出 token 能打 Express `/api/auth/validate`
+- [ ] **4b. 前端切流**(唯一剩餘步驟)
+  `render.yaml` 的 `VITE_API_URL` 由 `https://hesocial-api.onrender.com/api` 改為 `https://hesocial-api.ahexagram.com/api`,重新部署 `hesocial-frontend`。線上 bundle 目前寫死的仍是 Render 位址,因此網站現在每個資料請求都是 500;切過來即恢復。回滾為改回該值重新部署。
 
 - [ ] **5. 驗收**
   ```bash
   npm run test:contract:rust   # 49/49
-  cargo test -p core            # 109
+  cargo test -p core            # 106
   ```
-  生產抽檢: `POST /api/auth/login`、`GET /api/auth/validate`、`POST /api/registrations/{id}/payment`(admin)、`GET /api/events/{id}/participants`(paid 閘門 403→200)。
+  已通過的生產抽檢:`/api/health`、`/api/events`、`/api/venues`、`/api/categories` 皆 200(空陣列,生產僅有 schema);`POST /api/auth/login` 回 401 而非 500,證明 `JWT_SECRET` 生效且 Turso 連通。**登入/付款/participants 的完整流程待生產有資料後才能抽檢**,目前僅由契約測試(有 seed 的本機 Turso)覆蓋。
 
 ## 已知技術債/陷阱(移植時處理)
 

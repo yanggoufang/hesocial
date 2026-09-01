@@ -224,10 +224,10 @@ impl HealthResponse {
     pub fn healthy(timestamp: String) -> Self {
         Self {
             success: true,
-            message: "API health check passed (D1)",
+            message: "API health check passed (Turso)",
             timestamp,
             version: "1.0.0",
-            database: "d1",
+            database: "turso",
         }
     }
 }

@@ -488,7 +488,7 @@ async fn database_stats_inner(state: AppState, headers: HeaderMap) -> Response {
         _ => return server_error(DB_STATS_ERROR),
     }
 
-    // D1 has no schema_migrations (locked decision: wrangler d1 migrations).
+    // Turso has no schema_migrations table; the schema is applied from sql/schema.sql.
     // The probe fails and we report 'unknown', the Express fallback path.
     let schema_version = match bind(&db, SCHEMA_VERSION_SQL, &[]) {
         Ok(statement) => match first_value(statement).await {

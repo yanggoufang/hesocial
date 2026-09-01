@@ -1,5 +1,12 @@
 # HeSocial Rebuild Plan - Turso/libSQL Direction
 
+> **SUPERSEDED (2026-08-30) by [`rust-migration/ROADMAP.md`](./rust-migration/ROADMAP.md).**
+> This plan assumed the backend would keep running in a Render container, with
+> Turso only moving persistence out of it. The backend has since been rewritten
+> in Rust on Cloudflare Workers, which removes that premise — though the
+> database landed on Turso after all, by a different route (roadmap decision
+> #7). Kept for the decision history, not as instructions.
+
 **Date**: 2026-04-19
 **Decision**: Move the production transactional database off DuckDB and rebuild the backend around Turso/libSQL.
 **Status**: Planned follow-up after the current Render production hotfix is deployed.

@@ -2,12 +2,22 @@ name = "hesocial-backend-rust"
 main = "crates/worker/build/worker/shim.mjs"
 compatibility_date = "2026-08-30"
 
+# Workers Custom Domain on the account's only zone. `api.hesocial.com` from
+# the roadmap was never registered as a zone here; swapping to it later is
+# one more entry in this list, not a redeploy of anything else.
+routes = [{ pattern = "hesocial-api.ahexagram.com", custom_domain = true }]
+
 [build]
 command = "worker-build --release crates/worker"
 
 [vars]
-CORS_ORIGINS = "http://localhost:3000"
-NODE_ENV = "development"
+# Mirrors the Express service's CORS_ORIGINS in render.yaml. The first entry
+# is also the OAuth redirect target (`AppState::frontend_origin`), so the
+# production frontend has to stay first.
+CORS_ORIGINS = "https://hesocial-frontend.onrender.com,http://localhost:3000"
+# Gates the `Secure` flag on the visitor cookie and the environment field in
+# /api/health/status.
+NODE_ENV = "production"
 # Public custom domain (or r2.dev URL) used in image response fields. Private
 # documents remain R2 keys and are never exposed by the public list route.
 R2_PUBLIC_URL = "https://media.hesocial.com"

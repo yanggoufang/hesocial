@@ -97,7 +97,7 @@ pub async fn health_status(State(state): State<AppState>) -> Response {
             "platform": Value::Null
         },
         "database": {
-            "type": "D1",
+            "type": "Turso",
             "r2Sync": "disabled"
         },
         "environment": environment,

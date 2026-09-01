@@ -31,7 +31,7 @@ const newestMtime = (path: string): number => {
 const newestRustSourceMtime = [
   'crates/core/src',
   'crates/worker/src',
-  'd1',
+  'sql',
   'Cargo.toml',
   'Cargo.lock',
   'wrangler.toml',

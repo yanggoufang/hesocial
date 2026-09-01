@@ -100,8 +100,8 @@ export default async function setup(): Promise<() => Promise<void>> {
 
   try {
     await waitForReady(server)
-    await applyScript(resolve(rustDirectory, 'd1/schema.sql'))
-    await applyScript(resolve(rustDirectory, 'd1/seed.sql'))
+    await applyScript(resolve(rustDirectory, 'sql/schema.sql'))
+    await applyScript(resolve(rustDirectory, 'sql/seed.sql'))
   } catch (error) {
     server.kill('SIGKILL')
     throw new Error(`${String(error)}\n--- turso dev output ---\n${output}`)

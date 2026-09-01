@@ -22,7 +22,7 @@ The main `CLAUDE.md` file has been **reorganized and reduced from 947 lines to 1
 | `authentication/AUTHENTICATION_SYSTEM.md` | Complete authentication system guide | 180+ |
 | `database/DATABASE_SYSTEM.md` | Database architecture and migrations | 200+ |
 | `configuration/R2_CONFIGURATION.md` | R2 storage configuration guide | 60+ |
-| `REBUILD_PLAN.md` | Turso/libSQL rebuild direction and unresolved issues | 120+ |
+| `REBUILD_PLAN.md` | Superseded 2026-08-30 by `rust-migration/ROADMAP.md` — kept for decision history | 120+ |
 
 ## Directory Structure
 
