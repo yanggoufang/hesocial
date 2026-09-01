@@ -22,6 +22,7 @@ mod analytics_d1_handlers;
 mod analytics_handlers;
 mod auth;
 mod auth_handlers;
+mod db;
 mod event_handlers;
 mod handlers;
 mod media_handlers;

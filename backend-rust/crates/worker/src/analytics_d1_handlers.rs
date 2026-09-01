@@ -45,12 +45,11 @@ use hesocial_core::analytics::{
     revenue_events_envelope,
 };
 use serde_json::{Value, json};
-use worker::D1Database;
 use worker::send::SendFuture;
-use worker::wasm_bindgen::JsValue;
 
 use crate::AppState;
 use crate::analytics_handlers::{require_analytics_admin, server_error};
+use crate::db::{self, Val};
 
 const OVERVIEW_ERROR: &str = "Failed to retrieve event analytics overview";
 const PERFORMANCE_ERROR: &str = "Failed to retrieve event performance analytics";
@@ -62,21 +61,21 @@ const MEMBERS_ERROR: &str = "Failed to fetch member engagement data";
 /// string would never match. Express passes the string through to DuckDB,
 /// which casts — reproduce by parsing when possible (same helper as
 /// `event_handlers`, kept private there).
-fn id_bind(id: &str) -> JsValue {
+fn id_bind(id: &str) -> Value {
     match id.parse::<f64>().ok().filter(|value| value.is_finite()) {
-        Some(number) => JsValue::from_f64(number),
-        None => JsValue::from_str(id),
+        Some(number) => Val::from_f64(number),
+        None => Val::from_str(id),
     }
 }
 
-async fn all_values(db: &D1Database, sql: &str, binds: &[JsValue]) -> Result<Vec<Value>, ()> {
+async fn all_values(db: &db::Db, sql: &str, binds: &[Value]) -> Result<Vec<Value>, ()> {
     let statement = db.prepare(sql).bind(binds).map_err(|_| ())?;
     let result = statement.all().await.map_err(|_| ())?;
     result.results::<Value>().map_err(|_| ())
 }
 
-fn database(state: &AppState, error: &'static str) -> Result<D1Database, Response> {
-    state.env.d1("DB").map_err(|_| server_error(error))
+fn database(state: &AppState, error: &'static str) -> Result<db::Db, Response> {
+    db::Db::from_env(&state.env).map_err(|_| server_error(error))
 }
 
 pub async fn events_overview(

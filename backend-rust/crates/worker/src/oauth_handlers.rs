@@ -22,6 +22,7 @@ use worker::{
 use crate::AppState;
 use crate::auth::find_user_by_email;
 use crate::auth_handlers::{issue_token, now_iso};
+use crate::db::{self, Val};
 
 const GOOGLE_PICTURE_UPDATE: &str =
     "UPDATE users SET profile_picture = COALESCE(?, profile_picture), updated_at = ? WHERE id = ?";
@@ -225,10 +226,10 @@ async fn fetch_userinfo(access_token: &str) -> Option<GoogleProfile> {
 /// `updated_at`; new users are inserted with NULL financial/profile fields,
 /// tier Platinum, privacy 3, unverified/pending, empty interests.
 async fn upsert_google_user(state: &AppState, profile: &GoogleProfile) -> Option<UserRow> {
-    let db = state.env.d1("DB").ok()?;
+    let db = db::Db::from_env(&state.env).ok()?;
     let timestamp = now_iso();
 
-    let existing = find_user_by_email(state, JsValue::from_str(&profile.email))
+    let existing = find_user_by_email(state, Val::from_str(&profile.email))
         .await
         .ok()?;
 
@@ -236,14 +237,14 @@ async fn upsert_google_user(state: &AppState, profile: &GoogleProfile) -> Option
         let picture = profile
             .picture
             .as_deref()
-            .map(JsValue::from_str)
-            .unwrap_or(JsValue::NULL);
+            .map(Val::from_str)
+            .unwrap_or(db::NULL);
         let update = db
             .prepare(GOOGLE_PICTURE_UPDATE)
             .bind(&[
                 picture,
-                JsValue::from_str(&timestamp),
-                JsValue::from_str(&existing.id),
+                Val::from_str(&timestamp),
+                Val::from_str(&existing.id),
             ])
             .ok()?;
         update.run().await.ok()?;
@@ -257,38 +258,38 @@ async fn upsert_google_user(state: &AppState, profile: &GoogleProfile) -> Option
         .picture
         .as_deref()
         .filter(|picture| !picture.is_empty())
-        .map(JsValue::from_str)
-        .unwrap_or(JsValue::NULL);
+        .map(Val::from_str)
+        .unwrap_or(db::NULL);
     let insert = db
         .prepare(GOOGLE_INSERT)
         .bind(&[
-            JsValue::from_str(&user_id),
-            JsValue::from_str(&profile.email),
-            JsValue::from_str(&profile.first_name),
-            JsValue::from_str(&profile.last_name),
-            JsValue::NULL, // age - to be filled by user
-            JsValue::NULL, // profession - to be filled by user
-            JsValue::NULL, // annual_income - to be filled by user
-            JsValue::NULL, // net_worth - to be filled by user
-            JsValue::from_str("Platinum"),
-            JsValue::from_f64(3.0),
-            JsValue::from_f64(0.0),
-            JsValue::from_str("pending"),
+            Val::from_str(&user_id),
+            Val::from_str(&profile.email),
+            Val::from_str(&profile.first_name),
+            Val::from_str(&profile.last_name),
+            db::NULL, // age - to be filled by user
+            db::NULL, // profession - to be filled by user
+            db::NULL, // annual_income - to be filled by user
+            db::NULL, // net_worth - to be filled by user
+            Val::from_str("Platinum"),
+            Val::from_f64(3.0),
+            Val::from_f64(0.0),
+            Val::from_str("pending"),
             picture,
-            JsValue::NULL,           // bio
-            JsValue::from_str("[]"), // empty interests array
-            JsValue::from_str(&timestamp),
-            JsValue::from_str(&timestamp),
+            db::NULL,            // bio
+            Val::from_str("[]"), // empty interests array
+            Val::from_str(&timestamp),
+            Val::from_str(&timestamp),
         ])
         .ok()?;
     insert.run().await.ok()?;
     select_user(&db, &user_id).await
 }
 
-async fn select_user(db: &worker::D1Database, user_id: &str) -> Option<UserRow> {
+async fn select_user(db: &db::Db, user_id: &str) -> Option<UserRow> {
     let query = db
         .prepare(user_select(USER_SELECT_BY_ID))
-        .bind(&[JsValue::from_str(user_id)])
+        .bind(&[Val::from_str(user_id)])
         .ok()?;
     query.first(None).await.ok()?
 }

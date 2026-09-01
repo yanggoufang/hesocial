@@ -7,9 +7,9 @@ use hesocial_core::{ApiEnvelope, JWT_EXPIRY_SECONDS, parse_jwt_expiry, verify_jw
 use serde_json::Value;
 use worker::js_sys::Date;
 use worker::send::SendFuture;
-use worker::wasm_bindgen::JsValue;
 
 use crate::AppState;
+use crate::db::{self, Val};
 
 pub struct QueryUnavailable;
 
@@ -58,9 +58,9 @@ pub fn now_seconds() -> u64 {
 async fn query_user(
     state: &AppState,
     statement: &str,
-    bind: JsValue,
+    bind: Value,
 ) -> Result<Option<UserRow>, QueryUnavailable> {
-    let db = state.env.d1("DB").map_err(|_| QueryUnavailable)?;
+    let db = db::Db::from_env(&state.env).map_err(|_| QueryUnavailable)?;
     let query = db
         .prepare(statement.to_owned())
         .bind(&[bind])
@@ -89,7 +89,7 @@ pub async fn authenticate(state: &AppState, headers: &HeaderMap) -> Result<UserR
     let user = SendFuture::new(query_user(
         state,
         &user_select(USER_SELECT_BY_ID_ALIVE),
-        JsValue::from_str(&claims.user_id),
+        Val::from_str(&claims.user_id),
     ))
     .await;
 
@@ -118,7 +118,7 @@ pub fn require_super_admin(user: &UserRow) -> Result<(), Response> {
 
 pub async fn find_user_by_email(
     state: &AppState,
-    email: JsValue,
+    email: Value,
 ) -> Result<Option<UserRow>, QueryUnavailable> {
     SendFuture::new(query_user(state, &user_select(LOGIN_USER_SELECT), email)).await
 }

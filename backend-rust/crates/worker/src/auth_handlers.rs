@@ -11,13 +11,13 @@ use hesocial_core::{ApiEnvelope, JwtPayload, sign_jwt, verify_password};
 use serde_json::{Value, json};
 use worker::js_sys::Date;
 use worker::send::SendFuture;
-use worker::wasm_bindgen::JsValue;
 
 use crate::AppState;
 use crate::auth::{
     authenticate, find_user_by_email, internal_error, jwt_expiry_seconds, jwt_secret, now_seconds,
     unauthorized,
 };
+use crate::db::{self, Val};
 
 const REGISTER_INSERT: &str = "INSERT INTO users (id, email, password_hash, password_algo, first_name, last_name, age, profession, annual_income, net_worth, membership_tier, privacy_level, is_verified, verification_status, bio, interests, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -34,16 +34,13 @@ pub(crate) fn now_iso() -> String {
         .unwrap_or_default()
 }
 
-fn to_js(value: &Value) -> JsValue {
+fn to_js(value: &Value) -> Value {
     match value {
-        Value::Null => JsValue::NULL,
-        Value::Bool(flag) => JsValue::from_bool(*flag),
-        Value::Number(number) => number
-            .as_f64()
-            .map(JsValue::from_f64)
-            .unwrap_or(JsValue::NULL),
-        Value::String(text) => JsValue::from_str(text),
-        _ => JsValue::NULL,
+        Value::Null => db::NULL,
+        Value::Bool(flag) => Val::from_bool(*flag),
+        Value::Number(number) => number.as_f64().map(Val::from_f64).unwrap_or(db::NULL),
+        Value::String(text) => Val::from_str(text),
+        _ => db::NULL,
     }
 }
 
@@ -65,11 +62,11 @@ fn body_number(body: &Value, key: &str) -> f64 {
     body.get(key).and_then(Value::as_f64).unwrap_or(f64::NAN)
 }
 
-fn optional_text(body: &Value, key: &str) -> JsValue {
+fn optional_text(body: &Value, key: &str) -> Value {
     body.get(key)
         .filter(|value| js_truthy(value))
         .map(to_js)
-        .unwrap_or(JsValue::NULL)
+        .unwrap_or(db::NULL)
 }
 
 fn interests_column(body: &Value) -> String {
@@ -101,7 +98,7 @@ pub async fn register(State(state): State<AppState>, Json(body): Json<Value>) ->
 }
 
 async fn register_inner(state: AppState, body: Value) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return registration_failed(),
     };
@@ -147,24 +144,24 @@ async fn register_inner(state: AppState, body: Value) -> Response {
     let timestamp = now_iso();
 
     let insert = db.prepare(REGISTER_INSERT).bind(&[
-        JsValue::from_str(&user_id),
+        Val::from_str(&user_id),
         email,
-        JsValue::from_str(&hashed_password),
-        JsValue::from_str(PBKDF2_ALGORITHM),
+        Val::from_str(&hashed_password),
+        Val::from_str(PBKDF2_ALGORITHM),
         to_js(body.get("firstName").unwrap_or(&Value::Null)),
         to_js(body.get("lastName").unwrap_or(&Value::Null)),
         to_js(body.get("age").unwrap_or(&Value::Null)),
         to_js(body.get("profession").unwrap_or(&Value::Null)),
         to_js(body.get("annualIncome").unwrap_or(&Value::Null)),
         to_js(body.get("netWorth").unwrap_or(&Value::Null)),
-        JsValue::from_str(membership_tier),
-        JsValue::from_f64(3.0),
-        JsValue::from_f64(0.0),
-        JsValue::from_str("pending"),
+        Val::from_str(membership_tier),
+        Val::from_f64(3.0),
+        Val::from_f64(0.0),
+        Val::from_str("pending"),
         optional_text(&body, "bio"),
-        JsValue::from_str(&interests_column(&body)),
-        JsValue::from_str(&timestamp),
-        JsValue::from_str(&timestamp),
+        Val::from_str(&interests_column(&body)),
+        Val::from_str(&timestamp),
+        Val::from_str(&timestamp),
     ]);
     let insert = match insert {
         Ok(query) => query,
@@ -176,7 +173,7 @@ async fn register_inner(state: AppState, body: Value) -> Response {
 
     let created = db
         .prepare(user_select(USER_SELECT_BY_ID))
-        .bind(&[JsValue::from_str(&user_id)]);
+        .bind(&[Val::from_str(&user_id)]);
     let created = match created {
         Ok(query) => query,
         Err(_) => return registration_failed(),
@@ -239,11 +236,11 @@ async fn login_inner(state: AppState, body: Value) -> Response {
 
     if algorithm != PBKDF2_ALGORITHM {
         if let Ok(rehashed) = hash_password(password) {
-            if let Ok(db) = state.env.d1("DB") {
+            if let Ok(db) = db::Db::from_env(&state.env) {
                 if let Ok(update) = db.prepare(REHASH_UPDATE).bind(&[
-                    JsValue::from_str(&rehashed),
-                    JsValue::from_str(PBKDF2_ALGORITHM),
-                    JsValue::from_str(&user.id),
+                    Val::from_str(&rehashed),
+                    Val::from_str(PBKDF2_ALGORITHM),
+                    Val::from_str(&user.id),
                 ]) {
                     let _ = update.run().await;
                 }
@@ -330,7 +327,7 @@ pub async fn update_profile(
 }
 
 async fn update_profile_inner(state: AppState, user: UserRow, body: Value) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to update profile"),
     };
@@ -339,8 +336,8 @@ async fn update_profile_inner(state: AppState, user: UserRow, body: Value) -> Re
     // every other field binds the raw value and COALESCE keeps the column on
     // JSON null/absent.
     let interests = match body.get("interests") {
-        Some(value) if js_truthy(value) => JsValue::from_str(&value.to_string()),
-        _ => JsValue::NULL,
+        Some(value) if js_truthy(value) => Val::from_str(&value.to_string()),
+        _ => db::NULL,
     };
     let update = db.prepare(UPDATE_PROFILE).bind(&[
         to_js(body.get("firstName").unwrap_or(&Value::Null)),
@@ -350,8 +347,8 @@ async fn update_profile_inner(state: AppState, user: UserRow, body: Value) -> Re
         to_js(body.get("bio").unwrap_or(&Value::Null)),
         interests,
         to_js(body.get("privacyLevel").unwrap_or(&Value::Null)),
-        JsValue::from_str(&now_iso()),
-        JsValue::from_str(&user.id),
+        Val::from_str(&now_iso()),
+        Val::from_str(&user.id),
     ]);
     let update = match update {
         Ok(query) => query,
@@ -363,7 +360,7 @@ async fn update_profile_inner(state: AppState, user: UserRow, body: Value) -> Re
 
     let updated = db
         .prepare(user_select(USER_SELECT_BY_ID))
-        .bind(&[JsValue::from_str(&user.id)]);
+        .bind(&[Val::from_str(&user.id)]);
     let updated = match updated {
         Ok(query) => query,
         Err(_) => return internal_error("Failed to update profile"),

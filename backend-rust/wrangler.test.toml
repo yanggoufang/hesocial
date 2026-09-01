@@ -10,11 +10,10 @@ JWT_SECRET = "contract-harness-secret-0123456789abcdef"
 ANALYTICS_QUERY_STUB = "true"
 CLOUDFLARE_ACCOUNT_ID = "contract-account"
 R2_PUBLIC_URL = "https://media.hesocial.test"
+# Overridden by vitest.workers.config.ts with the port the harness actually
+# bound; this value only keeps the config valid on its own.
+TURSO_URL = "http://127.0.0.1:8481"
 
-[[d1_databases]]
-binding = "DB"
-database_name = "hesocial-db"
-database_id = "00000000-0000-0000-0000-000000000000"
 
 # Miniflare supplies an isolated local R2 bucket to the contract harness.
 [[r2_buckets]]

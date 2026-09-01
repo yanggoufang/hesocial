@@ -17,10 +17,10 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use worker::js_sys::Date;
 use worker::send::SendFuture;
-use worker::wasm_bindgen::JsValue;
 
 use crate::AppState;
 use crate::auth::{authenticate, require_admin, require_super_admin};
+use crate::db::{self, Val};
 
 const EVENT_SELECT: &str = "SELECT e.id AS id, e.title AS name, e.description AS description, e.start_datetime AS \"dateTime\", e.registration_closes_at AS \"registrationDeadline\", e.price_platinum AS price_platinum, e.price_diamond AS price_diamond, e.price_black_card AS price_black_card, e.currency AS pricing_currency, e.dress_code AS \"dressCode\", e.capacity_max AS capacity, e.current_registrations AS \"currentAttendees\", e.gallery_images AS images, e.special_requirements AS requirements, e.created_at AS \"createdAt\", e.updated_at AS \"updatedAt\", v.name AS \"venueName\", v.address AS \"venueAddress\", v.city AS \"venueCity\", v.rating AS \"venueRating\", v.amenities AS \"venueAmenities\", ec.name AS \"categoryName\", ec.icon AS \"categoryIcon\", (u.first_name || ' ' || u.last_name) AS \"organizerName\" FROM events e JOIN venues v ON e.venue_id = v.id JOIN event_categories ec ON e.category_id = ec.id JOIN users u ON e.organizer_id = u.id";
 
@@ -130,22 +130,22 @@ async fn list_events_inner(state: AppState, params: HashMap<String, String>) -> 
         "e.status = 'published'".to_owned(),
         "e.approval_status = 'approved'".to_owned(),
     ];
-    let mut binds: Vec<JsValue> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
 
     if upcoming == "true" {
         conditions.push("e.start_datetime > ?".to_owned());
-        binds.push(JsValue::from_str(&now_iso()));
+        binds.push(Val::from_str(&now_iso()));
     }
     if let Some(search) = params.get("search").filter(|value| !value.is_empty()) {
         conditions.push("(e.title LIKE ? OR e.description LIKE ?)".to_owned());
         let pattern = format!("%{search}%");
-        binds.push(JsValue::from_str(&pattern));
-        binds.push(JsValue::from_str(&pattern));
+        binds.push(Val::from_str(&pattern));
+        binds.push(Val::from_str(&pattern));
     }
     if let Some(category) = params.get("category").filter(|value| !value.is_empty()) {
         conditions.push("(ec.slug = ? OR ec.name = ?)".to_owned());
-        binds.push(JsValue::from_str(category));
-        binds.push(JsValue::from_str(category));
+        binds.push(Val::from_str(category));
+        binds.push(Val::from_str(category));
     }
 
     let where_clause = format!("WHERE {}", conditions.join(" AND "));
@@ -159,14 +159,14 @@ async fn list_events_inner(state: AppState, params: HashMap<String, String>) -> 
     let sort_order = if order == "desc" { "DESC" } else { "ASC" };
     let offset = (page - 1.0) * limit;
 
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return error_response("Failed to get events"),
     };
 
     let mut data_binds = binds.clone();
-    data_binds.push(JsValue::from_f64(limit));
-    data_binds.push(JsValue::from_f64(offset));
+    data_binds.push(Val::from_f64(limit));
+    data_binds.push(Val::from_f64(offset));
 
     let events_query = db
         .prepare(format!(
@@ -211,7 +211,7 @@ pub async fn list_categories(State(state): State<AppState>) -> Response {
 }
 
 async fn list_categories_inner(state: AppState) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return error_response("Failed to get event categories"),
     };
@@ -236,18 +236,18 @@ pub async fn list_venues(
 
 async fn list_venues_inner(state: AppState, params: HashMap<String, String>) -> Response {
     let mut conditions: Vec<String> = Vec::new();
-    let mut binds: Vec<JsValue> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
 
     if let Some(city) = params.get("city").filter(|value| !value.is_empty()) {
         conditions.push("city LIKE ?".to_owned());
-        binds.push(JsValue::from_str(&format!("%{city}%")));
+        binds.push(Val::from_str(&format!("%{city}%")));
     }
     if let Some(rating) = params.get("rating").filter(|value| !value.is_empty()) {
         let Some(rating) = parse_query_number(Some(rating), 0.0) else {
             return error_response("Failed to get venues");
         };
         conditions.push("rating >= ?".to_owned());
-        binds.push(JsValue::from_f64(rating));
+        binds.push(Val::from_f64(rating));
     }
 
     let where_clause = if conditions.is_empty() {
@@ -256,7 +256,7 @@ async fn list_venues_inner(state: AppState, params: HashMap<String, String>) -> 
         format!("WHERE {}", conditions.join(" AND "))
     };
 
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return error_response("Failed to get venues"),
     };

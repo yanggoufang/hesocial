@@ -12,11 +12,11 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use worker::js_sys::Date;
 use worker::send::SendFuture;
-use worker::wasm_bindgen::JsValue;
 
 use crate::AppState;
 use crate::auth::{authenticate, bearer_token, internal_error, require_admin, require_super_admin};
 use crate::auth_handlers::now_iso;
+use crate::db::{self, Val};
 
 const EVENT_DETAIL_SQL: &str = "SELECT e.id AS id, e.title AS name, e.description AS description, e.start_datetime AS \"dateTime\", e.registration_closes_at AS \"registrationDeadline\", e.price_platinum AS price_platinum, e.price_diamond AS price_diamond, e.price_black_card AS price_black_card, e.currency AS pricing_currency, e.dress_code AS \"dressCode\", e.capacity_max AS capacity, e.current_registrations AS \"currentAttendees\", e.gallery_images AS images, e.special_requirements AS requirements, e.created_at AS \"createdAt\", e.updated_at AS \"updatedAt\", v.id AS \"venueId\", v.name AS \"venueName\", v.address AS \"venueAddress\", v.city AS \"venueCity\", v.latitude AS latitude, v.longitude AS longitude, v.rating AS \"venueRating\", v.amenities AS \"venueAmenities\", v.images AS \"venueImages\", ec.id AS \"categoryId\", ec.name AS \"categoryName\", ec.description AS \"categoryDescription\", ec.icon AS \"categoryIcon\", (u.first_name || ' ' || u.last_name) AS \"organizerName\", e.slug AS slug, e.title AS title, e.detailed_description AS detailed_description, e.category_id AS category_id, e.venue_id AS venue_id, e.organizer_id AS organizer_id, e.start_datetime AS start_datetime, e.end_datetime AS end_datetime, e.timezone AS timezone, e.capacity_min AS capacity_min, e.capacity_max AS capacity_max, e.current_registrations AS current_registrations, e.currency AS currency, e.status AS status, e.approval_status AS approval_status, e.approved_by AS approved_by, e.approved_at AS approved_at, e.required_membership_tiers AS required_membership_tiers, e.required_verification AS required_verification, e.age_restriction AS age_restriction, e.dress_code AS dress_code, e.language AS language, e.special_requirements AS special_requirements, e.inclusions AS inclusions, e.exclusions AS exclusions, e.registration_opens_at AS registration_opens_at, e.registration_closes_at AS registration_closes_at, e.cancellation_deadline AS cancellation_deadline, e.waitlist_enabled AS waitlist_enabled, e.auto_approval AS auto_approval, e.meta_title AS meta_title, e.meta_description AS meta_description, e.featured_image AS featured_image, e.gallery_images AS gallery_images, e.internal_notes AS internal_notes, e.cost_breakdown AS cost_breakdown, e.profit_margin AS profit_margin, e.published_at AS published_at FROM events e JOIN venues v ON e.venue_id = v.id JOIN event_categories ec ON e.category_id = ec.id JOIN users u ON e.organizer_id = u.id WHERE e.id = ?";
 
@@ -72,16 +72,13 @@ fn message_response(message: &str) -> Response {
     Json(Value::Object(body)).into_response()
 }
 
-fn to_js(value: &Value) -> JsValue {
+fn to_js(value: &Value) -> Value {
     match value {
-        Value::Null => JsValue::NULL,
-        Value::Bool(flag) => JsValue::from_bool(*flag),
-        Value::Number(number) => number
-            .as_f64()
-            .map(JsValue::from_f64)
-            .unwrap_or(JsValue::NULL),
-        Value::String(text) => JsValue::from_str(text),
-        _ => JsValue::NULL,
+        Value::Null => db::NULL,
+        Value::Bool(flag) => Val::from_bool(*flag),
+        Value::Number(number) => number.as_f64().map(Val::from_f64).unwrap_or(db::NULL),
+        Value::String(text) => Val::from_str(text),
+        _ => db::NULL,
     }
 }
 
@@ -95,64 +92,59 @@ fn js_truthy(value: &Value) -> bool {
     }
 }
 
-fn raw_field(body: &Value, key: &str) -> JsValue {
-    body.get(key).map_or(JsValue::NULL, to_js)
+fn raw_field(body: &Value, key: &str) -> Value {
+    body.get(key).map_or(db::NULL, to_js)
 }
 
 /// JS `value || fallback` semantics for scalar fields.
-fn fallback_field(body: &Value, key: &str, fallback: &str) -> JsValue {
+fn fallback_field(body: &Value, key: &str, fallback: &str) -> Value {
     match body.get(key).filter(|value| js_truthy(value)) {
         Some(value) => to_js(value),
-        None => JsValue::from_str(fallback),
+        None => Val::from_str(fallback),
     }
 }
 
-fn fallback_number(body: &Value, key: &str, fallback: f64) -> JsValue {
+fn fallback_number(body: &Value, key: &str, fallback: f64) -> Value {
     match body.get(key).filter(|value| js_truthy(value)) {
         Some(value) => to_js(value),
-        None => JsValue::from_f64(fallback),
+        None => Val::from_f64(fallback),
     }
 }
 
 /// JS `JSON.stringify(value || fallback)` for the JSON text columns.
-fn json_field(body: &Value, key: &str, fallback: &str) -> JsValue {
+fn json_field(body: &Value, key: &str, fallback: &str) -> Value {
     let serialized = match body.get(key).filter(|value| js_truthy(value)) {
         Some(value) => value.to_string(),
         None => fallback.to_owned(),
     };
-    JsValue::from_str(&serialized)
+    Val::from_str(&serialized)
 }
 
 /// JS `value !== false`.
-fn unless_false(body: &Value, key: &str) -> JsValue {
+fn unless_false(body: &Value, key: &str) -> Value {
     let flag = !matches!(body.get(key), Some(Value::Bool(false)));
-    JsValue::from_f64(if flag { 1.0 } else { 0.0 })
+    Val::from_f64(if flag { 1.0 } else { 0.0 })
 }
 
 /// JS `value === true`.
-fn only_true(body: &Value, key: &str) -> JsValue {
+fn only_true(body: &Value, key: &str) -> Value {
     let flag = matches!(body.get(key), Some(Value::Bool(true)));
-    JsValue::from_f64(if flag { 1.0 } else { 0.0 })
+    Val::from_f64(if flag { 1.0 } else { 0.0 })
 }
 
 /// SQLite compares an INTEGER PRIMARY KEY against a numeric bind; a raw path
 /// string would never match. Express passes the string through to DuckDB,
 /// which casts — reproduce by parsing when possible.
-fn id_bind(id: &str) -> JsValue {
+fn id_bind(id: &str) -> Value {
     match id.parse::<f64>().ok().filter(|value| value.is_finite()) {
-        Some(number) => JsValue::from_f64(number),
-        None => JsValue::from_str(id),
+        Some(number) => Val::from_f64(number),
+        None => Val::from_str(id),
     }
 }
 
-async fn run_changes(statement: worker::D1PreparedStatement) -> Result<usize, ()> {
+async fn run_changes(statement: db::PreparedStatement) -> Result<usize, ()> {
     let result = statement.run().await.map_err(|_| ())?;
-    Ok(result
-        .meta()
-        .ok()
-        .flatten()
-        .and_then(|meta| meta.changes)
-        .unwrap_or(0))
+    Ok(result.meta().changes)
 }
 
 pub async fn get_event(
@@ -173,7 +165,7 @@ async fn get_event_inner(state: AppState, user: Option<UserRow>, id: String) -> 
         .as_ref()
         .is_some_and(|user| user.role == "admin" || user.role == "super_admin");
 
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to get event"),
     };
@@ -251,7 +243,7 @@ pub async fn create_event(
 }
 
 async fn create_event_inner(state: AppState, user: UserRow, body: Value) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to create event"),
     };
@@ -267,14 +259,14 @@ async fn create_event_inner(state: AppState, user: UserRow, body: Value) -> Resp
     let timestamp = now_iso();
 
     let insert = db.prepare(CREATE_EVENT_SQL).bind(&[
-        JsValue::from_f64(epoch_ms as f64),
+        Val::from_f64(epoch_ms as f64),
         raw_field(&body, "title"),
-        JsValue::from_str(&slug),
+        Val::from_str(&slug),
         raw_field(&body, "description"),
         raw_field(&body, "detailedDescription"),
         raw_field(&body, "categoryId"),
         raw_field(&body, "venueId"),
-        JsValue::from_str(&user.id),
+        Val::from_str(&user.id),
         raw_field(&body, "startDatetime"),
         raw_field(&body, "endDatetime"),
         fallback_field(&body, "timezone", "Asia/Taipei"),
@@ -306,8 +298,8 @@ async fn create_event_inner(state: AppState, user: UserRow, body: Value) -> Resp
         raw_field(&body, "internalNotes"),
         json_field(&body, "costBreakdown", "{}"),
         raw_field(&body, "profitMargin"),
-        JsValue::from_str(&timestamp),
-        JsValue::from_str(&timestamp),
+        Val::from_str(&timestamp),
+        Val::from_str(&timestamp),
     ]);
     let insert = match insert {
         Ok(query) => query,
@@ -345,7 +337,7 @@ pub async fn update_event(
 }
 
 async fn update_event_inner(state: AppState, id: String, body: Value) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to update event"),
     };
@@ -370,7 +362,7 @@ async fn update_event_inner(state: AppState, id: String, body: Value) -> Respons
     };
 
     let mut assignments: Vec<String> = Vec::new();
-    let mut binds: Vec<JsValue> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
     for (key, value) in updates {
         let Some(column) = update_column(key) else {
             continue;
@@ -380,10 +372,10 @@ async fn update_event_inner(state: AppState, id: String, body: Value) -> Respons
         }
         assignments.push(column.to_owned());
         if is_json_column(column) {
-            binds.push(JsValue::from_str(&value.to_string()));
+            binds.push(Val::from_str(&value.to_string()));
         } else if is_bool_column(column) {
             binds.push(match value {
-                Value::Bool(flag) => JsValue::from_f64(if *flag { 1.0 } else { 0.0 }),
+                Value::Bool(flag) => Val::from_f64(if *flag { 1.0 } else { 0.0 }),
                 other => to_js(other),
             });
         } else {
@@ -400,7 +392,7 @@ async fn update_event_inner(state: AppState, id: String, body: Value) -> Respons
         .map(|column| format!("{column} = ?"))
         .collect::<Vec<_>>()
         .join(", ");
-    binds.push(JsValue::from_str(&now_iso()));
+    binds.push(Val::from_str(&now_iso()));
     binds.push(bind);
 
     let update = db
@@ -435,7 +427,7 @@ pub async fn delete_event(
 }
 
 async fn delete_event_inner(state: AppState, id: String) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to delete event"),
     };
@@ -502,15 +494,15 @@ pub async fn publish_event(
 }
 
 async fn publish_event_inner(state: AppState, id: String) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to publish event"),
     };
 
     let timestamp = now_iso();
     let publish = db.prepare(PUBLISH_EVENT_SQL).bind(&[
-        JsValue::from_str(&timestamp),
-        JsValue::from_str(&timestamp),
+        Val::from_str(&timestamp),
+        Val::from_str(&timestamp),
         id_bind(&id),
     ]);
     let publish = match publish {
@@ -544,7 +536,7 @@ pub async fn approve_event(
 }
 
 async fn approve_event_inner(state: AppState, user: UserRow, id: String, body: Value) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to process event approval"),
     };
@@ -553,10 +545,10 @@ async fn approve_event_inner(state: AppState, user: UserRow, id: String, body: V
     let approval_status = if approved { "approved" } else { "rejected" };
     let timestamp = now_iso();
     let approve = db.prepare(APPROVE_EVENT_SQL).bind(&[
-        JsValue::from_str(approval_status),
-        JsValue::from_str(&user.id),
-        JsValue::from_str(&timestamp),
-        JsValue::from_str(&timestamp),
+        Val::from_str(approval_status),
+        Val::from_str(&user.id),
+        Val::from_str(&timestamp),
+        Val::from_str(&timestamp),
         id_bind(&id),
     ]);
     let approve = match approve {

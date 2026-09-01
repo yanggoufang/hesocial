@@ -12,7 +12,6 @@ use hesocial_core::registrations::{
 use hesocial_core::{ApiEnvelope, auth::UserRow};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use worker::D1Database;
 use worker::js_sys::Date;
 use worker::send::SendFuture;
 use worker::wasm_bindgen::JsValue;
@@ -20,6 +19,7 @@ use worker::wasm_bindgen::JsValue;
 use crate::AppState;
 use crate::auth::{authenticate, internal_error};
 use crate::auth_handlers::now_iso;
+use crate::db::{self, Val};
 
 const EVENT_FOR_REGISTRATION_SQL: &str = "SELECT id, registration_closes_at, start_datetime, capacity_max, current_registrations, required_membership_tiers, required_verification, waitlist_enabled FROM events WHERE id = ? AND status = 'published' AND approval_status = 'approved'";
 
@@ -32,7 +32,11 @@ const INCREMENT_EVENT_SQL: &str = "UPDATE events SET current_registrations = cur
 
 const INSERT_WAITLIST_REGISTRATION_SQL: &str = "INSERT INTO registrations (event_id, user_id, status, payment_status, special_requests, created_at, updated_at) SELECT e.id, ?, 'waitlisted', 'pending', ?, ?, ? FROM events e WHERE e.id = ? AND e.current_registrations >= e.capacity_max AND e.waitlist_enabled = 1";
 
-const INSERT_WAITLIST_SQL: &str = "INSERT INTO event_waitlist (event_id, user_id, position, status, created_at, updated_at) SELECT ?, ?, COALESCE(MAX(position), 0) + 1, 'waiting', ?, ? FROM event_waitlist WHERE event_id = ? HAVING EXISTS (SELECT 1 FROM registrations r WHERE r.event_id = ? AND r.user_id = ? AND r.status = 'waitlisted' AND r.created_at = ?)";
+// libSQL's parser rejects `HAVING` without a `GROUP BY`, which SQLite (and so
+// D1) accepted — the aggregate moves into a scalar subquery and the guard
+// into a plain `WHERE EXISTS`. Same rows, same positions, same no-op when
+// the registration above did not land.
+const INSERT_WAITLIST_SQL: &str = "INSERT INTO event_waitlist (event_id, user_id, position, status, created_at, updated_at) SELECT ?, ?, (SELECT COALESCE(MAX(position), 0) + 1 FROM event_waitlist WHERE event_id = ?), 'waiting', ?, ? WHERE EXISTS (SELECT 1 FROM registrations r WHERE r.event_id = ? AND r.user_id = ? AND r.status = 'waitlisted' AND r.created_at = ?)";
 
 const REGISTRATION_VIEW_SELECT: &str = "SELECT r.id, r.user_id, r.event_id, r.status, r.payment_status, r.payment_intent_id, r.special_requests, r.created_at, r.updated_at, e.title AS event_name, e.description AS event_description, e.start_datetime AS event_date_time, e.registration_closes_at AS registration_deadline, e.dress_code, e.capacity_max AS capacity, e.current_registrations AS current_attendees, e.price_platinum, e.price_diamond, e.price_black_card, e.currency AS pricing_currency, v.name AS venue_name, v.address AS venue_address, v.latitude, v.longitude, v.amenities AS venue_amenities, v.images AS venue_images, ec.name AS category_name, ec.description AS category_description FROM registrations r JOIN events e ON r.event_id = e.id JOIN venues v ON e.venue_id = v.id JOIN event_categories ec ON e.category_id = ec.id";
 
@@ -80,18 +84,14 @@ struct LegacyStatsRow {
     waitlist_registrations: i64,
 }
 
-fn id_bind(id: &str) -> JsValue {
+fn id_bind(id: &str) -> Value {
     match id.parse::<f64>().ok().filter(|value| value.is_finite()) {
-        Some(number) => JsValue::from_f64(number),
-        None => JsValue::from_str(id),
+        Some(number) => Val::from_f64(number),
+        None => Val::from_str(id),
     }
 }
 
-async fn duplicate_registration_response(
-    db: &D1Database,
-    user_id: &str,
-    event_id: i64,
-) -> Response {
+async fn duplicate_registration_response(db: &db::Db, user_id: &str, event_id: i64) -> Response {
     // A UNIQUE(event_id,user_id) violation in a batch surfaces as a plain
     // error; re-check whether a registration for this pair now exists and
     // answer 400 instead of an opaque 500 for the concurrent-double-register
@@ -117,10 +117,10 @@ fn message_response(message: &str) -> Response {
     Json(json!({ "success": true, "message": message })).into_response()
 }
 
-fn special_requests_bind(value: Option<&str>) -> JsValue {
+fn special_requests_bind(value: Option<&str>) -> Value {
     value
         .filter(|request| !request.is_empty())
-        .map_or_else(|| JsValue::NULL, JsValue::from_str)
+        .map_or_else(|| db::NULL, Val::from_str)
 }
 
 fn is_admin(user: &UserRow) -> bool {
@@ -131,33 +131,20 @@ fn can_access(user: &UserRow, owner_id: &str) -> bool {
     user.id == owner_id || is_admin(user)
 }
 
-fn result_changes(result: &worker::D1Result) -> usize {
-    result
-        .meta()
-        .ok()
-        .flatten()
-        .and_then(|meta| meta.changes)
-        .unwrap_or(0)
+fn result_changes(result: &db::QueryResult) -> usize {
+    result.meta().changes
 }
 
-fn result_last_row_id(result: &worker::D1Result) -> Option<i64> {
-    result
-        .meta()
-        .ok()
-        .flatten()
-        .and_then(|meta| meta.last_row_id)
+fn result_last_row_id(result: &db::QueryResult) -> Option<i64> {
+    result.meta().last_row_id
 }
 
-fn bind_statement(
-    db: &D1Database,
-    sql: &str,
-    values: &[JsValue],
-) -> Result<worker::D1PreparedStatement, ()> {
+fn bind_statement(db: &db::Db, sql: &str, values: &[Value]) -> Result<db::PreparedStatement, ()> {
     db.prepare(sql).bind(values).map_err(|_| ())
 }
 
 async fn event_for_registration(
-    db: &D1Database,
+    db: &db::Db,
     event_id: &str,
 ) -> Result<Option<RegistrationEventRow>, ()> {
     let query = bind_statement(db, EVENT_FOR_REGISTRATION_SQL, &[id_bind(event_id)])?;
@@ -165,17 +152,14 @@ async fn event_for_registration(
 }
 
 async fn existing_registration(
-    db: &D1Database,
+    db: &db::Db,
     user_id: &str,
     event_id: i64,
 ) -> Result<Option<ExistingRegistrationRow>, ()> {
     let query = bind_statement(
         db,
         EXISTING_REGISTRATION_SQL,
-        &[
-            JsValue::from_str(user_id),
-            JsValue::from_f64(event_id as f64),
-        ],
+        &[Val::from_str(user_id), Val::from_f64(event_id as f64)],
     )?;
     query.first(None).await.map_err(|_| ())
 }
@@ -199,22 +183,17 @@ fn registration_created(registration_id: i64, status: &str, message: &str) -> Re
 /// Express swallows epa failures (`Don't fail the main operation if
 /// participant access creation fails`), so the write runs outside the atomic
 /// registration batch and its errors are ignored here too.
-async fn seed_participant_access(
-    db: &D1Database,
-    user_id: &str,
-    event_id: i64,
-    registration_id: i64,
-) {
+async fn seed_participant_access(db: &db::Db, user_id: &str, event_id: i64, registration_id: i64) {
     let timestamp = now_iso();
     let upsert = bind_statement(
         db,
         UPSERT_EPA_SQL,
         &[
-            JsValue::from_str(user_id),
-            JsValue::from_f64(event_id as f64),
-            JsValue::from_f64(registration_id as f64),
-            JsValue::from_str(&timestamp),
-            JsValue::from_str(&timestamp),
+            Val::from_str(user_id),
+            Val::from_f64(event_id as f64),
+            Val::from_f64(registration_id as f64),
+            Val::from_str(&timestamp),
+            Val::from_str(&timestamp),
         ],
     );
     if let Ok(statement) = upsert {
@@ -233,7 +212,7 @@ fn access_level_for(payment_status: &str) -> &'static str {
 }
 
 async fn insert_capacity_registration(
-    db: &D1Database,
+    db: &db::Db,
     event_id: i64,
     user_id: &str,
     special_requests: Option<&str>,
@@ -243,21 +222,21 @@ async fn insert_capacity_registration(
         db,
         INSERT_CAPACITY_REGISTRATION_SQL,
         &[
-            JsValue::from_str(user_id),
+            Val::from_str(user_id),
             special_requests_bind(special_requests),
-            JsValue::from_str(timestamp),
-            JsValue::from_str(timestamp),
-            JsValue::from_f64(event_id as f64),
+            Val::from_str(timestamp),
+            Val::from_str(timestamp),
+            Val::from_f64(event_id as f64),
         ],
     )?;
     let increment = bind_statement(
         db,
         INCREMENT_EVENT_SQL,
         &[
-            JsValue::from_str(timestamp),
-            JsValue::from_f64(event_id as f64),
-            JsValue::from_str(user_id),
-            JsValue::from_str(timestamp),
+            Val::from_str(timestamp),
+            Val::from_f64(event_id as f64),
+            Val::from_str(user_id),
+            Val::from_str(timestamp),
         ],
     )?;
     let results = db.batch(vec![insert, increment]).await.map_err(|_| ())?;
@@ -277,7 +256,7 @@ async fn insert_capacity_registration(
 }
 
 async fn insert_waitlisted_registration(
-    db: &D1Database,
+    db: &db::Db,
     event_id: i64,
     user_id: &str,
     special_requests: Option<&str>,
@@ -287,25 +266,25 @@ async fn insert_waitlisted_registration(
         db,
         INSERT_WAITLIST_REGISTRATION_SQL,
         &[
-            JsValue::from_str(user_id),
+            Val::from_str(user_id),
             special_requests_bind(special_requests),
-            JsValue::from_str(timestamp),
-            JsValue::from_str(timestamp),
-            JsValue::from_f64(event_id as f64),
+            Val::from_str(timestamp),
+            Val::from_str(timestamp),
+            Val::from_f64(event_id as f64),
         ],
     )?;
     let insert_waitlist = bind_statement(
         db,
         INSERT_WAITLIST_SQL,
         &[
-            JsValue::from_f64(event_id as f64),
-            JsValue::from_str(user_id),
-            JsValue::from_str(timestamp),
-            JsValue::from_str(timestamp),
-            JsValue::from_f64(event_id as f64),
-            JsValue::from_f64(event_id as f64),
-            JsValue::from_str(user_id),
-            JsValue::from_str(timestamp),
+            Val::from_f64(event_id as f64),
+            Val::from_str(user_id),
+            Val::from_f64(event_id as f64),
+            Val::from_str(timestamp),
+            Val::from_str(timestamp),
+            Val::from_f64(event_id as f64),
+            Val::from_str(user_id),
+            Val::from_str(timestamp),
         ],
     )?;
     let results = db
@@ -346,7 +325,7 @@ async fn register_for_event_inner(
     event_id: String,
     body: RegistrationBody,
 ) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to register for event"),
     };
@@ -479,15 +458,15 @@ async fn get_user_registrations_inner(
         return internal_error("Failed to fetch registrations");
     };
     let offset = (page - 1.0) * limit;
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to fetch registrations"),
     };
     let mut condition = "r.user_id = ?".to_owned();
-    let mut binds = vec![JsValue::from_str(&user.id)];
+    let mut binds = vec![Val::from_str(&user.id)];
     if let Some(status) = params.get("status").filter(|status| !status.is_empty()) {
         condition.push_str(" AND r.status = ?");
-        binds.push(JsValue::from_str(status));
+        binds.push(Val::from_str(status));
     }
 
     let count = match bind_statement(
@@ -503,8 +482,8 @@ async fn get_user_registrations_inner(
     };
 
     let mut data_binds = binds;
-    data_binds.push(JsValue::from_f64(limit));
-    data_binds.push(JsValue::from_f64(offset));
+    data_binds.push(Val::from_f64(limit));
+    data_binds.push(Val::from_f64(offset));
     let query = format!(
         "{REGISTRATION_VIEW_SELECT} WHERE {condition} ORDER BY r.created_at DESC LIMIT ? OFFSET ?"
     );
@@ -526,7 +505,7 @@ async fn get_user_registrations_inner(
     .into_response()
 }
 
-async fn registration_owner(db: &D1Database, id: &str) -> Result<Option<RegistrationOwnerRow>, ()> {
+async fn registration_owner(db: &db::Db, id: &str) -> Result<Option<RegistrationOwnerRow>, ()> {
     let query = bind_statement(db, REGISTRATION_OWNER_SQL, &[id_bind(id)])?;
     query.first(None).await.map_err(|_| ())
 }
@@ -544,7 +523,7 @@ pub async fn get_registration(
 }
 
 async fn get_registration_inner(state: AppState, user: UserRow, id: String) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to fetch registration details"),
     };
@@ -554,7 +533,7 @@ async fn get_registration_inner(state: AppState, user: UserRow, id: String) -> R
         Err(()) => return internal_error("Failed to fetch registration details"),
     };
     let query = format!("{REGISTRATION_VIEW_SELECT} WHERE r.id = ?");
-    let row = match bind_statement(&db, &query, &[JsValue::from_f64(owner.id as f64)]) {
+    let row = match bind_statement(&db, &query, &[Val::from_f64(owner.id as f64)]) {
         Ok(query) => match query.first::<RegistrationViewRow>(None).await {
             Ok(Some(row)) => row,
             Ok(None) => return registration_not_found(),
@@ -584,7 +563,7 @@ async fn update_registration_inner(
     id: String,
     body: RegistrationBody,
 ) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to update registration"),
     };
@@ -615,8 +594,8 @@ async fn update_registration_inner(
         "UPDATE registrations SET special_requests = ?, updated_at = ? WHERE id = ?",
         &[
             special_requests_bind(body.special_requests.as_deref()),
-            JsValue::from_str(&timestamp),
-            JsValue::from_f64(registration.id as f64),
+            Val::from_str(&timestamp),
+            Val::from_f64(registration.id as f64),
         ],
     );
     match update {
@@ -640,7 +619,7 @@ pub async fn cancel_registration(
 }
 
 async fn cancel_registration_inner(state: AppState, user: UserRow, id: String) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to cancel registration"),
     };
@@ -673,19 +652,19 @@ async fn cancel_registration_inner(state: AppState, user: UserRow, id: String) -
             &db,
             CANCEL_WAITLISTED_SQL,
             &[
-                JsValue::from_str(&timestamp),
-                JsValue::from_str(&timestamp),
-                JsValue::from_f64(registration.id as f64),
+                Val::from_str(&timestamp),
+                Val::from_str(&timestamp),
+                Val::from_f64(registration.id as f64),
             ],
         );
         let decline = bind_statement(
             &db,
             DECLINE_WAITLIST_SQL,
             &[
-                JsValue::from_str(&timestamp),
-                JsValue::from_str(&timestamp),
-                JsValue::from_f64(registration.event_id as f64),
-                JsValue::from_str(&registration.user_id),
+                Val::from_str(&timestamp),
+                Val::from_str(&timestamp),
+                Val::from_f64(registration.event_id as f64),
+                Val::from_str(&registration.user_id),
             ],
         );
         match (cancel, decline) {
@@ -693,23 +672,19 @@ async fn cancel_registration_inner(state: AppState, user: UserRow, id: String) -
             _ => return internal_error("Failed to cancel registration"),
         }
     } else {
-        let values = || JsValue::from_str(&timestamp);
+        let values = || Val::from_str(&timestamp);
         let cancel = bind_statement(
             &db,
             CANCEL_ACTIVE_SQL,
-            &[
-                values(),
-                values(),
-                JsValue::from_f64(registration.id as f64),
-            ],
+            &[values(), values(), Val::from_f64(registration.id as f64)],
         );
         let decrement = bind_statement(
             &db,
             DECREMENT_EVENT_SQL,
             &[
                 values(),
-                JsValue::from_f64(registration.event_id as f64),
-                JsValue::from_f64(registration.id as f64),
+                Val::from_f64(registration.event_id as f64),
+                Val::from_f64(registration.id as f64),
                 values(),
             ],
         );
@@ -719,8 +694,8 @@ async fn cancel_registration_inner(state: AppState, user: UserRow, id: String) -
             &[
                 values(),
                 values(),
-                JsValue::from_f64(registration.event_id as f64),
-                JsValue::from_f64(registration.id as f64),
+                Val::from_f64(registration.event_id as f64),
+                Val::from_f64(registration.id as f64),
                 values(),
             ],
         );
@@ -729,8 +704,8 @@ async fn cancel_registration_inner(state: AppState, user: UserRow, id: String) -
             PROMOTE_WAITLIST_REGISTRATION_SQL,
             &[
                 values(),
-                JsValue::from_f64(registration.event_id as f64),
-                JsValue::from_f64(registration.event_id as f64),
+                Val::from_f64(registration.event_id as f64),
+                Val::from_f64(registration.event_id as f64),
                 values(),
             ],
         );
@@ -739,7 +714,7 @@ async fn cancel_registration_inner(state: AppState, user: UserRow, id: String) -
             INCREMENT_PROMOTED_EVENT_SQL,
             &[
                 values(),
-                JsValue::from_f64(registration.event_id as f64),
+                Val::from_f64(registration.event_id as f64),
                 values(),
                 values(),
             ],
@@ -772,7 +747,7 @@ pub async fn registration_stats(
 }
 
 async fn registration_stats_inner(state: AppState, event_id: String) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to get registration stats"),
     };
@@ -805,7 +780,7 @@ async fn registration_stats_inner(state: AppState, event_id: String) -> Response
                 }
             }))
             .into_response(),
-            Err(error) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &error.to_string()),
+            Err(()) => internal_error("Failed to get registration stats"),
         },
         Err(()) => internal_error("Failed to get registration stats"),
     }
@@ -849,7 +824,7 @@ async fn update_payment_status_inner(state: AppState, id: String, body: PaymentB
         return json_error(StatusCode::BAD_REQUEST, "Invalid payment status");
     };
 
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error(ERROR),
     };
@@ -879,12 +854,12 @@ async fn update_payment_status_inner(state: AppState, id: String, body: PaymentB
         &db,
         PAYMENT_UPDATE_SQL,
         &[
-            JsValue::from_str(payment_status),
+            Val::from_str(payment_status),
             body.payment_intent_id
                 .as_deref()
                 .filter(|intent| !intent.is_empty())
-                .map_or(JsValue::NULL, JsValue::from_str),
-            JsValue::from_str(&now_iso()),
+                .map_or(db::NULL, Val::from_str),
+            Val::from_str(&now_iso()),
             id_bind(&id),
         ],
     );
@@ -905,13 +880,13 @@ async fn update_payment_status_inner(state: AppState, id: String, body: PaymentB
         &db,
         "INSERT INTO event_participant_access (user_id, event_id, registration_id, has_access, payment_status, access_level, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?, ?, ?) ON CONFLICT(user_id, event_id) DO UPDATE SET payment_status = excluded.payment_status, access_level = excluded.access_level, registration_id = excluded.registration_id, updated_at = excluded.updated_at",
         &[
-            JsValue::from_str(&user_id),
-            JsValue::from_f64(event_id),
+            Val::from_str(&user_id),
+            Val::from_f64(event_id),
             id_bind(&id),
-            JsValue::from_str(payment_status),
-            JsValue::from_str(access_level_for(payment_status)),
-            JsValue::from_str(&now_iso()),
-            JsValue::from_str(&now_iso()),
+            Val::from_str(payment_status),
+            Val::from_str(access_level_for(payment_status)),
+            Val::from_str(&now_iso()),
+            Val::from_str(&now_iso()),
         ],
     );
     if let Ok(statement) = upsert {

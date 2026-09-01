@@ -15,10 +15,10 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use worker::HttpMetadata;
 use worker::send::SendFuture;
-use worker::wasm_bindgen::JsValue;
 
 use crate::AppState;
 use crate::auth::{authenticate, internal_error};
+use crate::db::{self, Val};
 
 const MEDIA_BUCKET_BINDING: &str = "MEDIA";
 const DEFAULT_PUBLIC_URL: &str = "https://media.hesocial.com";
@@ -61,10 +61,10 @@ impl MediaParent {
     }
 }
 
-fn id_bind(id: &str) -> JsValue {
+fn id_bind(id: &str) -> Value {
     match id.parse::<f64>().ok().filter(|value| value.is_finite()) {
-        Some(number) => JsValue::from_f64(number),
-        None => JsValue::from_str(id),
+        Some(number) => Val::from_f64(number),
+        None => Val::from_str(id),
     }
 }
 
@@ -211,7 +211,7 @@ async fn upload_one(
         original_key.clone()
     };
     let thumbnail_path = is_image.then(|| Value::Object(thumbnails.clone()).to_string());
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => {
             delete_keys(state, &stored_keys).await;
@@ -227,17 +227,15 @@ async fn upload_one(
         }
     };
     let binds = [
-        JsValue::from_str(&media_id),
+        Val::from_str(&media_id),
         id_bind(parent_id),
-        JsValue::from_str(media_type),
-        JsValue::from_str(&file_path),
-        thumbnail_path
-            .as_deref()
-            .map_or(JsValue::NULL, JsValue::from_str),
-        JsValue::from_str(&file.original_filename),
-        JsValue::from_f64(file.bytes.len() as f64),
-        JsValue::from_str(&file.mime_type),
-        JsValue::from_str(&user.id),
+        Val::from_str(media_type),
+        Val::from_str(&file_path),
+        thumbnail_path.as_deref().map_or(db::NULL, Val::from_str),
+        Val::from_str(&file.original_filename),
+        Val::from_f64(file.bytes.len() as f64),
+        Val::from_str(&file.mime_type),
+        Val::from_str(&user.id),
     ];
     let inserted = db
         .prepare(statement)
@@ -264,7 +262,7 @@ async fn upload_one(
 }
 
 async fn event_owner(state: &AppState, event_id: &str) -> Result<Option<EventOwner>, ()> {
-    let db = state.env.d1("DB").map_err(|_| ())?;
+    let db = db::Db::from_env(&state.env).map_err(|_| ())?;
     db.prepare("SELECT organizer_id FROM events WHERE id = ? AND status <> 'archived'")
         .bind(&[id_bind(event_id)])
         .map_err(|_| ())?
@@ -274,7 +272,7 @@ async fn event_owner(state: &AppState, event_id: &str) -> Result<Option<EventOwn
 }
 
 async fn venue_exists(state: &AppState, venue_id: &str) -> Result<bool, ()> {
-    let db = state.env.d1("DB").map_err(|_| ())?;
+    let db = db::Db::from_env(&state.env).map_err(|_| ())?;
     let venue: Option<ExistingVenue> = db
         .prepare("SELECT id FROM venues WHERE id = ? AND is_active = 1")
         .bind(&[id_bind(venue_id)])
@@ -498,7 +496,7 @@ async fn get_event_media_inner(
     event_id: String,
     params: HashMap<String, String>,
 ) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to get event media"),
     };
@@ -509,7 +507,7 @@ async fn get_event_media_inner(
         .filter(|value| value.as_str() == "image" || value.as_str() == "document")
     {
         statement.push_str(" AND type = ?");
-        binds.push(JsValue::from_str(media_type));
+        binds.push(Val::from_str(media_type));
     }
     statement.push_str(" ORDER BY created_at DESC");
     let query = match db.prepare(statement).bind(&binds) {
@@ -545,7 +543,7 @@ pub async fn get_venue_media(
 }
 
 async fn get_venue_media_inner(state: AppState, venue_id: String) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to get venue media"),
     };
@@ -581,11 +579,11 @@ pub async fn delete_media(
 }
 
 async fn delete_media_inner(state: AppState, user: UserRow, media_id: String) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to delete media"),
     };
-    let bind = JsValue::from_str(&media_id);
+    let bind = Val::from_str(&media_id);
     let row: Option<DeleteMediaRow> = match db
         .prepare(DELETE_MEDIA_SELECT)
         .bind(&[bind.clone(), bind.clone()])

@@ -30,13 +30,12 @@ use hesocial_core::auth::UserRow;
 use hesocial_core::pagination::pagination_json;
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
-use worker::D1Database;
 use worker::send::SendFuture;
-use worker::wasm_bindgen::JsValue;
 
 use crate::AppState;
 use crate::auth::{authenticate, require_admin, require_super_admin};
 use crate::auth_handlers::now_iso;
+use crate::db::{self, Val};
 
 const LIST_ERROR: &str = "Failed to retrieve users";
 const GET_ERROR: &str = "Failed to retrieve user";
@@ -71,43 +70,35 @@ fn message_response(message: &str) -> Response {
     Json(json!({ "success": true, "message": message })).into_response()
 }
 
-fn database(state: &AppState, error: &str) -> Result<D1Database, Response> {
-    state.env.d1("DB").map_err(|_| server_error(error))
+fn database(state: &AppState, error: &str) -> Result<db::Db, Response> {
+    db::Db::from_env(&state.env).map_err(|_| server_error(error))
 }
 
-fn to_js(value: &Value) -> JsValue {
+fn to_js(value: &Value) -> Value {
     match value {
-        Value::Null => JsValue::NULL,
-        Value::Bool(flag) => JsValue::from_bool(*flag),
-        Value::Number(number) => number
-            .as_f64()
-            .map(JsValue::from_f64)
-            .unwrap_or(JsValue::NULL),
-        Value::String(text) => JsValue::from_str(text),
-        _ => JsValue::NULL,
+        Value::Null => db::NULL,
+        Value::Bool(flag) => Val::from_bool(*flag),
+        Value::Number(number) => number.as_f64().map(Val::from_f64).unwrap_or(db::NULL),
+        Value::String(text) => Val::from_str(text),
+        _ => db::NULL,
     }
 }
 
-fn bind(db: &D1Database, sql: &str, values: &[JsValue]) -> Result<worker::D1PreparedStatement, ()> {
+fn bind(db: &db::Db, sql: &str, values: &[Value]) -> Result<db::PreparedStatement, ()> {
     db.prepare(sql).bind(values).map_err(|_| ())
 }
 
-async fn all_values(statement: worker::D1PreparedStatement) -> Result<Vec<Value>, ()> {
+async fn all_values(statement: db::PreparedStatement) -> Result<Vec<Value>, ()> {
     let result = statement.all().await.map_err(|_| ())?;
     result.results::<Value>().map_err(|_| ())
 }
 
-async fn first_value(statement: worker::D1PreparedStatement) -> Result<Option<Value>, ()> {
+async fn first_value(statement: db::PreparedStatement) -> Result<Option<Value>, ()> {
     statement.first::<Value>(None).await.map_err(|_| ())
 }
 
-fn result_changes(result: &worker::D1Result) -> usize {
-    result
-        .meta()
-        .ok()
-        .flatten()
-        .and_then(|meta| meta.changes)
-        .unwrap_or(0)
+fn result_changes(result: &db::QueryResult) -> usize {
+    result.meta().changes
 }
 
 async fn admin_user(state: &AppState, headers: &HeaderMap) -> Result<UserRow, Response> {
@@ -158,9 +149,9 @@ async fn list_users_inner(
         verification_status: text_filter(&params, "verificationStatus"),
     };
     let (where_clause, filter_params) = list_where(&filters);
-    let filter_binds: Vec<JsValue> = filter_params
+    let filter_binds: Vec<Value> = filter_params
         .iter()
-        .map(|param| JsValue::from_str(param))
+        .map(|param| Val::from_str(param))
         .collect();
 
     let db = match database(&state, LIST_ERROR) {
@@ -178,8 +169,8 @@ async fn list_users_inner(
     };
 
     let mut data_binds = filter_binds.clone();
-    data_binds.push(JsValue::from_f64(limit as f64));
-    data_binds.push(JsValue::from_f64(offset as f64));
+    data_binds.push(Val::from_f64(limit as f64));
+    data_binds.push(Val::from_f64(offset as f64));
     let data_sql =
         format!("{USER_LIST_SELECT} {where_clause} ORDER BY created_at DESC LIMIT ? OFFSET ?");
     let rows = match bind(&db, &data_sql, &data_binds) {
@@ -219,7 +210,7 @@ async fn get_user_inner(state: AppState, headers: HeaderMap, id: String) -> Resp
         Ok(db) => db,
         Err(response) => return response,
     };
-    let row = match bind(&db, USER_BY_ID_SQL, &[JsValue::from_str(&id)]) {
+    let row = match bind(&db, USER_BY_ID_SQL, &[Val::from_str(&id)]) {
         Ok(statement) => match first_value(statement).await {
             Ok(row) => row,
             Err(()) => return server_error(GET_ERROR),
@@ -256,7 +247,7 @@ async fn update_user_inner(
     };
 
     // Express checks existence first and 404s before touching the update.
-    let exists = match bind(&db, USER_EXISTS_SQL, &[JsValue::from_str(&id)]) {
+    let exists = match bind(&db, USER_EXISTS_SQL, &[Val::from_str(&id)]) {
         Ok(statement) => match first_value(statement).await {
             Ok(row) => row.is_some(),
             Err(()) => return server_error(UPDATE_ERROR),
@@ -276,9 +267,9 @@ async fn update_user_inner(
         .map(|(column, _)| format!("{column} = ?"))
         .collect();
     sets.push("updated_at = ?".to_owned());
-    let mut binds: Vec<JsValue> = assignments.iter().map(|(_, value)| to_js(value)).collect();
-    binds.push(JsValue::from_str(&now_iso()));
-    binds.push(JsValue::from_str(&id));
+    let mut binds: Vec<Value> = assignments.iter().map(|(_, value)| to_js(value)).collect();
+    binds.push(Val::from_str(&now_iso()));
+    binds.push(Val::from_str(&id));
 
     let sql = format!("UPDATE users SET {} WHERE id = ?", sets.join(", "));
     match bind(&db, &sql, &binds) {
@@ -306,7 +297,7 @@ async fn delete_user_inner(state: AppState, headers: HeaderMap, id: String) -> R
         Err(response) => return response,
     };
 
-    let exists = match bind(&db, USER_EXISTS_SQL, &[JsValue::from_str(&id)]) {
+    let exists = match bind(&db, USER_EXISTS_SQL, &[Val::from_str(&id)]) {
         Ok(statement) => match first_value(statement).await {
             Ok(row) => row.is_some(),
             Err(()) => return server_error(DELETE_ERROR),
@@ -318,7 +309,7 @@ async fn delete_user_inner(state: AppState, headers: HeaderMap, id: String) -> R
     }
 
     // Hard delete, exactly like Express.
-    match bind(&db, DELETE_USER_SQL, &[JsValue::from_str(&id)]) {
+    match bind(&db, DELETE_USER_SQL, &[Val::from_str(&id)]) {
         Ok(statement) if statement.run().await.is_ok() => {
             message_response("User deleted successfully")
         }
@@ -355,10 +346,10 @@ async fn verify_user_inner(
         Err(response) => return response,
     };
     let binds = [
-        JsValue::from_str(status),
-        JsValue::from_bool(status == "approved"),
-        JsValue::from_str(&now_iso()),
-        JsValue::from_str(&id),
+        Val::from_str(status),
+        Val::from_bool(status == "approved"),
+        Val::from_str(&now_iso()),
+        Val::from_str(&id),
     ];
     let statement = match bind(&db, VERIFY_USER_SQL, &binds) {
         Ok(statement) => statement,
@@ -401,9 +392,9 @@ async fn update_user_role_inner(
         Err(response) => return response,
     };
     let binds = [
-        JsValue::from_str(role),
-        JsValue::from_str(&now_iso()),
-        JsValue::from_str(&id),
+        Val::from_str(role),
+        Val::from_str(&now_iso()),
+        Val::from_str(&id),
     ];
     let statement = match bind(&db, UPDATE_ROLE_SQL, &binds) {
         Ok(statement) => statement,
@@ -524,7 +515,7 @@ async fn database_stats_inner(state: AppState, headers: HeaderMap) -> Response {
         let Some(name) = name_row.get("name").and_then(Value::as_str) else {
             return server_error(DB_STATS_ERROR);
         };
-        let column_count = match bind(&db, COLUMN_COUNT_SQL, &[JsValue::from_str(name)]) {
+        let column_count = match bind(&db, COLUMN_COUNT_SQL, &[Val::from_str(name)]) {
             Ok(statement) => match first_value(statement).await {
                 Ok(Some(row)) => row.get("column_count").and_then(Value::as_i64).unwrap_or(0),
                 _ => 0,

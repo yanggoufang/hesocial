@@ -1,8 +1,9 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cloudflareTest } from '@cloudflare/vitest-pool-workers'
 import { defineConfig } from 'vitest/config'
+import { TURSO_TEST_PORT } from './test/contract/turso.global-setup.js'
 
 const backendDirectory = dirname(fileURLToPath(import.meta.url))
 const rustDirectory = resolve(backendDirectory, '../backend-rust')
@@ -53,15 +54,15 @@ export default defineConfig({
       wrangler: { configPath: wranglerConfigPath },
       miniflare: {
         bindings: {
-          TEST_SCHEMA_SQL: readFileSync(resolve(rustDirectory, 'd1/schema.sql'), 'utf8'),
-          TEST_SEED_SQL: readFileSync(resolve(rustDirectory, 'd1/seed.sql'), 'utf8'),
+          // globalSetup owns the sqld lifecycle; the worker only needs its address.
+          TURSO_URL: `http://127.0.0.1:${TURSO_TEST_PORT}`,
         },
       },
     }),
   ],
   test: {
     include: ['test/contract/rust.contract.test.ts'],
-    setupFiles: ['./test/contract/rust.setup.ts'],
+    globalSetup: ['./test/contract/turso.global-setup.ts'],
     hookTimeout: 30_000,
     testTimeout: 15_000,
     fileParallelism: false,

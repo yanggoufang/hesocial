@@ -24,14 +24,13 @@ use hesocial_core::sales::{
 use hesocial_core::{ApiEnvelope, auth::UserRow};
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
-use worker::D1Database;
 use worker::js_sys::Date;
 use worker::send::SendFuture;
-use worker::wasm_bindgen::JsValue;
 
 use crate::AppState;
 use crate::auth::{authenticate, internal_error, require_admin};
 use crate::auth_handlers::now_iso;
+use crate::db::{self, Val};
 
 const LEAD_SELECT: &str = "SELECT l.id, l.first_name, l.last_name, l.email, l.phone, l.company, l.job_title, l.annual_income, l.net_worth, l.source, l.referral_code, l.lead_score, l.status, l.interested_membership_tier, l.budget_range, l.timeline, l.pain_points, l.interests, l.notes, l.last_contact_date, l.next_follow_up_date, l.assigned_to, l.created_at, l.updated_at, u.first_name AS assigned_to_first_name, u.last_name AS assigned_to_last_name FROM sales_leads l LEFT JOIN users u ON l.assigned_to = u.id";
 
@@ -110,62 +109,46 @@ fn list_response(rows: Vec<Value>, pagination: Option<Value>) -> Response {
 
 /// SQLite binds a numeric `id` against an INTEGER PRIMARY KEY; a raw path
 /// string would never match, so parse what parses and pass the text through.
-fn id_bind(id: &str) -> JsValue {
+fn id_bind(id: &str) -> Value {
     match id.parse::<f64>().ok().filter(|value| value.is_finite()) {
-        Some(number) => JsValue::from_f64(number),
-        None => JsValue::from_str(id),
+        Some(number) => Val::from_f64(number),
+        None => Val::from_str(id),
     }
 }
 
-fn to_js(value: &Value) -> JsValue {
+fn to_js(value: &Value) -> Value {
     match value {
-        Value::Null => JsValue::NULL,
-        Value::Bool(flag) => JsValue::from_bool(*flag),
-        Value::Number(number) => number
-            .as_f64()
-            .map(JsValue::from_f64)
-            .unwrap_or(JsValue::NULL),
-        Value::String(text) => JsValue::from_str(text),
-        _ => JsValue::NULL,
+        Value::Null => db::NULL,
+        Value::Bool(flag) => Val::from_bool(*flag),
+        Value::Number(number) => number.as_f64().map(Val::from_f64).unwrap_or(db::NULL),
+        Value::String(text) => Val::from_str(text),
+        _ => db::NULL,
     }
 }
 
 /// Express binds `req.body.field` directly, so an absent key is `undefined` and
 /// the driver stores NULL.
-fn raw_field(body: &Value, key: &str) -> JsValue {
-    body.get(key).map_or(JsValue::NULL, to_js)
+fn raw_field(body: &Value, key: &str) -> Value {
+    body.get(key).map_or(db::NULL, to_js)
 }
 
-fn bind_statement(
-    db: &D1Database,
-    sql: &str,
-    values: &[JsValue],
-) -> Result<worker::D1PreparedStatement, ()> {
+fn bind_statement(db: &db::Db, sql: &str, values: &[Value]) -> Result<db::PreparedStatement, ()> {
     db.prepare(sql).bind(values).map_err(|_| ())
 }
 
-fn result_changes(result: &worker::D1Result) -> usize {
-    result
-        .meta()
-        .ok()
-        .flatten()
-        .and_then(|meta| meta.changes)
-        .unwrap_or(0)
+fn result_changes(result: &db::QueryResult) -> usize {
+    result.meta().changes
 }
 
-fn result_last_row_id(result: &worker::D1Result) -> Option<i64> {
-    result
-        .meta()
-        .ok()
-        .flatten()
-        .and_then(|meta| meta.last_row_id)
+fn result_last_row_id(result: &db::QueryResult) -> Option<i64> {
+    result.meta().last_row_id
 }
 
-fn database(state: &AppState, error: &str) -> Result<D1Database, Response> {
-    state.env.d1("DB").map_err(|_| internal_error(error))
+fn database(state: &AppState, error: &str) -> Result<db::Db, Response> {
+    db::Db::from_env(&state.env).map_err(|_| internal_error(error))
 }
 
-async fn all_rows<T>(statement: worker::D1PreparedStatement) -> Result<Vec<T>, ()>
+async fn all_rows<T>(statement: db::PreparedStatement) -> Result<Vec<T>, ()>
 where
     for<'de> T: Deserialize<'de>,
 {
@@ -173,7 +156,7 @@ where
     result.results::<T>().map_err(|_| ())
 }
 
-async fn first_row<T>(statement: worker::D1PreparedStatement) -> Result<Option<T>, ()>
+async fn first_row<T>(statement: db::PreparedStatement) -> Result<Option<T>, ()>
 where
     for<'de> T: Deserialize<'de>,
 {
@@ -201,7 +184,7 @@ fn text_filter<'a>(params: &'a HashMap<String, String>, key: &str) -> Option<&'a
 fn page_and_limit(
     params: &HashMap<String, String>,
     error: &str,
-) -> Result<(f64, f64, JsValue, JsValue), Response> {
+) -> Result<(f64, f64, Value, Value), Response> {
     let page = query_number(params, "page", 1.0).ok_or_else(|| internal_error(error))?;
     let limit = query_number(params, "limit", 20.0).ok_or_else(|| internal_error(error))?;
     if limit < 0.0 {
@@ -210,17 +193,17 @@ fn page_and_limit(
     Ok((
         page,
         limit,
-        JsValue::from_f64(limit),
-        JsValue::from_f64((page - 1.0) * limit),
+        Val::from_f64(limit),
+        Val::from_f64((page - 1.0) * limit),
     ))
 }
 
-fn scalar_bind(column: &str, value: &Value) -> JsValue {
+fn scalar_bind(column: &str, value: &Value) -> Value {
     if is_json_column(column) {
         return match value {
-            Value::Null => JsValue::NULL,
-            Value::String(text) => JsValue::from_str(text),
-            other => JsValue::from_str(&other.to_string()),
+            Value::Null => db::NULL,
+            Value::String(text) => Val::from_str(text),
+            other => Val::from_str(&other.to_string()),
         };
     }
     to_js(value)
@@ -235,9 +218,9 @@ fn build_update(
     resolve: fn(&str) -> Option<&'static str>,
     failure_message: &str,
     timestamp: &str,
-) -> Result<(Vec<String>, Vec<JsValue>), Response> {
+) -> Result<(Vec<String>, Vec<Value>), Response> {
     let mut assignments = vec!["updated_at = ?".to_owned()];
-    let mut binds = vec![JsValue::from_str(timestamp)];
+    let mut binds = vec![Val::from_str(timestamp)];
 
     let Some(fields) = body.as_object() else {
         return Ok((assignments, binds));
@@ -262,7 +245,7 @@ fn build_update(
     Ok((assignments, binds))
 }
 
-async fn fetch_row<T>(db: &D1Database, sql: &str, bind: JsValue) -> Result<Option<T>, ()>
+async fn fetch_row<T>(db: &db::Db, sql: &str, bind: Value) -> Result<Option<T>, ()>
 where
     for<'de> T: Deserialize<'de>,
 {
@@ -289,30 +272,30 @@ async fn list_leads_inner(state: AppState, params: HashMap<String, String>) -> R
     };
 
     let mut conditions = vec!["1=1".to_owned()];
-    let mut binds: Vec<JsValue> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
 
     if let Some(status) = text_filter(&params, "status") {
         conditions.push("l.status = ?".to_owned());
-        binds.push(JsValue::from_str(status));
+        binds.push(Val::from_str(status));
     }
     if let Some(source) = text_filter(&params, "source") {
         conditions.push("l.source = ?".to_owned());
-        binds.push(JsValue::from_str(source));
+        binds.push(Val::from_str(source));
     }
     if let Some(assigned_to) = text_filter(&params, "assignedTo") {
         conditions.push("l.assigned_to = ?".to_owned());
-        binds.push(JsValue::from_str(assigned_to));
+        binds.push(Val::from_str(assigned_to));
     }
     if let Some(tier) = text_filter(&params, "membershipTier") {
         conditions.push("l.interested_membership_tier = ?".to_owned());
-        binds.push(JsValue::from_str(tier));
+        binds.push(Val::from_str(tier));
     }
     if let Some(search) = text_filter(&params, "search") {
         conditions.push(
             "(l.first_name LIKE ? OR l.last_name LIKE ? OR l.email LIKE ? OR l.company LIKE ?)"
                 .to_owned(),
         );
-        let pattern = JsValue::from_str(&format!("%{search}%"));
+        let pattern = Val::from_str(&format!("%{search}%"));
         for _ in 0..4 {
             binds.push(pattern.clone());
         }
@@ -419,7 +402,7 @@ async fn create_lead_inner(state: AppState, body: Value) -> Response {
     }
 
     let score = lead_score_for(&body);
-    let interests = JsValue::from_str(&interests_json(&body));
+    let interests = Val::from_str(&interests_json(&body));
     let binds = [
         raw_field(&body, "firstName"),
         raw_field(&body, "lastName"),
@@ -431,7 +414,7 @@ async fn create_lead_inner(state: AppState, body: Value) -> Response {
         raw_field(&body, "netWorth"),
         raw_field(&body, "source"),
         raw_field(&body, "referralCode"),
-        JsValue::from_f64(score as f64),
+        Val::from_f64(score as f64),
         raw_field(&body, "interestedMembershipTier"),
         raw_field(&body, "budgetRange"),
         raw_field(&body, "timeline"),
@@ -453,7 +436,7 @@ async fn create_lead_inner(state: AppState, body: Value) -> Response {
         return internal_error(error);
     };
 
-    let row = fetch_row::<LeadRow>(&db, LEAD_ROW_SQL, JsValue::from_f64(row_id as f64)).await;
+    let row = fetch_row::<LeadRow>(&db, LEAD_ROW_SQL, Val::from_f64(row_id as f64)).await;
     match row {
         Ok(Some(row)) => created(lead_json(&row), "Lead created successfully"),
         _ => internal_error(error),
@@ -583,18 +566,18 @@ async fn list_opportunities_inner(state: AppState, params: HashMap<String, Strin
     };
 
     let mut conditions = vec!["1=1".to_owned()];
-    let mut binds: Vec<JsValue> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
     if let Some(stage) = text_filter(&params, "stage") {
         conditions.push("o.stage = ?".to_owned());
-        binds.push(JsValue::from_str(stage));
+        binds.push(Val::from_str(stage));
     }
     if let Some(assigned_to) = text_filter(&params, "assignedTo") {
         conditions.push("o.assigned_to = ?".to_owned());
-        binds.push(JsValue::from_str(assigned_to));
+        binds.push(Val::from_str(assigned_to));
     }
     if let Some(tier) = text_filter(&params, "membershipTier") {
         conditions.push("o.membership_tier = ?".to_owned());
-        binds.push(JsValue::from_str(tier));
+        binds.push(Val::from_str(tier));
     }
 
     let where_clause = format!("WHERE {}", conditions.join(" AND "));
@@ -689,8 +672,7 @@ async fn create_opportunity_inner(state: AppState, body: Value) -> Response {
     };
 
     let row =
-        fetch_row::<OpportunityRow>(&db, OPPORTUNITY_ROW_SQL, JsValue::from_f64(row_id as f64))
-            .await;
+        fetch_row::<OpportunityRow>(&db, OPPORTUNITY_ROW_SQL, Val::from_f64(row_id as f64)).await;
     match row {
         Ok(Some(row)) => created(opportunity_json(&row), "Opportunity created successfully"),
         _ => internal_error(error),
@@ -771,7 +753,7 @@ async fn list_activities_inner(state: AppState, params: HashMap<String, String>)
     };
 
     let mut conditions = vec!["1=1".to_owned()];
-    let mut binds: Vec<JsValue> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
     if let Some(lead_id) = text_filter(&params, "leadId") {
         conditions.push("a.lead_id = ?".to_owned());
         binds.push(id_bind(lead_id));
@@ -838,7 +820,7 @@ async fn create_activity_inner(state: AppState, user: UserRow, body: Value) -> R
         raw_field(&body, "durationMinutes"),
         raw_field(&body, "scheduledAt"),
         raw_field(&body, "completedAt"),
-        JsValue::from_str(&user.id),
+        Val::from_str(&user.id),
     ];
     let insert = match bind_statement(&db, INSERT_ACTIVITY_SQL, &binds) {
         Ok(statement) => statement,
@@ -852,8 +834,7 @@ async fn create_activity_inner(state: AppState, user: UserRow, body: Value) -> R
         return internal_error(error);
     };
 
-    let row =
-        fetch_row::<ActivityRow>(&db, ACTIVITY_ROW_SQL, JsValue::from_f64(row_id as f64)).await;
+    let row = fetch_row::<ActivityRow>(&db, ACTIVITY_ROW_SQL, Val::from_f64(row_id as f64)).await;
     match row {
         Ok(Some(row)) => created(activity_json(&row), "Activity created successfully"),
         _ => internal_error(error),
@@ -881,10 +862,10 @@ async fn get_metrics_inner(state: AppState, params: HashMap<String, String>) -> 
         .map(String::as_str)
         .unwrap_or("monthly");
     let mut conditions: Vec<String> = Vec::new();
-    let mut binds: Vec<JsValue> = Vec::new();
+    let mut binds: Vec<Value> = Vec::new();
     if let Some(start) = period_start(period, Date::now()) {
         conditions.push("created_at >= ?".to_owned());
-        binds.push(JsValue::from_str(&start));
+        binds.push(Val::from_str(&start));
     }
     if let Some(sales_rep) = text_filter(&params, "salesRepId") {
         conditions.push("assigned_to = ?".to_owned());

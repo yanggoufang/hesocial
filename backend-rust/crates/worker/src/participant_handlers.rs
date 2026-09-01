@@ -13,13 +13,12 @@ use hesocial_core::participants::{
 };
 use serde::Deserialize;
 use serde_json::{Map, Value, json};
-use worker::D1Database;
 use worker::send::SendFuture;
-use worker::wasm_bindgen::JsValue;
 
 use crate::AppState;
 use crate::auth::{authenticate, internal_error};
 use crate::auth_handlers::now_iso;
+use crate::db::{self, Val};
 
 #[derive(Deserialize)]
 struct AccessRecord {
@@ -86,22 +85,18 @@ fn json_error(status: StatusCode, error: &str) -> Response {
     (status, Json(ApiEnvelope::<Value>::error(error))).into_response()
 }
 
-fn id_bind(id: &str) -> JsValue {
+fn id_bind(id: &str) -> Value {
     match id.parse::<f64>().ok().filter(|value| value.is_finite()) {
-        Some(number) => JsValue::from_f64(number),
-        None => JsValue::from_str(id),
+        Some(number) => Val::from_f64(number),
+        None => Val::from_str(id),
     }
 }
 
-fn optional_bool_bind(value: Option<bool>) -> JsValue {
-    value.map_or(JsValue::NULL, JsValue::from_bool)
+fn optional_bool_bind(value: Option<bool>) -> Value {
+    value.map_or(db::NULL, Val::from_bool)
 }
 
-fn bind_statement(
-    db: &D1Database,
-    sql: &str,
-    values: &[JsValue],
-) -> Result<worker::D1PreparedStatement, ()> {
+fn bind_statement(db: &db::Db, sql: &str, values: &[Value]) -> Result<db::PreparedStatement, ()> {
     db.prepare(sql).bind(values).map_err(|_| ())
 }
 
@@ -126,15 +121,11 @@ fn js_parse_int(raw: Option<&String>, fallback: i64) -> i64 {
     parsed.filter(|value| *value != 0).unwrap_or(fallback)
 }
 
-async fn participant_access(
-    db: &D1Database,
-    user: &UserRow,
-    event_id: &str,
-) -> ParticipantViewAccess {
+async fn participant_access(db: &db::Db, user: &UserRow, event_id: &str) -> ParticipantViewAccess {
     let query = bind_statement(
         db,
         "SELECT payment_status FROM event_participant_access WHERE user_id = ? AND event_id = ?",
-        &[JsValue::from_str(&user.id), id_bind(event_id)],
+        &[Val::from_str(&user.id), id_bind(event_id)],
     );
     let payment_status = match query {
         Ok(query) => query
@@ -152,14 +143,14 @@ async fn participant_access(
 }
 
 async fn registration_access(
-    db: &D1Database,
+    db: &db::Db,
     user_id: &str,
     event_id: &str,
 ) -> Result<Option<RegistrationAccessRow>, ()> {
     let query = bind_statement(
         db,
         "SELECT r.status, r.payment_status FROM registrations r LEFT JOIN event_participant_access epa ON r.id = epa.registration_id WHERE r.user_id = ? AND r.event_id = ?",
-        &[JsValue::from_str(user_id), id_bind(event_id)],
+        &[Val::from_str(user_id), id_bind(event_id)],
     )?;
     query.first(None).await.map_err(|_| ())
 }
@@ -186,7 +177,7 @@ fn denied_access_check_unknown() -> Value {
     })
 }
 
-async fn check_access(db: &D1Database, user: &UserRow, event_id: &str) -> Value {
+async fn check_access(db: &db::Db, user: &UserRow, event_id: &str) -> Value {
     let access = participant_access(db, user, event_id).await;
     match registration_access(db, &user.id, event_id).await {
         Ok(registration) => access_check_json(access, registration.as_ref()),
@@ -194,7 +185,7 @@ async fn check_access(db: &D1Database, user: &UserRow, event_id: &str) -> Value 
     }
 }
 
-async fn participant_counts(db: &D1Database, event_id: &str) -> Result<ParticipantCounts, ()> {
+async fn participant_counts(db: &db::Db, event_id: &str) -> Result<ParticipantCounts, ()> {
     let count = bind_statement(
         db,
         "SELECT SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) AS paid, SUM(CASE WHEN payment_status != 'paid' THEN 1 ELSE 0 END) AS unpaid FROM event_participant_access WHERE event_id = ?",
@@ -241,7 +232,7 @@ fn list_data(list: &ParticipantList) -> Value {
 }
 
 async fn log_views(
-    db: &D1Database,
+    db: &db::Db,
     viewer_id: &str,
     event_id: &str,
     access_level: i64,
@@ -256,12 +247,12 @@ async fn log_views(
                 db,
                 "INSERT INTO participant_view_logs (viewer_id, participant_id, event_id, access_level, ip_address, user_agent, viewed_at, created_at) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)",
                 &[
-                    JsValue::from_str(viewer_id),
-                    JsValue::from_str(participant_id),
+                    Val::from_str(viewer_id),
+                    Val::from_str(participant_id),
                     id_bind(event_id),
-                    JsValue::from_f64(access_level as f64),
-                    JsValue::from_str(&timestamp),
-                    JsValue::from_str(&timestamp),
+                    Val::from_f64(access_level as f64),
+                    Val::from_str(&timestamp),
+                    Val::from_str(&timestamp),
                 ],
             )
             .ok()
@@ -273,7 +264,7 @@ async fn log_views(
 }
 
 async fn get_participant_list(
-    db: &D1Database,
+    db: &db::Db,
     user: &UserRow,
     event_id: &str,
     page: i64,
@@ -292,18 +283,18 @@ async fn get_participant_list(
     ];
     let mut values = vec![
         id_bind(event_id),
-        JsValue::from_f64(viewer_access.max_privacy_level_visible as f64),
+        Val::from_f64(viewer_access.max_privacy_level_visible as f64),
     ];
     if let Some(tier) = filters
         .get("membershipTier")
         .filter(|value| !value.is_empty())
     {
         conditions.push("u.membership_tier = ?".to_owned());
-        values.push(JsValue::from_str(tier));
+        values.push(Val::from_str(tier));
     }
     if let Some(profession) = filters.get("profession").filter(|value| !value.is_empty()) {
         conditions.push("u.profession LIKE ?".to_owned());
-        values.push(JsValue::from_str(&format!("%{profession}%")));
+        values.push(Val::from_str(&format!("%{profession}%")));
     }
     let min_privacy = filters.get("minPrivacyLevel").and_then(|raw| {
         js_parse_int(Some(raw), 0)
@@ -312,10 +303,10 @@ async fn get_participant_list(
     });
     if let Some(level) = min_privacy {
         conditions.push("COALESCE(epo.privacy_level, u.privacy_level, 2) >= ?".to_owned());
-        values.push(JsValue::from_f64(level as f64));
+        values.push(Val::from_f64(level as f64));
     }
     conditions.push("u.id != ?".to_owned());
-    values.push(JsValue::from_str(&user.id));
+    values.push(Val::from_str(&user.id));
 
     let where_clause = conditions.join(" AND ");
     let mut joined_values = vec![id_bind(event_id)];
@@ -333,9 +324,9 @@ async fn get_participant_list(
         "SELECT u.id, u.first_name, u.last_name, u.email, u.phone_number AS phone, u.age, u.profession, u.company, NULL AS city, u.membership_tier, u.interests, u.profile_picture, u.bio, COALESCE(epo.privacy_level, u.privacy_level, 2) AS effective_privacy_level, COALESCE(epo.allow_contact, 1) AS can_contact FROM users u JOIN event_participant_access epa ON u.id = epa.user_id LEFT JOIN event_privacy_overrides epo ON u.id = epo.user_id AND epo.event_id = ? WHERE {where_clause} ORDER BY u.membership_tier DESC, u.first_name ASC LIMIT ? OFFSET ?"
     );
     let mut participant_values = joined_values;
-    participant_values.push(JsValue::from_f64(limit as f64));
-    participant_values.push(JsValue::from_f64(
-        page.saturating_sub(1).saturating_mul(limit) as f64,
+    participant_values.push(Val::from_f64(limit as f64));
+    participant_values.push(Val::from_f64(
+        page.saturating_sub(1).saturating_mul(limit) as f64
     ));
     let rows = bind_statement(db, &participant_sql, &participant_values)?
         .all()
@@ -384,7 +375,7 @@ async fn list_participants_inner(
     event_id: String,
     filters: HashMap<String, String>,
 ) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to get event participants"),
     };
@@ -428,7 +419,7 @@ async fn get_participant_access_inner(
     user: UserRow,
     event_id: String,
 ) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to check participant access"),
     };
@@ -454,7 +445,7 @@ async fn get_participant_inner(
     event_id: String,
     participant_id: String,
 ) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to get participant details"),
     };
@@ -476,9 +467,9 @@ async fn get_participant_inner(
         &[
             id_bind(&event_id),
             id_bind(&event_id),
-            JsValue::from_f64(access.max_privacy_level_visible as f64),
-            JsValue::from_str(&user.id),
-            JsValue::from_str(&participant_id),
+            Val::from_f64(access.max_privacy_level_visible as f64),
+            Val::from_str(&user.id),
+            Val::from_str(&participant_id),
         ],
     ) {
         Ok(query) => match query.first::<ParticipantRow>(None).await {
@@ -536,7 +527,7 @@ async fn initiate_contact_inner(
     event_id: String,
     body: ContactBody,
 ) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to initiate contact"),
     };
@@ -597,24 +588,24 @@ async fn update_privacy_settings_inner(
             "Privacy level must be between 1 and 5",
         );
     }
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to update privacy settings"),
     };
-    let privacy_level = body.privacy_level.map_or(JsValue::NULL, JsValue::from_f64);
+    let privacy_level = body.privacy_level.map_or(db::NULL, Val::from_f64);
     let query = bind_statement(
         &db,
         "INSERT INTO event_privacy_overrides (user_id, event_id, privacy_level, allow_contact, show_in_list, created_at, updated_at) VALUES (?, ?, COALESCE(?, (SELECT privacy_level FROM event_privacy_overrides WHERE user_id = ? AND event_id = ?), 3), ?, ?, ?, ?) ON CONFLICT(user_id, event_id) DO UPDATE SET privacy_level = COALESCE(excluded.privacy_level, privacy_level), allow_contact = COALESCE(excluded.allow_contact, allow_contact), show_in_list = COALESCE(excluded.show_in_list, show_in_list), updated_at = excluded.updated_at",
         &[
-            JsValue::from_str(&user.id),
+            Val::from_str(&user.id),
             id_bind(&event_id),
             privacy_level,
-            JsValue::from_str(&user.id),
+            Val::from_str(&user.id),
             id_bind(&event_id),
             optional_bool_bind(body.allow_contact),
             optional_bool_bind(body.show_in_list),
-            JsValue::from_str(&now_iso()),
-            JsValue::from_str(&now_iso()),
+            Val::from_str(&now_iso()),
+            Val::from_str(&now_iso()),
         ],
     );
     match query {
@@ -640,14 +631,14 @@ pub async fn get_privacy_settings(
 }
 
 async fn get_privacy_settings_inner(state: AppState, user: UserRow, event_id: String) -> Response {
-    let db = match state.env.d1("DB") {
+    let db = match db::Db::from_env(&state.env) {
         Ok(db) => db,
         Err(_) => return internal_error("Failed to get privacy settings"),
     };
     let query = bind_statement(
         &db,
         "SELECT COALESCE(epo.privacy_level, u.privacy_level, 2) AS privacy_level, COALESCE(epo.allow_contact, 1) AS allow_contact, COALESCE(epo.show_in_list, 1) AS show_in_list FROM users u LEFT JOIN event_privacy_overrides epo ON u.id = epo.user_id AND epo.event_id = ? WHERE u.id = ?",
-        &[id_bind(&event_id), JsValue::from_str(&user.id)],
+        &[id_bind(&event_id), Val::from_str(&user.id)],
     );
     match query {
         Ok(query) => match query.first::<PrivacySettingsRow>(None).await {
