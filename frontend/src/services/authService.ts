@@ -57,6 +57,16 @@ class AuthService {
   constructor() {
     this.baseURL = `${API_BASE_URL}/auth`
     this.token = localStorage.getItem('hesocial_token')
+
+    // Claim the OAuth token before React renders. The callback lands on
+    // /complete-profile?token=..., whose route immediately <Navigate>s to
+    // /profile and drops the query string. React runs child effects before
+    // parent ones, so that navigation fired before AuthProvider's effect could
+    // read window.location.search: the token vanished, the route guard saw an
+    // unauthenticated user, and the sign-in bounced back to /login with no
+    // error anywhere. Reading it here, at module init, means the token is
+    // already stored by the time any route or guard renders.
+    this.handleOAuthCallback()
     
     // Set up axios interceptor to include token in all requests
     axios.interceptors.request.use(

@@ -92,6 +92,7 @@ async fn google_start_inner(state: AppState, uri: Uri) -> Response {
     };
     let frontend_origin = state.frontend_origin().to_owned();
     let Some(redirect_uri) = callback_url(&uri) else {
+        worker::console_log!("oauth/start: could not derive redirect_uri from {uri}");
         return failure_redirect(&frontend_origin, "oauth_error");
     };
     let Ok(oauth_state) = random_oauth_state() else {
@@ -139,23 +140,35 @@ async fn google_callback_inner(
         cookie_state.as_deref(),
     );
     let CallbackAction::ExchangeCode(code) = action else {
+        worker::console_log!(
+            "oauth/callback: precondition failed (error={:?} code_present={} state_present={} cookie_present={})",
+            query.get("error"),
+            query.contains_key("code"),
+            query.contains_key("state"),
+            cookie_state.is_some(),
+        );
         return failure_redirect(&frontend_origin, "oauth_failed");
     };
 
     let Some(redirect_uri) = callback_url(&uri) else {
+        worker::console_log!("oauth/callback: could not derive redirect_uri from {uri}");
         return failure_redirect(&frontend_origin, "oauth_error");
     };
     let Some(access_token) = exchange_code(&client_id, &client_secret, &code, &redirect_uri).await
     else {
+        worker::console_log!("oauth/callback: token exchange failed (redirect_uri={redirect_uri})");
         return failure_redirect(&frontend_origin, "oauth_error");
     };
     let Some(profile) = fetch_userinfo(&access_token).await else {
+        worker::console_log!("oauth/callback: userinfo fetch failed");
         return failure_redirect(&frontend_origin, "oauth_error");
     };
     let Some(user) = upsert_google_user(&state, &profile).await else {
+        worker::console_log!("oauth/callback: upsert_google_user failed for {}", profile.email);
         return failure_redirect(&frontend_origin, "oauth_error");
     };
     let Some(token) = issue_token(&state, &user) else {
+        worker::console_log!("oauth/callback: issue_token failed for {}", user.id);
         return failure_redirect(&frontend_origin, "oauth_error");
     };
 

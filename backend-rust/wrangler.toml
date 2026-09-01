@@ -48,8 +48,15 @@ TURSO_URL = "libsql://hesocial-yanggf8.aws-ap-northeast-1.turso.io"
 binding = "MEDIA"
 bucket_name = "hesocial-media"
 
+# Guards /api/auth/* only (validate is exempt, matching Express). Express used
+# 20 requests / 15 minutes, but Cloudflare's binding accepts a period of just
+# 10 or 60 seconds, so the window cannot be matched — 10/60s is the closest
+# defensible shape: a real login is one or two requests (the Google flow is
+# /google then /google/callback), while a brute-force attempt still gets
+# throttled hard. The previous value of 2 was a development placeholder and
+# made Google sign-in fail on its own second request.
 [[ratelimits]]
 name = "RATE_LIMITER"
 namespace_id = "1001"
-simple = { limit = 2, period = 60 }
+simple = { limit = 10, period = 60 }
 
