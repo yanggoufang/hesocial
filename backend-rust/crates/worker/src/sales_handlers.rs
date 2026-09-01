@@ -195,13 +195,18 @@ fn text_filter<'a>(params: &'a HashMap<String, String>, key: &str) -> Option<&'a
 
 /// `page`/`limit` come off the query string unparsed. Express hands the driver
 /// a NaN and the route answers with its 500 envelope, so the worker bails the
-/// same way before touching D1.
+/// same way before touching D1. A negative limit is rejected for the same
+/// reason: DuckDB errors on it, while SQLite would silently treat it as
+/// "no limit" — an unbounded table dump (2f review fix).
 fn page_and_limit(
     params: &HashMap<String, String>,
     error: &str,
 ) -> Result<(f64, f64, JsValue, JsValue), Response> {
     let page = query_number(params, "page", 1.0).ok_or_else(|| internal_error(error))?;
     let limit = query_number(params, "limit", 20.0).ok_or_else(|| internal_error(error))?;
+    if limit < 0.0 {
+        return Err(internal_error(error));
+    }
     Ok((
         page,
         limit,
@@ -500,7 +505,10 @@ async fn update_lead_inner(state: AppState, id: String, body: Value) -> Response
     let row = fetch_row::<LeadRow>(&db, LEAD_ROW_SQL, id_bind(&id)).await;
     match row {
         Ok(Some(row)) => data_response(lead_json(&row), Some("Lead updated successfully")),
-        _ => not_found("Lead not found"),
+        Ok(None) => not_found("Lead not found"),
+        // A confirmed write followed by a read failure is a D1 error, not a
+        // missing row — mask neither as the other (2f review fix).
+        Err(_) => internal_error(error),
     }
 }
 
@@ -525,13 +533,27 @@ async fn delete_lead_inner(state: AppState, id: String) -> Response {
         Ok(db) => db,
         Err(response) => return response,
     };
-    let statement = match bind_statement(&db, DELETE_LEAD_SQL, &[id_bind(&id)]) {
-        Ok(statement) => statement,
-        Err(_) => return internal_error(error),
-    };
+    // D1 enforces foreign keys; a bare DELETE of a lead with opportunities
+    // would 500 on the constraint where Express (FK never enforced) 200s,
+    // and an ON DELETE CASCADE would silently destroy the child rows. So the
+    // children are orphaned explicitly inside one atomic batch: they survive
+    // with lead_id = NULL — Express leaves a stale id behind, a small
+    // declared divergence.
     // Express branches on `result.rowCount`, which its DuckDB adapter never
     // populates, so a delete that matches nothing still answers 200. Pinned.
-    if statement.run().await.is_err() {
+    let statements = match [
+        "UPDATE sales_opportunities SET lead_id = NULL WHERE lead_id = ?1",
+        "UPDATE sales_activities SET lead_id = NULL WHERE lead_id = ?1",
+        DELETE_LEAD_SQL,
+    ]
+    .iter()
+    .map(|sql| bind_statement(&db, sql, &[id_bind(&id)]))
+    .collect::<Result<Vec<_>, ()>>()
+    {
+        Ok(statements) => statements,
+        Err(()) => return internal_error(error),
+    };
+    if db.batch(statements).await.is_err() {
         return internal_error(error);
     }
 
@@ -723,7 +745,10 @@ async fn update_opportunity_inner(state: AppState, id: String, body: Value) -> R
             opportunity_json(&row),
             Some("Opportunity updated successfully"),
         ),
-        _ => not_found("Opportunity not found"),
+        Ok(None) => not_found("Opportunity not found"),
+        // Same split as the lead update: only a vanished row is a 404; a
+        // failed read-back is a 500 (2f review fix).
+        Err(_) => internal_error(error),
     }
 }
 

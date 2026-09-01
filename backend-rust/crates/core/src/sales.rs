@@ -159,7 +159,10 @@ pub struct LeadRow {
 #[derive(Clone, Debug, Deserialize)]
 pub struct OpportunityRow {
     pub id: i64,
-    pub lead_id: i64,
+    // Nullable: lead deletion orphans its opportunities with lead_id = NULL
+    // (the D1 FK is NO ACTION and the delete handler nulls children
+    // explicitly, mirroring Express's un-enforced foreign key).
+    pub lead_id: Option<i64>,
     pub name: String,
     pub description: Option<String>,
     pub stage: String,
@@ -493,11 +496,17 @@ pub fn update_value_is_allowed(column: &str, value: &Value) -> bool {
 /// The body fields `createLead` writes that D1 constrains. A value outside the
 /// vocabulary is refused with the same 500 envelope Express uses when its own
 /// bind fails — DuckDB has no such CHECK, so Express would store it.
+///
+/// The client-supplied `lead_score` is deliberately absent here: create
+/// persists the computed `lead_score_for(body)`, so a body score is never
+/// written and the CHECK vocabulary does not apply to it (2f review fix —
+/// the phantom check rejected a value that could never be stored while its
+/// camelCase alias sailed through unchecked). Updates keep the check.
 pub fn lead_insert_is_within_constraints(body: &Value) -> bool {
     update_value_is_allowed(
         "interested_membership_tier",
         body.get("interestedMembershipTier").unwrap_or(&Value::Null),
-    ) && update_value_is_allowed("lead_score", body.get("lead_score").unwrap_or(&Value::Null))
+    )
 }
 
 /// The constrained fields behind `createOpportunity`.
@@ -958,7 +967,7 @@ mod tests {
     fn opportunity_rows_keep_decimal_values_integral_and_join_the_lead() {
         let row = OpportunityRow {
             id: 9102,
-            lead_id: 9001,
+            lead_id: Some(9001),
             name: "Diamond Membership Renewal".to_owned(),
             description: None,
             stage: "proposal".to_owned(),

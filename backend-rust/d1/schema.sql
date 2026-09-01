@@ -284,7 +284,10 @@ CREATE TABLE IF NOT EXISTS sales_leads (
 
 CREATE TABLE IF NOT EXISTS sales_opportunities (
     id INTEGER PRIMARY KEY,
-    lead_id INTEGER NOT NULL REFERENCES sales_leads(id) ON DELETE CASCADE,
+    -- No ON DELETE action, mirroring Express where the FK is declared but
+    -- never enforced: lead deletion orphans children explicitly in the
+    -- delete handler batch (a CASCADE would silently destroy them).
+    lead_id INTEGER REFERENCES sales_leads(id),
     name VARCHAR(255) NOT NULL,
     description TEXT,
     stage VARCHAR(30) NOT NULL DEFAULT 'qualification' CHECK (stage IN ('qualification', 'needs_analysis', 'proposal', 'negotiation', 'closed_won', 'closed_lost')),
@@ -302,7 +305,7 @@ CREATE TABLE IF NOT EXISTS sales_opportunities (
 
 CREATE TABLE IF NOT EXISTS sales_activities (
     id INTEGER PRIMARY KEY,
-    lead_id INTEGER REFERENCES sales_leads(id) ON DELETE SET NULL,
+    lead_id INTEGER REFERENCES sales_leads(id),
     opportunity_id INTEGER REFERENCES sales_opportunities(id) ON DELETE CASCADE,
     activity_type VARCHAR(30) NOT NULL CHECK (activity_type IN ('call', 'email', 'meeting', 'demo', 'proposal', 'follow_up', 'note')),
     subject VARCHAR(255) NOT NULL,

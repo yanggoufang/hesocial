@@ -1344,6 +1344,20 @@ export const defineContractTests = (runner: ContractRunner): void => {
         })
       })
 
+      it('rejects a negative limit with the driver-error envelope', async () => {
+        // SQLite would treat a negative LIMIT as "no limit" (an unbounded
+        // dump); DuckDB errors, so both targets answer the route's 500.
+        const token = await tokenFor(runner.seededCredentials)
+        const denied = await runner.request('/api/sales/leads?limit=-1', {
+          headers: authHeaders(token),
+        })
+        expect(denied.response.status).toBe(500)
+        expect(denied.body).toEqual({
+          success: false,
+          error: 'Failed to fetch sales leads',
+        })
+      })
+
       it('reads a single lead and 404s an unknown id', async () => {
         const token = await tokenFor(runner.seededCredentials)
         const adminId = await userIdOf(token)
@@ -1867,6 +1881,55 @@ export const defineContractTests = (runner: ContractRunner): void => {
         expect(
           byAssignee.body.data.every((row: any) => row.assigned_to === userId),
         ).toBe(true)
+      })
+
+      it('survives its lead being deleted (orphaned with NULL lead_id, no FK action)', async () => {
+        const token = await tokenFor(runner.seededCredentials)
+        const userId = await userIdOf(token)
+        const leadId = await createLead(token, userId)
+
+        const created = await runner.request('/api/sales/opportunities', {
+          method: 'POST',
+          headers: authedJson(token),
+          body: JSON.stringify({
+            leadId,
+            name: 'Orphan Check Membership',
+            description: 'Created through the contract',
+            stage: 'qualification',
+            probability: 30,
+            value: 900000,
+            expectedCloseDate: '2026-12-01',
+            membershipTier: 'Platinum',
+            paymentTerms: 'annual-prepaid',
+            assignedTo: userId,
+          }),
+        })
+        expect(created.response.status).toBe(201)
+        const opportunityId = created.body.data.id
+
+        // D1 enforces its foreign keys, so the delete handler orphans the
+        // opportunity explicitly (batch, lead_id -> NULL): the row must
+        // survive the delete — not be destroyed (the pre-fix CASCADE) — and
+        // the opportunities list must render it (OpportunityRow.lead_id had
+        // to become Option: a NULL row hung the whole request).
+        const deleted = await runner.request(`/api/sales/leads/${leadId}`, {
+          method: 'DELETE',
+          headers: authHeaders(token),
+        })
+        expect(deleted.response.status).toBe(200)
+
+        const goneLead = await runner.request(`/api/sales/leads/${leadId}`, {
+          headers: authHeaders(token),
+        })
+        expect(goneLead.response.status).toBe(404)
+
+        const list = await runner.request('/api/sales/opportunities', {
+          headers: authHeaders(token),
+        })
+        expect(list.response.status).toBe(200)
+        const orphan = list.body.data.find((row: any) => row.id === opportunityId)
+        expect(orphan).toBeDefined()
+        expect(orphan.lead_id).toBeNull()
       })
 
       it('records an activity against the authenticated caller', async () => {
