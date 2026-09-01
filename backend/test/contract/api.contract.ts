@@ -991,6 +991,101 @@ export const defineContractTests = (runner: ContractRunner): void => {
         expect(promoted.response.status).toBe(200)
         expect(promoted.body.data.status).toBe('pending')
       })
+
+      it('seeds participant access on register and lets an admin pay it forward', async () => {
+        const admin = await tokenFor(runner.seededCredentials)
+        const member = await tokenFor({
+          email: 'test.platinum@example.com',
+          password: 'test123',
+        })
+
+        const eventId = await createPublishedEvent(admin, 'Payment Gate Contract Gala', 5)
+        const registered = await register(member, eventId)
+
+        // Register seeds the epa row as pending (cutover blocker #4).
+        const seeded = await runner.request(
+          `/api/events/${eventId}/participant-access`,
+          { headers: authHeaders(member) },
+        )
+        expect(seeded.response.status).toBe(200)
+        expect(seeded.body.data).toMatchObject({
+          paymentStatus: 'pending',
+          registrationStatus: 'pending',
+        })
+
+        // While pending, the paid-participants gate stays closed.
+        const denied = await runner.request(
+          `/api/events/${eventId}/participants`,
+          { headers: authHeaders(member) },
+        )
+        expect(denied.response.status).toBe(403)
+
+        // Only an admin can move the payment status forward.
+        const forbidden = await runner.request(
+          `/api/registrations/${registered.body.data.registrationId}/payment`,
+          {
+            method: 'POST',
+            headers: authedJson(member),
+            body: JSON.stringify({ paymentStatus: 'paid' }),
+          },
+        )
+        expect(forbidden.response.status).toBe(403)
+
+        const paid = await runner.request(
+          `/api/registrations/${registered.body.data.registrationId}/payment`,
+          {
+            method: 'POST',
+            headers: authedJson(admin),
+            body: JSON.stringify({ paymentStatus: 'paid', paymentIntentId: 'pi_contract_2h' }),
+          },
+        )
+        expect(paid.response.status).toBe(200)
+        expect(paid.body).toEqual({
+          success: true,
+          message: 'Payment status updated successfully',
+        })
+
+        // The registration and the participant-access gate both flip.
+        const own = await runner.request(
+          `/api/registrations/${registered.body.data.registrationId}`,
+          { headers: authHeaders(member) },
+        )
+        expect(own.body.data.paymentStatus).toBe('paid')
+
+        const granted = await runner.request(
+          `/api/events/${eventId}/participant-access`,
+          { headers: authHeaders(member) },
+        )
+        expect(granted.response.status).toBe(200)
+        expect(granted.body.data).toMatchObject({
+          hasAccess: true,
+          paymentStatus: 'paid',
+        })
+
+        const list = await runner.request(`/api/events/${eventId}/participants`, {
+          headers: authHeaders(member),
+        })
+        expect(list.response.status).toBe(200)
+
+        // Validation and unknown-id pins.
+        const invalid = await runner.request(
+          `/api/registrations/${registered.body.data.registrationId}/payment`,
+          {
+            method: 'POST',
+            headers: authedJson(admin),
+            body: JSON.stringify({ paymentStatus: 'teleported' }),
+          },
+        )
+        expect(invalid.response.status).toBe(400)
+
+        const missing = await runner.request('/api/registrations/424242/payment', {
+          method: 'POST',
+          headers: authedJson(admin),
+          body: JSON.stringify({ paymentStatus: 'paid' }),
+        })
+        expect(missing.response.status).toBe(404)
+        expect(missing.body).toEqual({ success: false, error: 'Registration not found' })
+      })
     })
   }
 

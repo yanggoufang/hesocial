@@ -52,6 +52,15 @@ const CANCEL_WAITLISTED_SQL: &str = "UPDATE registrations SET status = 'cancelle
 
 const DECLINE_WAITLIST_SQL: &str = "UPDATE event_waitlist SET status = 'declined', removed_at = ?, updated_at = ? WHERE event_id = ? AND user_id = ? AND status = 'waiting'";
 
+/// Cutover blocker #4 (2e review F1): Express seeds an `event_participant_access`
+/// row on every successful registration (`updateParticipantAccess`, 'pending',
+/// best-effort). Without this the participants gate (`payment_status='paid'`)
+/// can never be satisfied for post-cutover registrations. `access_level` is the
+/// stringified Express integer, matching the D1 seed convention ('1' pending).
+const UPSERT_EPA_SQL: &str = "INSERT INTO event_participant_access (user_id, event_id, registration_id, has_access, payment_status, access_level, created_at, updated_at) VALUES (?, ?, ?, 0, 'pending', '1', ?, ?) ON CONFLICT(user_id, event_id) DO UPDATE SET registration_id = excluded.registration_id, payment_status = excluded.payment_status, updated_at = excluded.updated_at";
+
+const PAYMENT_UPDATE_SQL: &str = "UPDATE registrations SET payment_status = ?, payment_intent_id = ?, updated_at = ? WHERE id = ?";
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrationBody {
@@ -184,6 +193,43 @@ fn registration_created(registration_id: i64, status: &str, message: &str) -> Re
         })),
     )
         .into_response()
+}
+
+/// Best-effort participant-access seeding after a successful registration —
+/// Express swallows epa failures (`Don't fail the main operation if
+/// participant access creation fails`), so the write runs outside the atomic
+/// registration batch and its errors are ignored here too.
+async fn seed_participant_access(
+    db: &D1Database,
+    user_id: &str,
+    event_id: i64,
+    registration_id: i64,
+) {
+    let timestamp = now_iso();
+    let upsert = bind_statement(
+        db,
+        UPSERT_EPA_SQL,
+        &[
+            JsValue::from_str(user_id),
+            JsValue::from_f64(event_id as f64),
+            JsValue::from_f64(registration_id as f64),
+            JsValue::from_str(&timestamp),
+            JsValue::from_str(&timestamp),
+        ],
+    );
+    if let Ok(statement) = upsert {
+        let _ = statement.run().await;
+    }
+}
+
+/// Access-level string for a payment status, following the Express integer
+/// semantics (3 paid / 1 pending / 0 refunded) stored as TEXT in D1.
+fn access_level_for(payment_status: &str) -> &'static str {
+    match payment_status {
+        "paid" => "3",
+        "refunded" => "0",
+        _ => "1",
+    }
 }
 
 async fn insert_capacity_registration(
@@ -347,6 +393,7 @@ async fn register_for_event_inner(
             .await
         {
             Ok(Some(id)) => {
+                seed_participant_access(&db, &user.id, event.id, id).await;
                 return registration_created(
                     id,
                     "pending",
@@ -366,11 +413,14 @@ async fn register_for_event_inner(
     match insert_waitlisted_registration(&db, event.id, &user.id, special_requests, &timestamp)
         .await
     {
-        Ok(Some(id)) => registration_created(
-            id,
-            "waitlisted",
-            "Event is full. You have been added to the waitlist.",
-        ),
+        Ok(Some(id)) => {
+            seed_participant_access(&db, &user.id, event.id, id).await;
+            registration_created(
+                id,
+                "waitlisted",
+                "Event is full. You have been added to the waitlist.",
+            )
+        }
         Ok(None) => {
             // Capacity may have reopened between the eligibility read and the
             // waitlist batch. One guarded retry chooses the now-current state.
@@ -383,11 +433,14 @@ async fn register_for_event_inner(
             )
             .await
             {
-                Ok(Some(id)) => registration_created(
-                    id,
-                    "pending",
-                    "Registration submitted successfully. Pending approval.",
-                ),
+                Ok(Some(id)) => {
+                    seed_participant_access(&db, &user.id, event.id, id).await;
+                    registration_created(
+                        id,
+                        "pending",
+                        "Registration submitted successfully. Pending approval.",
+                    )
+                }
                 Ok(None) => json_error(StatusCode::BAD_REQUEST, "Event is at full capacity"),
                 Err(()) => duplicate_registration_response(&db, &user.id, event.id).await,
             }
@@ -756,4 +809,114 @@ async fn registration_stats_inner(state: AppState, event_id: String) -> Response
         },
         Err(()) => internal_error("Failed to get registration stats"),
     }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentBody {
+    payment_status: Option<String>,
+    payment_intent_id: Option<String>,
+}
+
+/// `POST /api/registrations/{id}/payment` — admin-gated port of Express's
+/// unmounted `updatePaymentStatus` controller (the frontend service calls it;
+/// Express never mounted the route, so its participant-access rows could never
+/// reach `paid`). Deviation: Express 404s this path, Rust implements it.
+/// The epa upsert mirrors `updateParticipantAccess` (level 3/1/0 as TEXT).
+pub async fn update_payment_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<PaymentBody>,
+) -> Response {
+    let user = match SendFuture::new(authenticate(&state, &headers)).await {
+        Ok(user) => user,
+        Err(response) => return response,
+    };
+    if let Err(response) = crate::auth::require_admin(&user) {
+        return response;
+    }
+    SendFuture::new(update_payment_status_inner(state, id, body)).await
+}
+
+async fn update_payment_status_inner(state: AppState, id: String, body: PaymentBody) -> Response {
+    const ERROR: &str = "Failed to update payment status";
+    let Some(payment_status) = body
+        .payment_status
+        .as_deref()
+        .filter(|status| matches!(*status, "pending" | "paid" | "refunded" | "failed"))
+    else {
+        return json_error(StatusCode::BAD_REQUEST, "Invalid payment status");
+    };
+
+    let db = match state.env.d1("DB") {
+        Ok(db) => db,
+        Err(_) => return internal_error(ERROR),
+    };
+
+    let owner = match bind_statement(&db, REGISTRATION_OWNER_SQL, &[id_bind(&id)]) {
+        Ok(statement) => match statement.first::<Value>(None).await {
+            Ok(row) => row,
+            Err(_) => return internal_error(ERROR),
+        },
+        Err(()) => return internal_error(ERROR),
+    };
+    let Some(owner) = owner else {
+        return json_error(StatusCode::NOT_FOUND, "Registration not found");
+    };
+    let Some(user_id) = owner
+        .get("user_id")
+        .and_then(Value::as_str)
+        .map(str::to_owned)
+    else {
+        return internal_error(ERROR);
+    };
+    let Some(event_id) = owner.get("event_id").and_then(Value::as_f64) else {
+        return internal_error(ERROR);
+    };
+
+    let update = bind_statement(
+        &db,
+        PAYMENT_UPDATE_SQL,
+        &[
+            JsValue::from_str(payment_status),
+            body.payment_intent_id
+                .as_deref()
+                .filter(|intent| !intent.is_empty())
+                .map_or(JsValue::NULL, JsValue::from_str),
+            JsValue::from_str(&now_iso()),
+            id_bind(&id),
+        ],
+    );
+    let updated = match update {
+        Ok(statement) => match statement.run().await {
+            Ok(result) => result_changes(&result) > 0,
+            Err(_) => return internal_error(ERROR),
+        },
+        Err(()) => return internal_error(ERROR),
+    };
+    if !updated {
+        return json_error(StatusCode::NOT_FOUND, "Registration not found");
+    }
+
+    // Mirror `updateParticipantAccess`: upsert the epa row with the new
+    // payment status and the stringified access level.
+    let upsert = bind_statement(
+        &db,
+        "INSERT INTO event_participant_access (user_id, event_id, registration_id, has_access, payment_status, access_level, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?, ?, ?) ON CONFLICT(user_id, event_id) DO UPDATE SET payment_status = excluded.payment_status, access_level = excluded.access_level, registration_id = excluded.registration_id, updated_at = excluded.updated_at",
+        &[
+            JsValue::from_str(&user_id),
+            JsValue::from_f64(event_id),
+            id_bind(&id),
+            JsValue::from_str(payment_status),
+            JsValue::from_str(access_level_for(payment_status)),
+            JsValue::from_str(&now_iso()),
+            JsValue::from_str(&now_iso()),
+        ],
+    );
+    if let Ok(statement) = upsert {
+        let _ = statement.run().await;
+    }
+
+    message_response("Payment status updated successfully")
 }

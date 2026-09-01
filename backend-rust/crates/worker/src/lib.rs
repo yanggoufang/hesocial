@@ -256,6 +256,10 @@ fn router(state: AppState) -> Router {
                 .delete(registration_handlers::cancel_registration),
         )
         .route(
+            "/api/registrations/{id}/payment",
+            post(registration_handlers::update_payment_status),
+        )
+        .route(
             "/api/events/{event_id}/participants",
             get(participant_handlers::list_participants),
         )

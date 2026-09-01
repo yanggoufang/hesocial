@@ -34,7 +34,6 @@ struct RegistrationAccessRow {
 
 #[derive(Deserialize)]
 struct CountRow {
-    total: i64,
     paid: Option<i64>,
     unpaid: Option<i64>,
 }
@@ -71,7 +70,6 @@ pub struct ContactBody {
 }
 
 struct ParticipantCounts {
-    total: i64,
     paid: i64,
     unpaid: i64,
     by_tier: Map<String, Value>,
@@ -199,14 +197,13 @@ async fn check_access(db: &D1Database, user: &UserRow, event_id: &str) -> Value 
 async fn participant_counts(db: &D1Database, event_id: &str) -> Result<ParticipantCounts, ()> {
     let count = bind_statement(
         db,
-        "SELECT COUNT(*) AS total, SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) AS paid, SUM(CASE WHEN payment_status != 'paid' THEN 1 ELSE 0 END) AS unpaid FROM event_participant_access WHERE event_id = ?",
+        "SELECT SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) AS paid, SUM(CASE WHEN payment_status != 'paid' THEN 1 ELSE 0 END) AS unpaid FROM event_participant_access WHERE event_id = ?",
         &[id_bind(event_id)],
     )?
     .first::<CountRow>(None)
     .await
     .map_err(|_| ())?
     .unwrap_or(CountRow {
-        total: 0,
         paid: None,
         unpaid: None,
     });
@@ -226,7 +223,6 @@ async fn participant_counts(db: &D1Database, event_id: &str) -> Result<Participa
         .collect();
 
     Ok(ParticipantCounts {
-        total: count.total,
         paid: count.paid.unwrap_or(0),
         unpaid: count.unpaid.unwrap_or(0),
         by_tier,
@@ -283,17 +279,10 @@ async fn get_participant_list(
     page: i64,
     limit: i64,
     filters: &HashMap<String, String>,
+    viewer_access: ParticipantViewAccess,
 ) -> Result<ParticipantList, ()> {
-    let viewer_access = participant_access(db, user, event_id).await;
-    if !viewer_access.can_view_participants {
-        let counts = participant_counts(db, event_id).await?;
-        return Ok(ParticipantList {
-            participants: vec![],
-            total_count: counts.total,
-            counts,
-            viewer_access,
-        });
-    }
+    // `viewer_access` is computed by the caller, which rejects unpaid viewers
+    // with the Express 403 before reaching this paid-only query path.
 
     let mut conditions = vec![
         "epa.event_id = ?".to_owned(),
@@ -401,7 +390,17 @@ async fn list_participants_inner(
     };
     let page = js_parse_int(filters.get("page"), 1);
     let limit = js_parse_int(filters.get("limit"), 20).clamp(1, 100);
-    match get_participant_list(&db, &user, &event_id, page, limit, &filters).await {
+    // Unpaid/pending viewers get the same 403 the detail route and Express's
+    // list route answer — not a 200 with an empty list (the pre-payment-gate
+    // drift the recovered WIP's contract test caught).
+    let viewer_access = participant_access(&db, &user, &event_id).await;
+    if !viewer_access.can_view_participants {
+        return json_error(
+            StatusCode::FORBIDDEN,
+            "Access denied - payment required to view participants",
+        );
+    }
+    match get_participant_list(&db, &user, &event_id, page, limit, &filters, viewer_access).await {
         Ok(list) => Json(json!({
             "success": true,
             "data": list_data(&list),
