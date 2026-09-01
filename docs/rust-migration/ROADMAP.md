@@ -114,6 +114,16 @@
 - `framer-motion`(24 / 53 檔) — Rust 無等價物,改手寫 CSS transition 或 JS interop
 - `lucide-react`(32 / 53 檔) — 有 Rust port,機械替換
 
+### 產品需求：VVIP 頁必須賣會員(2026-09-01 使用者指出)
+
+現況是轉換漏洞:`VVIPRoute` 的 `fallbackPath="/events"`,未登入者點 VVIP 會被**靜默導去活動列表**,沒有任何說明,不知道自己看到的不是 VVIP 內容。React 版不修(整頁即將被取代),Rust 版必須改成:
+
+- **未登入 / 未達 Diamond**:渲染招募頁而非導走 — 說明 VVIP 權益、展示門檻、給入會 CTA。
+- **利用既有的分級遮蔽做預覽**:後端 Phase 2e 的 participant privacy 系統已經支援 `privacy_level` 1–5 的分級遮蔽、`event_participant_access` 付費閘門、`participant_view_logs` 查看紀錄。因此招募頁可以**展示「這裡有誰」的遮蔽版預覽**(職業/產業/會員等級可見,身分不可見),比純文案有說服力得多,且不需要新的後端能力。使用者原話:「VVIP 會員應該是可以看到參加活動的會員資料,用優質會員吸引優質會員」。
+- 已達 Diamond + 已驗證者才進入真正的 VVIP 內容。
+
+這條同時說明其他守衛的 `fallbackPath` 都要重新檢視:靜默導走對使用者是「壞掉」而不是「沒權限」。
+
 ### 必須寫成測試的已知陷阱
 
 ```jsx
