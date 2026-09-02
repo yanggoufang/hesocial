@@ -28,6 +28,40 @@ Static assets are matched before the Worker runs. `/api/*` is exempted via
 SPA fallback would answer an unknown API path with `index.html` instead of the
 JSON error clients expect.
 
+## Rust SPA: two bundles (not yet wired to the Worker)
+
+`frontend-rust/` is the 22-route Rust/Dioxus SPA that replaces the React one.
+**Nothing in `wrangler.toml` or `package.json` points at it yet** — the Worker
+still serves `frontend/dist`. Wiring it is a deliberate, separate cutover.
+
+It builds as **two** wasm bundles, because wasm-split is unusable
+(see `docs/rust-migration/ROADMAP.md`) and one bundle is 765,738 bytes gzipped:
+
+```bash
+npm run build:web-rust     # scripts/build-web-rust.sh
+```
+
+| Output | Routes | wasm gzip |
+| --- | --- | --- |
+| `frontend-rust/dist` | public + member (`/`, `/events*`, `/vvip`, `/profile*`, …) | 477,723 |
+| `frontend-rust/dist-admin` | `/admin*`, `/event-mgmt*` | 613,400 |
+
+Membership is the `admin-bundle` cargo feature gating the `Route` enum in
+`frontend-rust/src/ui.rs`. Both bundles carry `/`, `/login` and `/profile` so a
+cross-bundle jump always lands somewhere real, and `Shell`'s navigation falls
+back to a full page load (`shell::hard_navigate`) when a path does not parse in
+the running bundle — that is how a member clicking 管理後台 crosses over.
+
+**The Worker must serve `dist-admin/index.html` for `/admin*` and
+`/event-mgmt*`, and `dist/index.html` for everything else.** A single
+`[assets]` directory cannot express that, so the cutover needs either two
+asset bindings or the Worker answering those prefixes itself.
+
+Serving the wrong bundle for a path fails quietly rather than loudly: the
+router renders its `RouteMatchError` page *and* rewrites the address bar to
+`/`, so the URL and the content disagree. Verify both prefixes after any
+change to the asset routing.
+
 ## Deploy
 
 ```bash

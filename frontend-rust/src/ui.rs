@@ -2,23 +2,33 @@ use crate::auth::{
     GOOGLE_LOGIN_FAILED, claim_oauth_token_on_boot, clear_token, login_with_password,
     password_input_type, read_stored_token, store_token, validate_stored_token,
 };
+#[cfg(feature = "admin-bundle")]
 use crate::pages::admin::{Admin, AdminSystem};
+#[cfg(feature = "admin-bundle")]
 use crate::pages::adminanalytics::AdminAnalytics;
+#[cfg(feature = "admin-bundle")]
 use crate::pages::eventmgmt::{EventMedia, EventMgmt};
+#[cfg(not(feature = "admin-bundle"))]
 use crate::pages::events::{EventDetail, Events};
 use crate::pages::home::Home;
+#[cfg(not(feature = "admin-bundle"))]
 use crate::pages::participants::{EventParticipants, EventPrivacySettings};
 use crate::pages::profile::{ProfileBody, ProfileGuardLoading};
+#[cfg(not(feature = "admin-bundle"))]
 use crate::pages::registrations::{EventRegister, MyRegistrations};
+#[cfg(feature = "admin-bundle")]
 use crate::pages::sales::AdminSales;
+#[cfg(feature = "admin-bundle")]
 use crate::pages::taxonomy::{EventCategories, EventVenues};
+#[cfg(feature = "admin-bundle")]
 use crate::pages::users::AdminUsers;
+#[cfg(not(feature = "admin-bundle"))]
 use crate::pages::vvip::Vvip;
 use crate::permissions::{RouteGuard, Session, permissions, user_route_guard};
 use crate::register::{
     RegisterForm, push_interest, register_account, remove_interest, validate_step,
 };
-use crate::shell::{Presence, presence_after_animation_end, presence_toggle};
+use crate::shell::{Presence, hard_navigate, presence_after_animation_end, presence_toggle};
 use dioxus::prelude::*;
 use std::str::FromStr;
 
@@ -46,44 +56,62 @@ pub enum Route {
         #[route("/login")]
         Login {},
         #[route("/register")]
+        #[cfg(not(feature = "admin-bundle"))]
         Register {},
         #[route("/forgot-password")]
+        #[cfg(not(feature = "admin-bundle"))]
         ForgotPassword {},
         #[route("/events")]
+        #[cfg(not(feature = "admin-bundle"))]
         Events {},
         #[route("/events/:id/register")]
+        #[cfg(not(feature = "admin-bundle"))]
         EventRegister { id: String },
         #[route("/events/:id/participants")]
+        #[cfg(not(feature = "admin-bundle"))]
         EventParticipants { id: String },
         #[route("/events/:id/privacy-settings")]
+        #[cfg(not(feature = "admin-bundle"))]
         EventPrivacySettings { id: String },
         #[route("/events/:id")]
+        #[cfg(not(feature = "admin-bundle"))]
         EventDetail { id: String },
         #[route("/vvip")]
+        #[cfg(not(feature = "admin-bundle"))]
         Vvip {},
         #[route("/profile/registrations")]
+        #[cfg(not(feature = "admin-bundle"))]
         MyRegistrations {},
         #[redirect("/dashboard", || Route::Profile {})]
         #[redirect("/complete-profile", || Route::Profile {})]
         #[route("/profile")]
         Profile {},
         #[route("/admin")]
+        #[cfg(feature = "admin-bundle")]
         Admin {},
         #[route("/admin/users")]
+        #[cfg(feature = "admin-bundle")]
         AdminUsers {},
         #[route("/admin/analytics")]
+        #[cfg(feature = "admin-bundle")]
         AdminAnalytics {},
         #[route("/event-mgmt")]
+        #[cfg(feature = "admin-bundle")]
         EventMgmt {},
         #[route("/event-mgmt/categories")]
+        #[cfg(feature = "admin-bundle")]
         EventCategories {},
         #[route("/event-mgmt/venues")]
+        #[cfg(feature = "admin-bundle")]
         EventVenues {},
         #[route("/event-mgmt/media/:event_id")]
+        #[cfg(feature = "admin-bundle")]
         EventMedia { event_id: String },
         #[route("/admin/sales")]
+        #[cfg(feature = "admin-bundle")]
         AdminSales {},
         #[route("/admin/system")]
+        #[cfg(feature = "admin-bundle")]
         AdminSystem {},
 }
 
@@ -155,8 +183,11 @@ fn Shell() -> Element {
                     mobile.set(Presence::Hidden);
                 },
                 on_navigate: move |path: String| {
-                    if let Ok(next) = Route::from_str(&path) {
-                        navigator.push(next);
+                    match Route::from_str(&path) {
+                        Ok(next) => {
+                            navigator.push(next);
+                        }
+                        Err(_) => hard_navigate(&path),
                     }
                 },
             }

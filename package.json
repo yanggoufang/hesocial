@@ -42,6 +42,7 @@
     "clean:frontend": "cd frontend && rm -rf dist",
     "clean:backend": "cd backend && rm -rf dist",
     "build:worker": "cd backend-rust && cargo build -p hesocial-worker --target wasm32-unknown-unknown --release",
+    "build:web-rust": "bash scripts/build-web-rust.sh",
     "validate:docs": "node scripts/validate-docs.js",
     "generate:api-docs": "node scripts/generate-api-docs.js",
     "monitor:docs": "node scripts/monitor-docs.js",

@@ -146,3 +146,17 @@ pub fn presence_class(presence: Presence, enter: &'static str, exit: &'static st
         Presence::Hidden => "",
     }
 }
+
+#[cfg(target_arch = "wasm32")]
+pub fn hard_navigate(path: &str) {
+    if let Some(window) = web_sys::window() {
+        let _ = window.location().assign(path);
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn hard_navigate(_path: &str) {}
+
+pub fn crosses_bundle(path: &str) -> bool {
+    path.starts_with("/admin") || path.starts_with("/event-mgmt")
+}

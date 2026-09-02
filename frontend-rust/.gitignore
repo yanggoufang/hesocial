@@ -3,3 +3,4 @@
 
 # dx generates this from tailwind.css + tailwind.config.js on every bundle
 /assets/tailwind.css
+/dist-admin
