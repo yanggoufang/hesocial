@@ -139,10 +139,30 @@ pub struct AuthUser {
     pub verification_status: Option<VerificationStatus>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RouteGuard {
+    Loading,
+    Redirect(&'static str),
+    Allow,
+}
+
+pub const USER_ROUTE_FALLBACK: &str = "/login";
+
+pub fn user_route_guard(restoring: bool, snapshot: &AuthSnapshot) -> RouteGuard {
+    if restoring {
+        RouteGuard::Loading
+    } else if !permissions(snapshot).access {
+        RouteGuard::Redirect(USER_ROUTE_FALLBACK)
+    } else {
+        RouteGuard::Allow
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Session {
     pub token: Option<String>,
     pub user: Option<AuthUser>,
+    pub restoring: bool,
 }
 
 impl Session {

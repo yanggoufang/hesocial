@@ -152,6 +152,32 @@ fn start_static_server(root: PathBuf) -> StaticHarness {
                 continue;
             }
 
+            if path_only == "/api/auth/validate" && *request.method() == Method::Get {
+                let token = request_bearer(&request);
+                let (status, payload) = stub_validate_payload(token.as_deref());
+                let header = Header::from_bytes(b"Content-Type", b"application/json")
+                    .expect("json content-type");
+                let _ = request.respond(
+                    Response::from_string(payload)
+                        .with_status_code(StatusCode::from(status))
+                        .with_header(header),
+                );
+                continue;
+            }
+
+            if path_only == "/api/auth/profile" && *request.method() == Method::Get {
+                let token = request_bearer(&request);
+                let (status, payload) = stub_profile_payload(token.as_deref());
+                let header = Header::from_bytes(b"Content-Type", b"application/json")
+                    .expect("json content-type");
+                let _ = request.respond(
+                    Response::from_string(payload)
+                        .with_status_code(StatusCode::from(status))
+                        .with_header(header),
+                );
+                continue;
+            }
+
             if path_only == "/api/events" && *request.method() == Method::Get {
                 let query = request.url().split_once('?').map(|(_, q)| q).unwrap_or("");
                 let (status, payload) = stub_events_payload(query);
@@ -295,6 +321,55 @@ async fn local_storage_get(driver: &WebDriver, key: &str) -> WebDriverResult<Opt
         serde_json::Value::Null => None,
         other => panic!("unexpected localStorage value for {key}: {other}"),
     })
+}
+
+fn request_bearer(request: &tiny_http::Request) -> Option<String> {
+    request.headers().iter().find_map(|header| {
+        if header.field.equiv("Authorization") {
+            header
+                .value
+                .as_str()
+                .strip_prefix("Bearer ")
+                .map(str::to_string)
+        } else {
+            None
+        }
+    })
+}
+
+fn stub_user_json(token: Option<&str>) -> Option<&'static str> {
+    match token {
+        Some("e2e-admin-token") => Some(
+            r#"{"id":"9","email":"admin@example.com","firstName":"Admin","lastName":"User","role":"admin","membershipTier":"Black Card","isVerified":true,"verificationStatus":"approved","age":40,"profession":"System Administrator","annualIncome":5000000,"netWorth":30000000,"privacyLevel":5,"bio":"Admin","interests":["ops"],"profilePicture":null}"#,
+        ),
+        Some("e2e-login-token") | Some("oauth-jwt-from-callback") => Some(
+            r#"{"id":"1","email":"ok@example.com","firstName":"Ok","lastName":"User","role":"user","membershipTier":"Platinum","isVerified":true,"verificationStatus":"approved","age":null,"profession":null,"annualIncome":null,"netWorth":null,"privacyLevel":3,"bio":null,"interests":null,"profilePicture":null}"#,
+        ),
+        _ => None,
+    }
+}
+
+fn stub_validate_payload(token: Option<&str>) -> (u16, String) {
+    match stub_user_json(token) {
+        Some(user) => (
+            200,
+            format!(r#"{{"success":true,"data":{{"user":{user},"valid":true}}}}"#),
+        ),
+        None => (
+            401,
+            r#"{"success":false,"error":"Access token required"}"#.to_string(),
+        ),
+    }
+}
+
+fn stub_profile_payload(token: Option<&str>) -> (u16, String) {
+    match stub_user_json(token) {
+        Some(user) => (200, format!(r#"{{"success":true,"data":{{"user":{user}}}}}"#)),
+        None => (
+            401,
+            r#"{"success":false,"error":"Access token required"}"#.to_string(),
+        ),
+    }
 }
 
 fn query_param(query: &str, key: &str) -> String {
@@ -919,6 +994,75 @@ async fn logout_clears_token_and_returns_signed_out_shell() -> WebDriverResult<(
         wait_gone(&driver, "nav-user-button").await?;
         let token = local_storage_get(&driver, "hesocial_token").await?;
         assert_eq!(token, None, "logout must clear hesocial_token");
+        Ok(())
+    })
+    .await
+}
+
+async fn seed_token(driver: &WebDriver, url: &str, token: &str) -> WebDriverResult<()> {
+    driver.goto(url).await?;
+    wait_present(driver, "nav").await?;
+    let script = format!("window.localStorage.setItem('hesocial_token', {token:?});");
+    driver.execute(script, vec![]).await?;
+    driver.goto(url).await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn hard_reload_with_admin_token_restores_user_and_admin_entry() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        seed_token(&driver, &url, "e2e-admin-token").await?;
+        wait_present(&driver, "nav-user-button").await?;
+        driver.find(By::Id("nav-user-button")).await?.click().await?;
+        wait_present(&driver, "nav-admin").await?;
+        wait_present(&driver, "nav-event-mgmt").await?;
+        let menu = driver.find(By::Id("nav-user-menu")).await?.text().await?;
+        assert!(menu.contains("管理後台"), "restored admin must reveal admin entry, menu={menu:?}");
+        let token = local_storage_get(&driver, "hesocial_token").await?;
+        assert_eq!(token.as_deref(), Some("e2e-admin-token"));
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn hard_reload_with_invalid_token_clears_session_and_signed_out_shell() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        seed_token(&driver, &url, "expired-token").await?;
+        wait_present(&driver, "nav-login").await?;
+        wait_present(&driver, "nav-register").await?;
+        wait_gone(&driver, "nav-user-button").await?;
+        let token = local_storage_get(&driver, "hesocial_token").await?;
+        assert_eq!(token, None, "401 validate must clear hesocial_token");
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn signed_out_profile_redirects_to_login() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        driver.goto(&format!("{url}profile")).await?;
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(20);
+        let last = loop {
+            let current = driver
+                .current_url()
+                .await
+                .map(|u| u.to_string())
+                .unwrap_or_default();
+            if current.contains("/login") {
+                break current;
+            }
+            if tokio::time::Instant::now() >= deadline {
+                panic!("signed-out /profile did not redirect to /login; url={current}");
+            }
+            tokio::time::sleep(Duration::from_millis(150)).await;
+        };
+        wait_text(&driver, "login-heading", "歡迎回來").await?;
+        assert!(
+            last.contains("/login"),
+            "must land on login, url={last}"
+        );
         Ok(())
     })
     .await

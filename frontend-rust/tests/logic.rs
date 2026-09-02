@@ -1,7 +1,7 @@
 use hesocial_frontend::auth::{
-    LOGIN_FAILED_FALLBACK, TOKEN_STORAGE_KEY, apply_complete_profile_redirect,
+    LOGIN_FAILED_FALLBACK, TOKEN_STORAGE_KEY, VALIDATE_API_PATH, apply_complete_profile_redirect,
     bearer_authorization, boot_claim_oauth, display_login_error, extract_oauth_token,
-    parse_login_response, password_input_type,
+    parse_login_response, parse_validate_response, password_input_type, session_after_validate,
 };
 use hesocial_frontend::events::{
     EventFilters, PAGE_LIMIT, collapse_on_error, events_query_string, exclusivity_color,
@@ -10,7 +10,13 @@ use hesocial_frontend::events::{
 };
 use hesocial_frontend::logic::{next_toggled, toggle_label};
 use hesocial_frontend::permissions::{
-    AuthSnapshot, MembershipTier, Role, VerificationStatus, permissions,
+    AuthSnapshot, MembershipTier, Role, RouteGuard, USER_ROUTE_FALLBACK, VerificationStatus,
+    permissions, user_route_guard,
+};
+use hesocial_frontend::profile::{
+    PROFILE_API_PATH, display_age, display_full_name, display_optional, display_optional_i64,
+    display_privacy_level, membership_benefits, membership_color_class, parse_profile_response,
+    profile_picture_src,
 };
 use hesocial_frontend::shell::{
     Presence, SessionKind, is_active_path, presence_after_animation_end, presence_is_mounted,
@@ -489,4 +495,240 @@ fn dropdown_presence_stays_mounted_through_exit() {
         Presence::Hidden
     );
     assert_eq!(presence_toggle(Presence::Exiting), Presence::Entering);
+}
+
+const ADMIN_VALIDATE_BODY: &str = r#"{
+    "success": true,
+    "data": {
+        "user": {
+            "id": "9",
+            "email": "admin@hesocial.com",
+            "firstName": "Admin",
+            "lastName": "User",
+            "role": "admin",
+            "membershipTier": "Black Card",
+            "isVerified": true,
+            "verificationStatus": "approved"
+        },
+        "valid": true
+    }
+}"#;
+
+const GOOGLE_PROFILE_BODY: &str = r#"{
+    "success": true,
+    "data": {
+        "user": {
+            "id": "g-1",
+            "email": "google@example.com",
+            "firstName": "Ada",
+            "lastName": "Li",
+            "age": null,
+            "profession": null,
+            "annualIncome": null,
+            "netWorth": null,
+            "membershipTier": "Platinum",
+            "privacyLevel": 3,
+            "isVerified": false,
+            "verificationStatus": "pending",
+            "role": "user",
+            "profilePicture": null,
+            "bio": null,
+            "interests": null
+        }
+    }
+}"#;
+
+const COMPLETE_PROFILE_BODY: &str = r#"{
+    "success": true,
+    "data": {
+        "user": {
+            "id": "1",
+            "email": "ok@example.com",
+            "firstName": "Wei",
+            "lastName": "Chen",
+            "age": 42,
+            "profession": "投資人",
+            "annualIncome": 8000000,
+            "netWorth": 50000000,
+            "membershipTier": "Diamond",
+            "privacyLevel": 4,
+            "isVerified": true,
+            "verificationStatus": "approved",
+            "role": "user",
+            "profilePicture": "https://media.example/p.jpg",
+            "bio": "喜歡藝術與航海",
+            "interests": ["藝術", "遊艇"]
+        }
+    }
+}"#;
+
+#[test]
+fn validate_path_and_bearer_header_match_react() {
+    assert_eq!(VALIDATE_API_PATH, "/api/auth/validate");
+    assert_eq!(PROFILE_API_PATH, "/api/auth/profile");
+    assert_eq!(TOKEN_STORAGE_KEY, "hesocial_token");
+    assert_eq!(bearer_authorization("stored-jwt"), "Bearer stored-jwt");
+}
+
+#[test]
+fn parse_validate_success_extracts_user_and_feeds_auth_snapshot() {
+    let user = parse_validate_response(200, ADMIN_VALIDATE_BODY).expect("valid body");
+    assert_eq!(user.email.as_deref(), Some("admin@hesocial.com"));
+    assert_eq!(user.role, Some(Role::Admin));
+    assert_eq!(user.membership_tier, Some(MembershipTier::BlackCard));
+    assert!(user.is_verified);
+    assert_eq!(user.verification_status, Some(VerificationStatus::Approved));
+
+    let session = session_after_validate("stored-jwt", Ok(user));
+    assert_eq!(session.token.as_deref(), Some("stored-jwt"));
+    assert!(session.view_admin(), "restored admin role must light up view_admin");
+    assert!(permissions(&session.snapshot()).view_admin);
+    assert!(!session.restoring);
+}
+
+#[test]
+fn parse_validate_rejects_success_false() {
+    let err = parse_validate_response(200, r#"{"success":false,"error":"Invalid token"}"#);
+    assert!(err.is_err());
+    let session = session_after_validate("stored-jwt", err);
+    assert_eq!(session, hesocial_frontend::permissions::Session::default());
+    assert!(!session.view_admin());
+}
+
+#[test]
+fn parse_validate_401_is_failure() {
+    let err = parse_validate_response(
+        401,
+        r#"{"success":false,"error":"Access token required"}"#,
+    );
+    assert!(err.is_err());
+    let session = session_after_validate("stored-jwt", err);
+    assert_eq!(session.token, None);
+    assert_eq!(session.user, None);
+    assert!(!session.snapshot().is_authenticated);
+}
+
+#[test]
+fn parse_validate_malformed_body_is_failure() {
+    let err = parse_validate_response(200, "not-json");
+    assert!(err.is_err());
+    let session = session_after_validate("stored-jwt", err);
+    assert_eq!(session, hesocial_frontend::permissions::Session::default());
+}
+
+#[test]
+fn parse_validate_missing_user_is_failure() {
+    let err = parse_validate_response(200, r#"{"success":true,"data":{"valid":true}}"#);
+    assert!(err.is_err());
+    let session = session_after_validate("stored-jwt", err);
+    assert_eq!(session.token, None);
+}
+
+#[test]
+fn any_validate_failure_logs_out() {
+    for result in [
+        parse_validate_response(401, r#"{"success":false}"#),
+        parse_validate_response(500, "oops"),
+        parse_validate_response(200, r#"{"success":false}"#),
+        parse_validate_response(200, "{"),
+        parse_validate_response(0, ""),
+        Err(hesocial_frontend::auth::ValidateFailure::Transport),
+    ] {
+        let session = session_after_validate("stored-jwt", result);
+        assert_eq!(
+            session,
+            hesocial_frontend::permissions::Session::default(),
+            "React logs out on any validate failure"
+        );
+        assert!(!permissions(&session.snapshot()).access);
+        assert!(!session.view_admin());
+    }
+}
+
+#[test]
+fn user_route_guard_redirects_signed_out_to_login() {
+    assert_eq!(USER_ROUTE_FALLBACK, "/login");
+    let signed_out = AuthSnapshot::default();
+    assert_eq!(
+        user_route_guard(false, &signed_out),
+        RouteGuard::Redirect("/login")
+    );
+    assert_eq!(
+        user_route_guard(false, &signed_out),
+        RouteGuard::Redirect(USER_ROUTE_FALLBACK)
+    );
+}
+
+#[test]
+fn user_route_guard_waits_while_restoring() {
+    let pending = AuthSnapshot {
+        is_authenticated: true,
+        ..AuthSnapshot::default()
+    };
+    assert_eq!(user_route_guard(true, &pending), RouteGuard::Loading);
+    assert_eq!(
+        user_route_guard(true, &AuthSnapshot::default()),
+        RouteGuard::Loading,
+        "restoring must not bounce to /login before validate returns"
+    );
+}
+
+#[test]
+fn user_route_guard_allows_authenticated_snapshot() {
+    let signed_in = AuthSnapshot {
+        is_authenticated: true,
+        role: Some(Role::User),
+        ..AuthSnapshot::default()
+    };
+    assert_eq!(user_route_guard(false, &signed_in), RouteGuard::Allow);
+}
+
+#[test]
+fn parse_profile_complete_user() {
+    let profile = parse_profile_response(COMPLETE_PROFILE_BODY).expect("complete body");
+    assert_eq!(profile.email.as_deref(), Some("ok@example.com"));
+    assert_eq!(display_full_name(profile.first_name.as_deref(), profile.last_name.as_deref()), "Wei Chen");
+    assert_eq!(display_age(profile.age), "42 歲");
+    assert_eq!(display_optional(profile.profession.as_deref()), "投資人");
+    assert_eq!(display_privacy_level(profile.privacy_level), "Level 4");
+    assert_eq!(profile.interests, vec!["藝術".to_string(), "遊艇".to_string()]);
+    assert_eq!(profile_picture_src(profile.profile_picture.as_deref()), "https://media.example/p.jpg");
+    assert_eq!(membership_color_class(profile.membership_tier_label()), "text-blue-400");
+    assert_eq!(
+        membership_benefits(profile.membership_tier_label()),
+        &["VIP活動優先預訂", "專屬社交顧問", "私人活動邀請", "高端場地折扣"]
+    );
+}
+
+#[test]
+fn parse_profile_google_null_fields_match_react_interpolation() {
+    let profile = parse_profile_response(GOOGLE_PROFILE_BODY).expect("google body");
+    assert_eq!(profile.age, None);
+    assert_eq!(profile.profession, None);
+    assert_eq!(profile.annual_income, None);
+    assert_eq!(profile.net_worth, None);
+    assert_eq!(profile.bio, None);
+    assert!(profile.interests.is_empty());
+    assert_eq!(display_age(None), " 歲");
+    assert_eq!(display_optional(None), "");
+    assert_eq!(display_optional_i64(None), "");
+    assert_eq!(display_optional_i64(Some(0)), "0");
+    assert_eq!(
+        display_full_name(profile.first_name.as_deref(), profile.last_name.as_deref()),
+        "Ada Li"
+    );
+    assert_eq!(
+        profile_picture_src(profile.profile_picture.as_deref()),
+        "/api/placeholder/150/150"
+    );
+    assert_eq!(display_privacy_level(profile.privacy_level), "Level 3");
+    assert_eq!(membership_color_class(Some("Platinum")), "text-gray-400");
+    assert_eq!(membership_color_class(Some("Black Card")), "text-luxury-gold");
+    assert_eq!(membership_color_class(None), "text-luxury-platinum");
+}
+
+#[test]
+fn parse_profile_success_false_is_error() {
+    assert!(parse_profile_response(r#"{"success":false,"error":"Authentication required"}"#).is_err());
+    assert!(parse_profile_response("not-json").is_err());
 }

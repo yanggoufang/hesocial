@@ -1,6 +1,7 @@
 pub const TOKEN_STORAGE_KEY: &str = "hesocial_token";
 pub const LOGIN_API_PATH: &str = "/api/auth/login";
 pub const GOOGLE_AUTH_PATH: &str = "/api/auth/google";
+pub const VALIDATE_API_PATH: &str = "/api/auth/validate";
 pub const LOGIN_FAILED_FALLBACK: &str = "登入失敗，請檢查您的電子郵件和密碼";
 pub const GOOGLE_LOGIN_FAILED: &str = "Google 登入失敗，請稍後再試";
 pub const OAUTH_LANDING_PATH: &str = "/complete-profile";
@@ -30,6 +31,81 @@ pub fn display_login_error(api_error: Option<&str>) -> String {
     match api_error.map(str::trim).filter(|s| !s.is_empty()) {
         Some(error) => error.to_string(),
         None => LOGIN_FAILED_FALLBACK.to_string(),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ValidateFailure {
+    Http(u16),
+    Transport,
+    InvalidBody,
+}
+
+pub fn parse_validate_response(
+    status: u16,
+    body: &str,
+) -> Result<crate::permissions::AuthUser, ValidateFailure> {
+    if !(200..300).contains(&status) {
+        return Err(ValidateFailure::Http(status));
+    }
+    let value: serde_json::Value =
+        serde_json::from_str(body).map_err(|_| ValidateFailure::InvalidBody)?;
+    let success = value
+        .get("success")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    if !success {
+        return Err(ValidateFailure::InvalidBody);
+    }
+    let user = value
+        .pointer("/data/user")
+        .filter(|v| !v.is_null())
+        .ok_or(ValidateFailure::InvalidBody)?;
+    Ok(crate::permissions::AuthUser::from_json(user))
+}
+
+pub fn session_after_validate(
+    token: &str,
+    result: Result<crate::permissions::AuthUser, ValidateFailure>,
+) -> crate::permissions::Session {
+    match result {
+        Ok(user) => crate::permissions::Session {
+            token: Some(token.to_string()),
+            user: Some(user),
+            restoring: false,
+        },
+        Err(_) => crate::permissions::Session::default(),
+    }
+}
+
+pub async fn validate_stored_token() -> crate::permissions::Session {
+    let Some(token) = read_stored_token() else {
+        return crate::permissions::Session::default();
+    };
+    let result = fetch_validate(&token).await;
+    let session = session_after_validate(&token, result);
+    if session.token.is_none() {
+        clear_token();
+    }
+    session
+}
+
+async fn fetch_validate(token: &str) -> Result<crate::permissions::AuthUser, ValidateFailure> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let response = gloo_net::http::Request::get(VALIDATE_API_PATH)
+            .header("Authorization", &bearer_authorization(token))
+            .send()
+            .await
+            .map_err(|_| ValidateFailure::Transport)?;
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        return parse_validate_response(status, &body);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = token;
+        Err(ValidateFailure::Transport)
     }
 }
 

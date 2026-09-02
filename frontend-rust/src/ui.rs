@@ -1,15 +1,17 @@
 use crate::auth::{
     GOOGLE_LOGIN_FAILED, claim_oauth_token_on_boot, clear_token, login_with_password,
-    password_input_type, read_stored_token, store_token,
+    password_input_type, read_stored_token, store_token, validate_stored_token,
 };
 use crate::logic::{next_toggled, toggle_label};
 use crate::pages::events::{EventDetail, Events};
-use crate::permissions::{Session, permissions};
+use crate::pages::profile::{ProfileBody, ProfileGuardLoading};
+use crate::permissions::{RouteGuard, Session, permissions, user_route_guard};
 use crate::shell::{Presence, presence_after_animation_end, presence_toggle};
 use dioxus::prelude::*;
 use std::str::FromStr;
 
 pub use crate::pages::events::{EventCard, EventsScreen};
+pub use crate::pages::profile::ProfileScreen;
 pub use crate::pages::shell::{Footer, NavbarScreen};
 
 #[derive(Routable, Clone, PartialEq, Debug)]
@@ -48,11 +50,20 @@ pub enum Route {
 #[component]
 pub fn App() -> Element {
     claim_oauth_token_on_boot();
-    let session = use_signal(|| Session {
-        token: read_stored_token(),
-        user: None,
+    let mut session = use_signal(|| {
+        let token = read_stored_token();
+        Session {
+            restoring: token.is_some(),
+            token,
+            user: None,
+        }
     });
     use_context_provider(|| session);
+    use_future(move || async move {
+        if session.peek().restoring {
+            session.set(validate_stored_token().await);
+        }
+    });
     rsx! {
         document::Link {
             rel: "stylesheet",
@@ -68,6 +79,7 @@ fn Shell() -> Element {
     let local = use_signal(|| Session {
         token: read_stored_token(),
         user: None,
+        restoring: false,
     });
     let mut session = try_use_context::<Signal<Session>>().unwrap_or(local);
     let navigator = use_navigator();
@@ -183,6 +195,7 @@ pub fn Login() -> Element {
                                 session.set(Session {
                                     token: Some(ok.token.clone()),
                                     user: ok.user.clone(),
+                                    restoring: false,
                                 });
                             }
                             navigator.push(Route::Home {});
@@ -530,17 +543,17 @@ pub fn AdminSystem() -> Element {
 #[component]
 pub fn Profile() -> Element {
     let navigator = use_navigator();
-    if crate::auth::read_stored_token().is_none() {
-        navigator.replace(Route::Login {});
-        return rsx! {
-            p { id: "profile-unauth", "redirecting" }
-        };
-    }
-    rsx! {
-        main {
-            id: "profile-stub",
-            class: "min-h-screen bg-luxury-midnight-black text-luxury-platinum p-8",
-            h1 { id: "profile-heading", "個人資料" }
+    let local = use_signal(Session::default);
+    let session = try_use_context::<Signal<Session>>().unwrap_or(local);
+    let current = session();
+    match user_route_guard(current.restoring, &current.snapshot()) {
+        RouteGuard::Loading => rsx! { ProfileGuardLoading {} },
+        RouteGuard::Redirect(_) => {
+            navigator.replace(Route::Login {});
+            rsx! {
+                p { id: "profile-unauth", "redirecting" }
+            }
         }
+        RouteGuard::Allow => rsx! { ProfileBody {} },
     }
 }

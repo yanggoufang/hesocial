@@ -6,8 +6,11 @@ use dioxus::history::{History, MemoryHistory};
 use dioxus::prelude::*;
 use dioxus::router::components::HistoryProvider;
 use hesocial_frontend::events::{Event, Pagination, Pricing, Venue};
+use hesocial_frontend::profile::ProfileUser;
 use hesocial_frontend::shell::Presence;
-use hesocial_frontend::ui::{EventCard, EventsScreen, Footer, LoginScreen, NavbarScreen, Route};
+use hesocial_frontend::ui::{
+    EventCard, EventsScreen, Footer, LoginScreen, NavbarScreen, ProfileScreen, Route,
+};
 use wasm_bindgen_test::wasm_bindgen_test;
 
 #[component]
@@ -586,4 +589,141 @@ fn footer_renders_react_copy() {
             "expected {needle:?} in footer, got: {html}"
         );
     }
+}
+
+fn complete_profile_user() -> ProfileUser {
+    ProfileUser::from_json(&serde_json::json!({
+        "id": "1",
+        "email": "ok@example.com",
+        "firstName": "Wei",
+        "lastName": "Chen",
+        "age": 42,
+        "profession": "投資人",
+        "annualIncome": 8000000,
+        "netWorth": 50000000,
+        "membershipTier": "Diamond",
+        "privacyLevel": 4,
+        "isVerified": true,
+        "verificationStatus": "approved",
+        "role": "user",
+        "profilePicture": "https://media.example/p.jpg",
+        "bio": "喜歡藝術與航海",
+        "interests": ["藝術", "遊艇"]
+    }))
+}
+
+fn google_profile_user() -> ProfileUser {
+    ProfileUser::from_json(&serde_json::json!({
+        "id": "g-1",
+        "email": "google@example.com",
+        "firstName": "Ada",
+        "lastName": "Li",
+        "age": null,
+        "profession": null,
+        "annualIncome": null,
+        "netWorth": null,
+        "membershipTier": "Platinum",
+        "privacyLevel": 3,
+        "isVerified": false,
+        "verificationStatus": "pending",
+        "role": "user",
+        "profilePicture": null,
+        "bio": null,
+        "interests": null
+    }))
+}
+
+#[component]
+fn ProfileAt(profile: ProfileUser) -> Element {
+    rsx! { ProfileScreen { profile } }
+}
+
+fn render_profile(profile: ProfileUser) -> String {
+    let mut vdom = VirtualDom::new_with_props(ProfileAt, ProfileAtProps { profile });
+    vdom.rebuild_in_place();
+    dioxus_ssr::render(&vdom)
+}
+
+#[wasm_bindgen_test]
+fn profile_renders_complete_user() {
+    let html = render_profile(complete_profile_user());
+    for needle in [
+        "id=\"profile-stub\"",
+        "id=\"profile-heading\"",
+        "Wei Chen",
+        "ok@example.com",
+        "投資人",
+        "42 歲",
+        "Diamond 會員",
+        "喜歡藝術與航海",
+        "Level 4",
+        "藝術",
+        "遊艇",
+        "https://media.example/p.jpg",
+        "會員權益",
+        "VIP活動優先預訂",
+        "參與活動",
+        "即將參與",
+        "累計消費",
+        "信用評級",
+        "NT$ 450K",
+        "A+",
+        "即將參與的活動",
+        "星空下的法式晚宴",
+        "已確認",
+        "私人遊艇品酒之夜",
+        "待審核",
+        "當代藝術收藏家沙龍",
+        "個人資訊",
+        "會員自 2023 年",
+        "data-icon=\"crown\"",
+        "data-icon=\"mail\"",
+        "data-icon=\"briefcase\"",
+        "data-icon=\"calendar\"",
+        "data-icon=\"star\"",
+        "data-icon=\"users\"",
+        "data-icon=\"trending-up\"",
+        "data-icon=\"award\"",
+    ] {
+        assert!(
+            html.contains(needle),
+            "expected {needle:?} in complete profile, got: {html}"
+        );
+    }
+    assert!(
+        !html.contains("編輯個人資料"),
+        "edit controls are next round: {html}"
+    );
+    assert!(!html.contains("name=\"firstName\""), "must not wire the edit form: {html}");
+}
+
+#[wasm_bindgen_test]
+fn profile_renders_google_user_with_null_financials() {
+    let html = render_profile(google_profile_user());
+    assert!(html.contains("Ada Li"), "name missing: {html}");
+    assert!(html.contains("google@example.com"), "email missing: {html}");
+    assert!(html.contains("Platinum 會員"), "tier missing: {html}");
+    assert!(html.contains(" 歲"), "null age must still render React's 歲 suffix: {html}");
+    assert!(!html.contains("null"), "must not stringify JSON null: {html}");
+    assert!(
+        html.contains("/api/placeholder/150/150"),
+        "null picture falls back to placeholder: {html}"
+    );
+    assert!(html.contains("Level 3"), "privacy missing: {html}");
+    assert!(html.contains("參與精選社交活動"), "platinum benefits missing: {html}");
+    assert!(!html.contains("8000000"), "annualIncome must not render: {html}");
+    assert!(!html.contains("50000000"), "netWorth must not render: {html}");
+}
+
+#[wasm_bindgen_test]
+fn signed_out_profile_redirects_to_login() {
+    let html = render_path("/profile");
+    assert!(
+        html.contains("歡迎回來") || html.contains("id=\"profile-unauth\""),
+        "signed-out /profile must redirect to /login, got: {html}"
+    );
+    assert!(
+        !html.contains("id=\"profile-heading\"") || html.contains("歡迎回來"),
+        "signed-out visitor must not see the profile body: {html}"
+    );
 }

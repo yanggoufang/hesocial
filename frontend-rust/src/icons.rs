@@ -21,6 +21,8 @@ pub enum IconName {
     TrendingUp,
     Mail,
     Phone,
+    Briefcase,
+    Award,
 }
 
 impl IconName {
@@ -61,6 +63,8 @@ impl IconName {
             Self::TrendingUp => "trending-up",
             Self::Mail => "mail",
             Self::Phone => "phone",
+            Self::Briefcase => "briefcase",
+            Self::Award => "award",
         }
     }
 }
@@ -158,6 +162,14 @@ pub fn Icon(
                 },
                 IconName::Phone => rsx! {
                     path { d: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" }
+                },
+                IconName::Briefcase => rsx! {
+                    path { d: "M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" }
+                    rect { width: "20", height: "14", x: "2", y: "6", rx: "2" }
+                },
+                IconName::Award => rsx! {
+                    path { d: "m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" }
+                    circle { cx: "12", cy: "8", r: "6" }
                 },
             }
         }

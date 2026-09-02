@@ -4,5 +4,6 @@ pub mod icons;
 pub mod logic;
 pub mod pages;
 pub mod permissions;
+pub mod profile;
 pub mod shell;
 pub mod ui;
