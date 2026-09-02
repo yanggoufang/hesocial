@@ -35,6 +35,19 @@ pub enum IconName {
     Plus,
     Eye,
     EyeOff,
+    Ticket,
+    Edit,
+    Filter,
+    RefreshCw,
+    CreditCard,
+    ExternalLink,
+    ArrowLeft,
+    MessageCircle,
+    Info,
+    Save,
+    Building,
+    AlertTriangle,
+    Zap,
 }
 
 impl IconName {
@@ -89,6 +102,19 @@ impl IconName {
             Self::Plus => "plus",
             Self::Eye => "eye",
             Self::EyeOff => "eye-off",
+            Self::Ticket => "ticket",
+            Self::Edit => "edit",
+            Self::Filter => "filter",
+            Self::RefreshCw => "refresh-cw",
+            Self::CreditCard => "credit-card",
+            Self::ExternalLink => "external-link",
+            Self::ArrowLeft => "arrow-left",
+            Self::MessageCircle => "message-circle",
+            Self::Info => "info",
+            Self::Save => "save",
+            Self::Building => "building",
+            Self::AlertTriangle => "alert-triangle",
+            Self::Zap => "zap",
         }
     }
 }
@@ -239,6 +265,72 @@ pub fn Icon(
                 IconName::Eye => rsx! {
                     path { d: "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" }
                     circle { cx: "12", cy: "12", r: "3" }
+                },
+                IconName::Ticket => rsx! {
+                    path { d: "M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" }
+                    path { d: "M13 5v2" }
+                    path { d: "M13 17v2" }
+                    path { d: "M13 11v2" }
+                },
+                IconName::Edit => rsx! {
+                    path { d: "M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" }
+                    path { d: "M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" }
+                },
+                IconName::Filter => rsx! {
+                    polygon { points: "22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" }
+                },
+                IconName::RefreshCw => rsx! {
+                    path { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" }
+                    path { d: "M21 3v5h-5" }
+                    path { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" }
+                    path { d: "M8 16H3v5" }
+                },
+                IconName::CreditCard => rsx! {
+                    rect { width: "20", height: "14", x: "2", y: "5", rx: "2" }
+                    line { x1: "2", x2: "22", y1: "10", y2: "10" }
+                },
+                IconName::ExternalLink => rsx! {
+                    path { d: "M15 3h6v6" }
+                    path { d: "M10 14 21 3" }
+                    path { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" }
+                },
+                IconName::ArrowLeft => rsx! {
+                    path { d: "m12 19-7-7 7-7" }
+                    path { d: "M19 12H5" }
+                },
+                IconName::MessageCircle => rsx! {
+                    path { d: "M7.9 20A9 9 0 1 0 4 16.1L2 22Z" }
+                },
+                IconName::Info => rsx! {
+                    circle { cx: "12", cy: "12", r: "10" }
+                    path { d: "M12 16v-4" }
+                    path { d: "M12 8h.01" }
+                },
+                IconName::Save => rsx! {
+                    path { d: "M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" }
+                    path { d: "M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" }
+                    path { d: "M7 3v4a1 1 0 0 0 1 1h7" }
+                },
+                IconName::Building => rsx! {
+                    rect { width: "16", height: "20", x: "4", y: "2", rx: "2", ry: "2" }
+                    path { d: "M9 22v-4h6v4" }
+                    path { d: "M8 6h.01" }
+                    path { d: "M16 6h.01" }
+                    path { d: "M12 6h.01" }
+                    path { d: "M12 10h.01" }
+                    path { d: "M12 14h.01" }
+                    path { d: "M16 10h.01" }
+                    path { d: "M16 14h.01" }
+                    path { d: "M8 10h.01" }
+                    path { d: "M8 14h.01" }
+                },
+                IconName::AlertTriangle => rsx! {
+                    path { d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" }
+                    path { d: "M12 9v4" }
+                    path { d: "M12 17h.01" }
+                },
+                IconName::Zap => rsx! {
+                    path { d: "M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" }
                 },
                 IconName::EyeOff => rsx! {
                     path { d: "M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" }

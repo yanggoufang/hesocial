@@ -4,7 +4,10 @@ use crate::auth::{
 };
 use crate::pages::events::{EventDetail, Events};
 use crate::pages::home::Home;
+use crate::pages::participants::{EventParticipants, EventPrivacySettings};
 use crate::pages::profile::{ProfileBody, ProfileGuardLoading};
+use crate::pages::registrations::{EventRegister, MyRegistrations};
+use crate::pages::vvip::Vvip;
 use crate::permissions::{RouteGuard, Session, permissions, user_route_guard};
 use crate::register::{
     RegisterForm, push_interest, register_account, remove_interest, validate_step,
@@ -15,9 +18,12 @@ use std::str::FromStr;
 
 pub use crate::pages::events::{EventCard, EventDetailScreen, EventsScreen};
 pub use crate::pages::home::HomeScreen;
+pub use crate::pages::participants::{EventParticipantsScreen, EventPrivacySettingsScreen};
 pub use crate::pages::profile::ProfileScreen;
 pub use crate::pages::register::RegisterScreen;
+pub use crate::pages::registrations::{EventRegisterScreen, MyRegistrationsScreen};
 pub use crate::pages::shell::{Footer, NavbarScreen};
+pub use crate::pages::vvip::{VvipRecruitmentScreen, VvipScreen};
 
 #[derive(Routable, Clone, PartialEq, Debug)]
 #[rustfmt::skip]
@@ -37,6 +43,8 @@ pub enum Route {
         EventRegister { id: String },
         #[route("/events/:id/participants")]
         EventParticipants { id: String },
+        #[route("/events/:id/privacy-settings")]
+        EventPrivacySettings { id: String },
         #[route("/events/:id")]
         EventDetail { id: String },
         #[route("/vvip")]
@@ -570,26 +578,6 @@ pub fn Register() -> Element {
 }
 
 #[component]
-pub fn EventRegister(id: String) -> Element {
-    rsx! {
-        StubPage {
-            id: "event-register-stub".to_string(),
-            title: format!("活動報名 {id}"),
-        }
-    }
-}
-
-#[component]
-pub fn EventParticipants(id: String) -> Element {
-    rsx! {
-        StubPage {
-            id: "event-participants-stub".to_string(),
-            title: format!("活動參與者 {id}"),
-        }
-    }
-}
-
-#[component]
 pub fn ForgotPassword() -> Element {
     rsx! {
         main {
@@ -609,16 +597,6 @@ fn StubPage(id: String, title: String) -> Element {
             h1 { "{title}" }
         }
     }
-}
-
-#[component]
-pub fn Vvip() -> Element {
-    rsx! { StubPage { id: "vvip-stub".to_string(), title: "VVIP專區".to_string() } }
-}
-
-#[component]
-pub fn MyRegistrations() -> Element {
-    rsx! { StubPage { id: "registrations-stub".to_string(), title: "我的報名".to_string() } }
 }
 
 #[component]
