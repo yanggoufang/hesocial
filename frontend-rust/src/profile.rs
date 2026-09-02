@@ -1,6 +1,9 @@
-use serde_json::Value;
+use serde_json::{Map, Value, json};
 
 use crate::permissions::{AuthUser, MembershipTier};
+use crate::register::{
+    MAX_AGE, MIN_AGE, REGISTER_AGE_RANGE, REGISTER_INTEREST_REQUIRED, REGISTER_REQUIRED,
+};
 
 pub const PROFILE_API_PATH: &str = "/api/auth/profile";
 pub const PROFILE_PLACEHOLDER_IMAGE: &str = "/api/placeholder/150/150";
@@ -193,6 +196,221 @@ pub async fn fetch_profile() -> Result<ProfileUser, ProfileError> {
     }
     #[cfg(not(target_arch = "wasm32"))]
     Err(ProfileError::Failed)
+}
+
+pub const PROFILE_UPDATE_FALLBACK: &str = "Failed to update profile";
+pub const PROFILE_EDIT_LABEL: &str = "編輯個人資料";
+pub const PROFILE_CANCEL: &str = "取消";
+pub const PROFILE_SAVE: &str = "儲存";
+pub const PROFILE_SAVING: &str = "儲存中...";
+pub const PROFILE_ADD_INTEREST_PLACEHOLDER: &str = "添加新興趣";
+
+pub const PRIVACY_LEVEL_OPTIONS: &[(i64, &'static str)] = &[
+    (1, "1 - 完全公開"),
+    (2, "2 - 基本資訊公開"),
+    (3, "3 - 僅會員可見"),
+    (4, "4 - 僅同等級會員可見"),
+    (5, "5 - 完全私密"),
+];
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ProfileEditForm {
+    pub first_name: String,
+    pub last_name: String,
+    pub age: String,
+    pub profession: String,
+    pub bio: String,
+    pub privacy_level: i64,
+    pub interests: Vec<String>,
+    pub new_interest: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProfileSaveOutcome {
+    pub profile: ProfileUser,
+    pub form: ProfileEditForm,
+    pub editing: bool,
+    pub error: Option<String>,
+}
+
+pub fn profile_edit_from_user(user: &ProfileUser) -> ProfileEditForm {
+    ProfileEditForm {
+        first_name: user.first_name.clone().unwrap_or_default(),
+        last_name: user.last_name.clone().unwrap_or_default(),
+        age: user.age.map(|n| n.to_string()).unwrap_or_default(),
+        profession: user.profession.clone().unwrap_or_default(),
+        bio: user.bio.clone().unwrap_or_default(),
+        privacy_level: user.privacy_level.unwrap_or(0),
+        interests: user.interests.clone(),
+        new_interest: String::new(),
+    }
+}
+
+pub fn parse_profile_age(raw: &str) -> Option<i64> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    trimmed.parse().ok()
+}
+
+pub fn interests_are_bindable(interests: &[String]) -> bool {
+    !interests.is_empty()
+}
+
+pub fn validate_profile_edit(form: &ProfileEditForm) -> Result<(), &'static str> {
+    if form.first_name.trim().is_empty()
+        || form.last_name.trim().is_empty()
+        || form.profession.trim().is_empty()
+    {
+        return Err(REGISTER_REQUIRED);
+    }
+    if !form.age.trim().is_empty() {
+        let age = parse_profile_age(&form.age).unwrap_or(i64::MIN);
+        if age < i64::from(MIN_AGE) || age > i64::from(MAX_AGE) {
+            return Err(REGISTER_AGE_RANGE);
+        }
+    }
+    if form.interests.is_empty() {
+        return Err(REGISTER_INTEREST_REQUIRED);
+    }
+    Ok(())
+}
+
+pub fn profile_full_payload(form: &ProfileEditForm) -> Value {
+    let mut map = Map::new();
+    map.insert("firstName".to_string(), json!(form.first_name));
+    map.insert("lastName".to_string(), json!(form.last_name));
+    if let Some(age) = parse_profile_age(&form.age) {
+        map.insert("age".to_string(), json!(age));
+    }
+    map.insert("profession".to_string(), json!(form.profession));
+    map.insert("bio".to_string(), json!(form.bio));
+    insert_interests(&mut map, &form.interests);
+    insert_privacy(&mut map, form.privacy_level);
+    Value::Object(map)
+}
+
+pub fn profile_partial_payload(original: &ProfileUser, form: &ProfileEditForm) -> Value {
+    let mut map = Map::new();
+    if !same_opt(original.first_name.as_deref(), &form.first_name) {
+        map.insert("firstName".to_string(), json!(form.first_name));
+    }
+    if !same_opt(original.last_name.as_deref(), &form.last_name) {
+        map.insert("lastName".to_string(), json!(form.last_name));
+    }
+    if parse_profile_age(&form.age) != original.age {
+        if let Some(age) = parse_profile_age(&form.age) {
+            map.insert("age".to_string(), json!(age));
+        }
+    }
+    if !same_opt(original.profession.as_deref(), &form.profession) {
+        map.insert("profession".to_string(), json!(form.profession));
+    }
+    if !same_opt(original.bio.as_deref(), &form.bio) {
+        map.insert("bio".to_string(), json!(form.bio));
+    }
+    if form.interests != original.interests {
+        insert_interests(&mut map, &form.interests);
+    }
+    if form.privacy_level != original.privacy_level.unwrap_or(0) {
+        insert_privacy(&mut map, form.privacy_level);
+    }
+    Value::Object(map)
+}
+
+pub fn parse_update_profile_response(status: u16, body: &str) -> Result<ProfileUser, String> {
+    if status == 401 || status == 403 {
+        let value = serde_json::from_str::<Value>(body).unwrap_or(Value::Null);
+        return Err(json_error_message(&value, PROFILE_UPDATE_FALLBACK));
+    }
+    let value: Value =
+        serde_json::from_str(body).map_err(|_| PROFILE_UPDATE_FALLBACK.to_string())?;
+    if value.get("success").and_then(Value::as_bool) != Some(true) {
+        return Err(json_error_message(&value, PROFILE_UPDATE_FALLBACK));
+    }
+    let user = value
+        .pointer("/data/user")
+        .filter(|item| !item.is_null())
+        .ok_or_else(|| PROFILE_UPDATE_FALLBACK.to_string())?;
+    Ok(ProfileUser::from_json(user))
+}
+
+pub fn apply_profile_save_success(server: ProfileUser) -> ProfileSaveOutcome {
+    let form = profile_edit_from_user(&server);
+    ProfileSaveOutcome {
+        profile: server,
+        form,
+        editing: false,
+        error: None,
+    }
+}
+
+pub fn apply_profile_save_failure(
+    profile: ProfileUser,
+    form: ProfileEditForm,
+    error: String,
+) -> ProfileSaveOutcome {
+    ProfileSaveOutcome {
+        profile,
+        form,
+        editing: true,
+        error: Some(error),
+    }
+}
+
+pub async fn update_profile(payload: &Value) -> Result<ProfileUser, String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let token =
+            crate::auth::read_stored_token().ok_or_else(|| PROFILE_UPDATE_FALLBACK.to_string())?;
+        let response = gloo_net::http::Request::put(PROFILE_API_PATH)
+            .header("Authorization", &crate::auth::bearer_authorization(&token))
+            .header("Content-Type", "application/json")
+            .json(payload)
+            .map_err(|_| PROFILE_UPDATE_FALLBACK.to_string())?
+            .send()
+            .await
+            .map_err(|_| PROFILE_UPDATE_FALLBACK.to_string())?;
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        return parse_update_profile_response(status, &body);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = payload;
+        Err(PROFILE_UPDATE_FALLBACK.to_string())
+    }
+}
+
+fn insert_interests(map: &mut Map<String, Value>, interests: &[String]) {
+    if interests_are_bindable(interests) {
+        map.insert("interests".to_string(), json!(interests));
+    }
+}
+
+fn insert_privacy(map: &mut Map<String, Value>, level: i64) {
+    if (1..=5).contains(&level) {
+        map.insert("privacyLevel".to_string(), json!(level));
+    }
+}
+
+fn same_opt(original: Option<&str>, form: &str) -> bool {
+    original
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("")
+        == form.trim()
+}
+
+fn json_error_message(value: &Value, fallback: &'static str) -> String {
+    value
+        .get("error")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|error| !error.is_empty())
+        .unwrap_or(fallback)
+        .to_string()
 }
 
 fn json_string(value: Option<&Value>) -> Option<String> {
