@@ -302,7 +302,7 @@ pub fn EventParticipantsScreen(
                         id: "event-participants-back",
                         href: "{detail_href}",
                         class: "inline-flex items-center gap-2 text-luxury-gold hover:text-luxury-gold/80 mb-4",
-                        Icon { name: IconName::ChevronLeft, class: "w-4 h-4".to_string() }
+                        Icon { name: IconName::ArrowLeft, class: "w-4 h-4".to_string() }
                         "返回活動詳情"
                     }
                     div { class: "flex items-center justify-between",
@@ -318,7 +318,7 @@ pub fn EventParticipantsScreen(
                                 r#type: "button",
                                 class: "inline-flex items-center gap-2 px-4 py-2 border border-luxury-gold/30 text-luxury-gold rounded-lg hover:bg-luxury-gold/10 transition-colors",
                                 onclick: move |_| on_toggle_filters.call(()),
-                                Icon { name: IconName::Search, class: "w-4 h-4".to_string() }
+                                Icon { name: IconName::Filter, class: "w-4 h-4".to_string() }
                                 "篩選"
                             }
                             a {
@@ -499,7 +499,7 @@ fn ParticipantsPaywall(event_id: String, payment_pending: bool) -> Element {
                     a {
                         href: "{detail_href}",
                         class: "inline-flex items-center gap-2 text-luxury-gold hover:text-luxury-gold/80 mb-4",
-                        Icon { name: IconName::ChevronLeft, class: "w-4 h-4".to_string() }
+                        Icon { name: IconName::ArrowLeft, class: "w-4 h-4".to_string() }
                         "返回活動詳情"
                     }
                 }
@@ -517,7 +517,7 @@ fn ParticipantsPaywall(event_id: String, payment_pending: bool) -> Element {
                     if payment_pending {
                         div { id: "event-participants-pending", class: "bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6",
                             div { class: "flex items-center justify-center gap-2 text-yellow-400",
-                                Icon { name: IconName::DollarSign, class: "w-5 h-5".to_string() }
+                                Icon { name: IconName::CreditCard, class: "w-5 h-5".to_string() }
                                 p { "您的報名付款正在處理中，完成付款後即可查看參與者" }
                             }
                         }
@@ -605,7 +605,7 @@ fn ParticipantCard(
                         r#type: "button",
                         class: "p-2 bg-luxury-gold/20 text-luxury-gold rounded-lg hover:bg-luxury-gold/30 transition-colors",
                         onclick: move |_| on_open_contact.call(contact_target.clone()),
-                        Icon { name: IconName::Mail, class: "w-4 h-4".to_string() }
+                        Icon { name: IconName::MessageCircle, class: "w-4 h-4".to_string() }
                     }
                 }
             }
@@ -641,7 +641,7 @@ fn ContactModal(
                 if draft.sent {
                     div { class: "text-center",
                         div { class: "w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4",
-                            Icon { name: IconName::Mail, class: "w-8 h-8 text-green-400".to_string() }
+                            Icon { name: IconName::MessageCircle, class: "w-8 h-8 text-green-400".to_string() }
                         }
                         h3 { class: "text-xl font-bold text-luxury-gold mb-2", "訊息已發送" }
                         p { class: "text-luxury-platinum/80", "您的聯繫請求已送達 {name}" }
@@ -890,7 +890,7 @@ pub fn EventPrivacySettingsScreen(
                         a {
                             href: "{participants_href}",
                             class: "inline-flex items-center gap-2 text-luxury-gold hover:text-luxury-gold/80",
-                            Icon { name: IconName::ChevronLeft, class: "w-4 h-4".to_string() }
+                            Icon { name: IconName::ArrowLeft, class: "w-4 h-4".to_string() }
                             "返回參與者列表"
                         }
                         a {
@@ -986,7 +986,7 @@ pub fn EventPrivacySettingsScreen(
 
                     div { class: "luxury-glass p-6 rounded-2xl",
                         div { class: "flex items-center gap-3 mb-6",
-                            Icon { name: IconName::Mail, class: "w-6 h-6 text-luxury-gold".to_string() }
+                            Icon { name: IconName::MessageCircle, class: "w-6 h-6 text-luxury-gold".to_string() }
                             h2 { class: "text-xl font-luxury font-semibold text-luxury-gold",
                                 "聯繫偏好"
                             }
@@ -994,7 +994,7 @@ pub fn EventPrivacySettingsScreen(
                         div { class: "space-y-4",
                             div { class: "flex items-center justify-between p-4 bg-luxury-midnight-black/30 rounded-xl",
                                 div { class: "flex items-center gap-3",
-                                    Icon { name: IconName::Mail, class: "w-5 h-5 text-luxury-platinum/60".to_string() }
+                                    Icon { name: IconName::MessageCircle, class: "w-5 h-5 text-luxury-platinum/60".to_string() }
                                     div {
                                         h3 { class: "font-medium text-luxury-platinum",
                                             "允許其他會員聯繫我"
@@ -1037,7 +1037,7 @@ pub fn EventPrivacySettingsScreen(
 
                     div { class: "luxury-glass p-6 rounded-2xl border border-blue-500/20",
                         div { class: "flex items-start gap-3",
-                            Icon { name: IconName::AlertCircle, class: "w-6 h-6 text-blue-400 mt-0.5".to_string() }
+                            Icon { name: IconName::Info, class: "w-6 h-6 text-blue-400 mt-0.5".to_string() }
                             div {
                                 h3 { class: "font-medium text-blue-400 mb-2", "隱私保護說明" }
                                 div { class: "space-y-2 text-sm text-luxury-platinum/80",
@@ -1067,7 +1067,7 @@ pub fn EventPrivacySettingsScreen(
                                 div { class: "w-4 h-4 border-2 border-luxury-midnight-black border-t-transparent rounded-full animate-spin" }
                                 "儲存中..."
                             } else {
-                                Icon { name: IconName::Check, class: "w-4 h-4".to_string() }
+                                Icon { name: IconName::Save, class: "w-4 h-4".to_string() }
                                 "儲存設定"
                             }
                         }

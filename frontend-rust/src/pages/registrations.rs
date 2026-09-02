@@ -454,7 +454,7 @@ pub fn MyRegistrationsScreen(
                 div { class: "luxury-glass rounded-xl shadow-2xl mb-8 p-6 hs-enter-filters",
                     div { class: "flex items-center justify-between mb-5",
                         h3 { class: "text-xl font-luxury font-semibold text-luxury-gold flex items-center gap-2",
-                            Icon { name: IconName::Search, class: "w-5 h-5".to_string() }
+                            Icon { name: IconName::Filter, class: "w-5 h-5".to_string() }
                             "篩選器"
                         }
                         button {
@@ -462,7 +462,7 @@ pub fn MyRegistrationsScreen(
                             id: "my-registrations-refresh",
                             class: "inline-flex items-center gap-2 px-3 py-1.5 text-sm text-luxury-platinum/80 hover:text-luxury-gold hover:bg-white/10 rounded-md transition-colors",
                             onclick: move |_| on_refresh.call(()),
-                            Icon { name: IconName::Activity, class: "w-4 h-4".to_string() }
+                            Icon { name: IconName::RefreshCw, class: "w-4 h-4".to_string() }
                             "刷新"
                         }
                     }
@@ -545,7 +545,7 @@ pub fn MyRegistrationsScreen(
                         div {
                             id: "my-registrations-empty",
                             class: "text-center py-20",
-                            Icon { name: IconName::Award, class: "w-20 h-20 text-luxury-gold/50 mx-auto mb-6".to_string() }
+                            Icon { name: IconName::Ticket, class: "w-20 h-20 text-luxury-gold/50 mx-auto mb-6".to_string() }
                             h3 { class: "text-2xl font-luxury font-semibold text-luxury-gold mb-3",
                                 "尚無報名記錄"
                             }
@@ -735,7 +735,7 @@ fn RegistrationRow(
                             "{status_text}"
                         }
                         span { class: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium {payment_styles}",
-                            Icon { name: IconName::DollarSign, class: "w-3 h-3".to_string() }
+                            Icon { name: IconName::CreditCard, class: "w-3 h-3".to_string() }
                             "{payment_text}"
                         }
                     }
@@ -759,7 +759,7 @@ fn RegistrationRow(
                             class: "p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/50 rounded-full transition-colors",
                             title: "編輯報名",
                             onclick: move |_| on_open_edit.call(registration_edit.clone()),
-                            Icon { name: IconName::Settings, class: "w-5 h-5".to_string() }
+                            Icon { name: IconName::Edit, class: "w-5 h-5".to_string() }
                         }
                     }
                     if cancellable {
@@ -817,7 +817,7 @@ pub fn EventRegisterScreen(
                         id: "event-register-back-missing",
                         href: "/events",
                         class: "inline-flex items-center gap-2 px-4 py-2 luxury-button",
-                        Icon { name: IconName::ChevronLeft, class: "w-4 h-4".to_string() }
+                        Icon { name: IconName::ArrowLeft, class: "w-4 h-4".to_string() }
                         "Back to Events"
                     }
                 }
@@ -848,7 +848,7 @@ pub fn EventRegisterScreen(
                         id: "event-register-back",
                         href: "/events",
                         class: "inline-flex items-center gap-2 text-luxury-platinum/80 hover:text-luxury-gold mb-4",
-                        Icon { name: IconName::ChevronLeft, class: "w-4 h-4".to_string() }
+                        Icon { name: IconName::ArrowLeft, class: "w-4 h-4".to_string() }
                         "Back to Events"
                     }
                     h1 {

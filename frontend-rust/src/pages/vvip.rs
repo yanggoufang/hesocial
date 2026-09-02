@@ -15,7 +15,7 @@ const PERK_ICONS: [IconName; 4] = [
     IconName::Crown,
     IconName::Diamond,
     IconName::Shield,
-    IconName::Award,
+    IconName::Zap,
 ];
 
 #[component]
