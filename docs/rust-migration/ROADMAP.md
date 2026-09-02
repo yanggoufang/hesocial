@@ -154,15 +154,27 @@
 | `lto=true, opt-level="z", codegen-units=1, panic="abort"` | **335,535** | −13.0% |
 | 上列 + `--wasm-split`(理論值,不可用) | 270,705(main 259,667 + Home 10,740) | −29.8% |
 
-**`--wasm-split` 目前不能開。** Dioxus 0.7.10 的 router 在 `wasm-split` feature 下會把**帶動態片段的路由解析錯掉 —— 尾端的動態片段被吃掉**:
+**`--wasm-split` 不能開,而且成因比原先判斷的嚴重。** 2026-09-02 追查結果:
 
-- `/events/11` → 載入 `module_7_routeEvents`,渲染活動列表(應為 EventDetail)
-- `/events/11/register` → 載入 `module_3_routeEventDetail`,渲染「活動未找到」(應為 EventRegister)
-- `/vvip`、`/profile/registrations` 等**無動態片段的路由完全正常**
+**症狀是 URL 被改寫,動態片段的值整個變成空字串**,不是 render 選錯分支:
 
-已排除的原因:JS glue 的 `__wasm_split_load_*` → chunk URL 對應表正確;同 profile 不開 split 的建置四條路由全對;`--debug-symbols` 開或關(即 wasm-opt 是否保留 DWARF)結果相同。切割本身有效 —— 15 個路由各自成 chunk,主 chunk 掉到 259,667。
+| 進入的 URL | 瀏覽器最後的 URL | 結果 |
+|---|---|---|
+| `/events/11` | `/events` | 活動列表 |
+| `/events/11/participants` | `/events/participants` | 落到 `/events/:id`,id=`participants` |
+| `/events/11/privacy-settings` | `/events/privacy-settings` | 同上 |
+| `/event-mgmt/media/11` | `/event-mgmt/media` | **沒有路由匹配**,出 RouteMatchError 頁 |
+| `/vvip`、`/profile/registrations` | 不變 | 正常 |
 
-因此:`split` feature 與 `[profile.wasm-split]` 已接好(`dx bundle --release --features split --wasm-split --profile wasm-split`),`ui.rs` 的 `Outlet` 也已包進 `SuspenseBoundary`(chunk 載入時顯示 `#route-chunk-loading`),等上游修好動態路由即可一鍵開啟。注意 `opt-level="z"` + `panic="abort"` 會讓 splitter 在 walrus 掛掉(`assertion failed: !self.dead.contains(&id)`),所以切割要走 `[profile.wasm-split]`。
+**不是 macro 產碼的錯。** 用 `-Zunpretty=expanded` 比對開/不開 `wasm-split` 兩份展開,`impl std::fmt::Display for Route` **逐字元相同**,而且是對的(`Self::EventDetail { id } => { write "/events"; write "/" + percent_encode(id.to_string()) }`)。同一份原始碼在不切割時輸出 `/events/11`,切割後輸出 `/events/`。
+
+**所以問題在 wasm-split-cli 對「主模組與 chunk 共用符號」的處理**:`Route` 的方法同時被主模組(解析/序列化)和 15+ 個 route chunk 使用,splitter 的 `shared_symbols` / `delete_main_funcs_from_split` / `create_ifunc_initializers` 這段把主模組仍需要的東西弄壞了,而且是**靜默產出錯誤結果,不是 trap**。
+
+已驗證兩種 macro 層面的改法都無效:讓每個 route 有獨立 loader、以及把 `Route` 從 split export 的呼叫圖裏拿掉(只傳一個 boxed tuple 的欄位值)。兩種都照樣掉值,這正好佐證錯不在 macro。
+
+**結論:0.7.10 的 `--wasm-split` 對這個 app 不可用,而且風險不限於路由** —— 會靜默改變共用符號的行為,任何主模組與 chunk 共用的程式碼都可能中招。等上游修好之前不要開。應向 DioxusLabs/dioxus 回報。
+
+`split` feature 與 `[profile.wasm-split]` 保留在 `Cargo.toml`,`ui.rs` 的 `Outlet` 也已包進 `SuspenseBoundary`(chunk 載入時顯示 `#route-chunk-loading`),上游修好即可一鍵開啟。注意 `opt-level="z"` + `panic="abort"` 會讓 splitter 在 walrus 掛掉(`assertion failed: !self.dead.contains(&id)`),所以切割要走 `[profile.wasm-split]`。
 
 ### 必須寫成測試的已知陷阱
 
