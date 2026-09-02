@@ -124,6 +124,24 @@
 
 這條同時說明其他守衛的 `fallbackPath` 都要重新檢視:靜默導走對使用者是「壞掉」而不是「沒權限」。
 
+### Bundle 體積與 code splitting(2026-09-02)
+
+| 設定 | 首屏 wasm(gzip) | 對照 |
+|---|---|---|
+| 初始 `[profile.release]`(cargo 預設) | 385,765 | React 全站 176,516 |
+| `lto=true, opt-level="z", codegen-units=1, panic="abort"` | **335,535** | −13.0% |
+| 上列 + `--wasm-split`(理論值,不可用) | 270,705(main 259,667 + Home 10,740) | −29.8% |
+
+**`--wasm-split` 目前不能開。** Dioxus 0.7.10 的 router 在 `wasm-split` feature 下會把**帶動態片段的路由解析錯掉 —— 尾端的動態片段被吃掉**:
+
+- `/events/11` → 載入 `module_7_routeEvents`,渲染活動列表(應為 EventDetail)
+- `/events/11/register` → 載入 `module_3_routeEventDetail`,渲染「活動未找到」(應為 EventRegister)
+- `/vvip`、`/profile/registrations` 等**無動態片段的路由完全正常**
+
+已排除的原因:JS glue 的 `__wasm_split_load_*` → chunk URL 對應表正確;同 profile 不開 split 的建置四條路由全對;`--debug-symbols` 開或關(即 wasm-opt 是否保留 DWARF)結果相同。切割本身有效 —— 15 個路由各自成 chunk,主 chunk 掉到 259,667。
+
+因此:`split` feature 與 `[profile.wasm-split]` 已接好(`dx bundle --release --features split --wasm-split --profile wasm-split`),`ui.rs` 的 `Outlet` 也已包進 `SuspenseBoundary`(chunk 載入時顯示 `#route-chunk-loading`),等上游修好動態路由即可一鍵開啟。注意 `opt-level="z"` + `panic="abort"` 會讓 splitter 在 walrus 掛掉(`assertion failed: !self.dead.contains(&id)`),所以切割要走 `[profile.wasm-split]`。
+
 ### 必須寫成測試的已知陷阱
 
 ```jsx

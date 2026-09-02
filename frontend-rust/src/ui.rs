@@ -131,9 +131,21 @@ fn Shell() -> Element {
                 },
             }
             main { class: "pt-20",
-                Outlet::<Route> {}
+                SuspenseBoundary {
+                    fallback: |_| rsx! { RouteChunkLoading {} },
+                    Outlet::<Route> {}
+                }
             }
             Footer {}
+        }
+    }
+}
+
+#[component]
+fn RouteChunkLoading() -> Element {
+    rsx! {
+        div { id: "route-chunk-loading", class: "min-h-[50vh] flex items-center justify-center",
+            div { class: "w-10 h-10 border-2 border-luxury-gold border-t-transparent rounded-full animate-spin" }
         }
     }
 }
