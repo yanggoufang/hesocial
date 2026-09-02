@@ -61,6 +61,11 @@ pub enum IconName {
     Target,
     PieChart,
     TrendingDown,
+    Image,
+    FileText,
+    Upload,
+    LayoutGrid,
+    Map,
 }
 
 impl IconName {
@@ -141,6 +146,11 @@ impl IconName {
             Self::Target => "target",
             Self::PieChart => "pie-chart",
             Self::TrendingDown => "trending-down",
+            Self::Image => "image",
+            Self::FileText => "file-text",
+            Self::Upload => "upload",
+            Self::LayoutGrid => "layout-grid",
+            Self::Map => "map",
         }
     }
 }
@@ -415,6 +425,34 @@ pub fn Icon(
                 IconName::PieChart => rsx! {
                     path { d: "M21.21 15.89A10 10 0 1 1 8 2.83" }
                     path { d: "M22 12A10 10 0 0 0 12 2v10z" }
+                },
+                IconName::Image => rsx! {
+                    rect { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2" }
+                    circle { cx: "9", cy: "9", r: "2" }
+                    path { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" }
+                },
+                IconName::FileText => rsx! {
+                    path { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" }
+                    path { d: "M14 2v4a2 2 0 0 0 2 2h4" }
+                    path { d: "M10 9H8" }
+                    path { d: "M16 13H8" }
+                    path { d: "M16 17H8" }
+                },
+                IconName::Upload => rsx! {
+                    path { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }
+                    polyline { points: "17 8 12 3 7 8" }
+                    line { x1: "12", x2: "12", y1: "3", y2: "15" }
+                },
+                IconName::LayoutGrid => rsx! {
+                    rect { width: "7", height: "7", x: "3", y: "3", rx: "1" }
+                    rect { width: "7", height: "7", x: "14", y: "3", rx: "1" }
+                    rect { width: "7", height: "7", x: "14", y: "14", rx: "1" }
+                    rect { width: "7", height: "7", x: "3", y: "14", rx: "1" }
+                },
+                IconName::Map => rsx! {
+                    path { d: "M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" }
+                    path { d: "M15 5.764v15" }
+                    path { d: "M9 3.236v15" }
                 },
                 IconName::TrendingDown => rsx! {
                     polyline { points: "22 17 13.5 8.5 8.5 13.5 2 7" }

@@ -4,12 +4,14 @@ use crate::auth::{
 };
 use crate::pages::admin::{Admin, AdminSystem};
 use crate::pages::adminanalytics::AdminAnalytics;
+use crate::pages::eventmgmt::{EventMedia, EventMgmt};
 use crate::pages::events::{EventDetail, Events};
 use crate::pages::home::Home;
 use crate::pages::participants::{EventParticipants, EventPrivacySettings};
 use crate::pages::profile::{ProfileBody, ProfileGuardLoading};
 use crate::pages::registrations::{EventRegister, MyRegistrations};
 use crate::pages::sales::AdminSales;
+use crate::pages::taxonomy::{EventCategories, EventVenues};
 use crate::pages::users::AdminUsers;
 use crate::pages::vvip::Vvip;
 use crate::permissions::{RouteGuard, Session, permissions, user_route_guard};
@@ -22,6 +24,7 @@ use std::str::FromStr;
 
 pub use crate::pages::admin::{AdminScreen, AdminSystemScreen};
 pub use crate::pages::adminanalytics::AdminAnalyticsScreen;
+pub use crate::pages::eventmgmt::{EventMediaScreen, EventMgmtScreen};
 pub use crate::pages::events::{EventCard, EventDetailScreen, EventsScreen};
 pub use crate::pages::home::HomeScreen;
 pub use crate::pages::participants::{EventParticipantsScreen, EventPrivacySettingsScreen};
@@ -30,6 +33,7 @@ pub use crate::pages::register::RegisterScreen;
 pub use crate::pages::registrations::{EventRegisterScreen, MyRegistrationsScreen};
 pub use crate::pages::sales::AdminSalesScreen;
 pub use crate::pages::shell::{Footer, NavbarScreen};
+pub use crate::pages::taxonomy::{EventCategoriesScreen, EventVenuesScreen};
 pub use crate::pages::users::AdminUsersScreen;
 pub use crate::pages::vvip::{VvipRecruitmentScreen, VvipScreen};
 
@@ -71,6 +75,12 @@ pub enum Route {
         AdminAnalytics {},
         #[route("/event-mgmt")]
         EventMgmt {},
+        #[route("/event-mgmt/categories")]
+        EventCategories {},
+        #[route("/event-mgmt/venues")]
+        EventVenues {},
+        #[route("/event-mgmt/media/:event_id")]
+        EventMedia { event_id: String },
         #[route("/admin/sales")]
         AdminSales {},
         #[route("/admin/system")]
@@ -598,22 +608,6 @@ pub fn ForgotPassword() -> Element {
             h1 { "忘記密碼" }
         }
     }
-}
-
-#[component]
-fn StubPage(id: String, title: String) -> Element {
-    rsx! {
-        main {
-            id: "{id}",
-            class: "min-h-screen bg-luxury-midnight-black text-luxury-platinum p-8",
-            h1 { "{title}" }
-        }
-    }
-}
-
-#[component]
-pub fn EventMgmt() -> Element {
-    rsx! { StubPage { id: "event-mgmt-stub".to_string(), title: "活動管理".to_string() } }
 }
 
 #[component]

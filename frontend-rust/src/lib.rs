@@ -1,6 +1,7 @@
 pub mod admin;
 pub mod adminanalytics;
 pub mod auth;
+pub mod eventmgmt;
 pub mod events;
 pub mod icons;
 pub mod logic;
@@ -12,6 +13,7 @@ pub mod register;
 pub mod registrations;
 pub mod sales;
 pub mod shell;
+pub mod taxonomy;
 pub mod ui;
 pub mod users;
 pub mod vvip;

@@ -126,7 +126,7 @@
 
 ### 前端移植進度(2026-09-02)
 
-18 / 22 條路由已是 Rust。剩下 event-mgmt 那批四頁(`/event-mgmt`、`/event-mgmt/categories`、`/event-mgmt/venues`、`/event-mgmt/media/:eventId`);`/admin/backups` 依決策 #5 不移植,`/access-test` 待確認。
+**22 / 22 條路由全部是 Rust**,`ui.rs` 已無任何 stub。`/admin/backups` 依決策 #5 不移植,`/access-test` 待確認去留。
 
 移植過程中發現的 React 缺陷,Rust 版都已修掉:
 
@@ -142,6 +142,9 @@
 | `/admin/analytics` | `POST /api/analytics/export`;overview 沒回 trends / category performance | 按鈕留著不做假下載;圖表走空狀態 |
 | `/events/:id/register` | `GET /api/registrations/check/{eventId}` | 改由 POST 失敗顯示錯誤橫幅 |
 | `/vvip` | — | React 三筆寫死活動與 156/12/45/28 統計全部拿掉 |
+| `/event-mgmt` | `GET /api/events` 是公開列表(只回 published + approved),`status`/`venue` query 被忽略 | 草稿可能看不到 |
+| `/event-mgmt/media/:id` | `GET /api/media/download/{id}` | 文件下載降級,圖片走回傳的 `filePath` / `thumbnails.medium` |
+| `/event-mgmt/categories`、`/event-mgmt/venues` | `/api/categories`、`/api/venues` 只有 GET,沒有 POST/PUT/DELETE | 表單與刪除確認 UI 保留,submit 只驗證後關閉,**不打假 mutation**(React 原本也只 `console.log`) |
 
 ### Bundle 體積與 code splitting(2026-09-02)
 

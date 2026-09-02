@@ -831,6 +831,44 @@ async fn events_api_failure_shows_empty_state_not_a_crash() -> WebDriverResult<(
     .await
 }
 
+async fn wait_body_contains(driver: &WebDriver, needle: &str) -> WebDriverResult<()> {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(20);
+    loop {
+        if let Ok(el) = driver.find(By::Tag("body")).await
+            && el.text().await.unwrap_or_default().contains(needle)
+        {
+            return Ok(());
+        }
+        if tokio::time::Instant::now() >= deadline {
+            panic!("timed out waiting for body text {needle:?}");
+        }
+        tokio::time::sleep(Duration::from_millis(150)).await;
+    }
+}
+
+async fn watch_class(driver: &WebDriver, id: &str) -> WebDriverResult<()> {
+    driver
+        .execute(
+            &format!(
+                "window.__clsLog=[];var el=document.getElementById('{id}');\
+                 if(el){{window.__clsLog.push(el.className);\
+                 new MutationObserver(function(ms){{ms.forEach(function(m){{\
+                 window.__clsLog.push(m.target.className);}});}})\
+                 .observe(el,{{attributes:true,attributeFilter:['class']}});}}return 1;"
+            ),
+            vec![],
+        )
+        .await?;
+    Ok(())
+}
+
+async fn class_log(driver: &WebDriver) -> WebDriverResult<String> {
+    let value = driver
+        .execute("return (window.__clsLog||[]).join(' | ');", vec![])
+        .await?;
+    Ok(value.json().as_str().unwrap_or_default().to_string())
+}
+
 async fn wait_gone(driver: &WebDriver, id: &str) -> WebDriverResult<()> {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(20);
     loop {
@@ -876,7 +914,6 @@ async fn signed_out_shell_renders_nav_and_footer() -> WebDriverResult<()> {
         wait_present(&driver, "footer").await?;
         wait_present(&driver, "nav-login").await?;
         wait_present(&driver, "nav-register").await?;
-        let body = driver.find(By::Tag("body")).await?.text().await?;
         for needle in [
             "首頁",
             "精選活動",
@@ -888,7 +925,7 @@ async fn signed_out_shell_renders_nav_and_footer() -> WebDriverResult<()> {
             "concierge@hesocial.com",
             "系統正常運行",
         ] {
-            assert!(body.contains(needle), "missing {needle:?} in {body:?}");
+            wait_body_contains(&driver, needle).await?;
         }
         assert!(
             driver.find(By::Id("nav-user-button")).await.is_err(),
@@ -929,27 +966,13 @@ async fn user_dropdown_opens_and_closes_with_exit_class() -> WebDriverResult<()>
             "plain user must not see admin entries"
         );
 
+        watch_class(&driver, "nav-user-menu").await?;
         driver.find(By::Id("nav-user-button")).await?.click().await?;
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
-        let mut saw_exit = false;
-        loop {
-            match driver.find(By::Id("nav-user-menu")).await {
-                Ok(el) => {
-                    let class = el.attr("class").await?.unwrap_or_default();
-                    if class.contains("hs-dropdown-exit") {
-                        saw_exit = true;
-                    }
-                }
-                Err(_) => break,
-            }
-            if tokio::time::Instant::now() >= deadline {
-                panic!("dropdown did not unmount after close; saw_exit={saw_exit}");
-            }
-            tokio::time::sleep(Duration::from_millis(20)).await;
-        }
+        wait_gone(&driver, "nav-user-menu").await?;
+        let seen = class_log(&driver).await?;
         assert!(
-            saw_exit,
-            "exit class never appeared; CSS presence did not keep the node mounted while animating out"
+            seen.contains("hs-dropdown-exit"),
+            "exit class never appeared; CSS presence did not keep the node mounted while animating out, seen={seen}"
         );
         Ok(())
     })
@@ -987,29 +1010,18 @@ async fn mobile_toggle_opens_and_closes_panel() -> WebDriverResult<()> {
             assert!(panel.contains(needle), "missing {needle:?} in {panel:?}");
         }
 
+        watch_class(&driver, "nav-mobile-panel").await?;
         driver
             .find(By::Id("nav-mobile-toggle"))
             .await?
             .click()
             .await?;
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
-        let mut saw_exit = false;
-        loop {
-            match driver.find(By::Id("nav-mobile-panel")).await {
-                Ok(el) => {
-                    let class = el.attr("class").await?.unwrap_or_default();
-                    if class.contains("hs-mobile-exit") {
-                        saw_exit = true;
-                    }
-                }
-                Err(_) => break,
-            }
-            if tokio::time::Instant::now() >= deadline {
-                panic!("mobile panel did not unmount; saw_exit={saw_exit}");
-            }
-            tokio::time::sleep(Duration::from_millis(20)).await;
-        }
-        assert!(saw_exit, "mobile exit class never appeared");
+        wait_gone(&driver, "nav-mobile-panel").await?;
+        let seen = class_log(&driver).await?;
+        assert!(
+            seen.contains("hs-mobile-exit"),
+            "mobile exit class never appeared, seen={seen}"
+        );
         Ok(())
     })
     .await
