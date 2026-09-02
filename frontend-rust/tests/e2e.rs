@@ -502,18 +502,24 @@ async fn launch_chrome() -> WebDriverResult<WebDriver> {
 
 async fn with_browser<F, Fut>(test: F) -> WebDriverResult<()>
 where
-    F: FnOnce(WebDriver, String) -> Fut,
-    Fut: std::future::Future<Output = WebDriverResult<()>>,
+    F: FnOnce(WebDriver, String) -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = WebDriverResult<()>> + Send + 'static,
 {
     let dist = find_dist();
     let harness = start_static_server(dist);
     let url = format!("http://{}/", harness.addr);
     let driver = launch_chrome().await?;
-    let result = test(driver.clone(), url).await;
+    let outcome = tokio::spawn(test(driver.clone(), url)).await;
     let quit = driver.quit().await;
     harness.shutdown();
-    result?;
-    quit
+    match outcome {
+        Ok(result) => {
+            result?;
+            quit
+        }
+        Err(join) if join.is_panic() => std::panic::resume_unwind(join.into_panic()),
+        Err(join) => panic!("browser test task did not finish: {join}"),
+    }
 }
 
 #[tokio::test(flavor = "multi_thread")]
