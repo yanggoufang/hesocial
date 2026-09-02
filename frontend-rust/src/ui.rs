@@ -1,35 +1,58 @@
 use crate::auth::{
-    GOOGLE_LOGIN_FAILED, claim_oauth_token_on_boot, login_with_password, password_input_type,
-    store_token,
+    GOOGLE_LOGIN_FAILED, claim_oauth_token_on_boot, clear_token, login_with_password,
+    password_input_type, read_stored_token, store_token,
 };
 use crate::logic::{next_toggled, toggle_label};
 use crate::pages::events::{EventDetail, Events};
+use crate::permissions::{Session, permissions};
+use crate::shell::{Presence, presence_after_animation_end, presence_toggle};
 use dioxus::prelude::*;
+use std::str::FromStr;
 
 pub use crate::pages::events::{EventCard, EventsScreen};
+pub use crate::pages::shell::{Footer, NavbarScreen};
 
 #[derive(Routable, Clone, PartialEq, Debug)]
+#[rustfmt::skip]
 pub enum Route {
-    #[route("/")]
-    Home {},
-    #[route("/login")]
-    Login {},
-    #[route("/register")]
-    Register {},
-    #[route("/forgot-password")]
-    ForgotPassword {},
-    #[route("/events")]
-    Events {},
-    #[route("/events/:id")]
-    EventDetail { id: String },
-    #[redirect("/complete-profile", || Route::Profile {})]
-    #[route("/profile")]
-    Profile {},
+    #[layout(Shell)]
+        #[route("/")]
+        Home {},
+        #[route("/login")]
+        Login {},
+        #[route("/register")]
+        Register {},
+        #[route("/forgot-password")]
+        ForgotPassword {},
+        #[route("/events")]
+        Events {},
+        #[route("/events/:id")]
+        EventDetail { id: String },
+        #[route("/vvip")]
+        Vvip {},
+        #[route("/profile/registrations")]
+        MyRegistrations {},
+        #[redirect("/complete-profile", || Route::Profile {})]
+        #[route("/profile")]
+        Profile {},
+        #[route("/admin")]
+        Admin {},
+        #[route("/event-mgmt")]
+        EventMgmt {},
+        #[route("/admin/sales")]
+        AdminSales {},
+        #[route("/admin/system")]
+        AdminSystem {},
 }
 
 #[component]
 pub fn App() -> Element {
     claim_oauth_token_on_boot();
+    let session = use_signal(|| Session {
+        token: read_stored_token(),
+        user: None,
+    });
+    use_context_provider(|| session);
     rsx! {
         document::Link {
             rel: "stylesheet",
@@ -37,6 +60,59 @@ pub fn App() -> Element {
         }
         document::Stylesheet { href: asset!("/assets/tailwind.css") }
         Router::<Route> {}
+    }
+}
+
+#[component]
+fn Shell() -> Element {
+    let local = use_signal(|| Session {
+        token: read_stored_token(),
+        user: None,
+    });
+    let mut session = try_use_context::<Signal<Session>>().unwrap_or(local);
+    let navigator = use_navigator();
+    let route = use_route::<Route>();
+    let pathname = route.to_string();
+    let mut user_menu = use_signal(|| Presence::Hidden);
+    let mut mobile = use_signal(|| Presence::Hidden);
+    let snapshot = session().snapshot();
+    let can = permissions(&snapshot);
+
+    rsx! {
+        div { class: "min-h-screen bg-luxury-midnight-black text-luxury-platinum",
+            NavbarScreen {
+                pathname,
+                is_authenticated: snapshot.is_authenticated,
+                view_admin: can.view_admin,
+                user_menu: user_menu(),
+                mobile: mobile(),
+                on_toggle_user_menu: move |_| user_menu.set(presence_toggle(user_menu())),
+                on_user_menu_animation_end: move |_| {
+                    user_menu.set(presence_after_animation_end(user_menu()));
+                },
+                on_toggle_mobile: move |_| mobile.set(presence_toggle(mobile())),
+                on_mobile_animation_end: move |_| {
+                    mobile.set(presence_after_animation_end(mobile()));
+                },
+                on_close_user_menu: move |_| user_menu.set(Presence::Exiting),
+                on_close_mobile: move |_| mobile.set(Presence::Exiting),
+                on_logout: move |_| {
+                    clear_token();
+                    session.set(Session::default());
+                    user_menu.set(Presence::Hidden);
+                    mobile.set(Presence::Hidden);
+                },
+                on_navigate: move |path: String| {
+                    if let Ok(next) = Route::from_str(&path) {
+                        navigator.push(next);
+                    }
+                },
+            }
+            main { class: "pt-20",
+                Outlet::<Route> {}
+            }
+            Footer {}
+        }
     }
 }
 
@@ -65,6 +141,7 @@ pub fn Home() -> Element {
 #[component]
 pub fn Login() -> Element {
     let navigator = use_navigator();
+    let session = try_use_context::<Signal<Session>>();
     let mut email = use_signal(String::new);
     let mut password = use_signal(String::new);
     let mut show_password = use_signal(|| false);
@@ -102,6 +179,12 @@ pub fn Login() -> Element {
                     match login_with_password(&email_val, &password_val).await {
                         Ok(ok) => {
                             store_token(&ok.token);
+                            if let Some(mut session) = session {
+                                session.set(Session {
+                                    token: Some(ok.token.clone()),
+                                    user: ok.user.clone(),
+                                });
+                            }
                             navigator.push(Route::Home {});
                         }
                         Err(msg) => {
@@ -401,6 +484,47 @@ pub fn ForgotPassword() -> Element {
             h1 { "忘記密碼" }
         }
     }
+}
+
+#[component]
+fn StubPage(id: String, title: String) -> Element {
+    rsx! {
+        main {
+            id: "{id}",
+            class: "min-h-screen bg-luxury-midnight-black text-luxury-platinum p-8",
+            h1 { "{title}" }
+        }
+    }
+}
+
+#[component]
+pub fn Vvip() -> Element {
+    rsx! { StubPage { id: "vvip-stub".to_string(), title: "VVIP專區".to_string() } }
+}
+
+#[component]
+pub fn MyRegistrations() -> Element {
+    rsx! { StubPage { id: "registrations-stub".to_string(), title: "我的報名".to_string() } }
+}
+
+#[component]
+pub fn Admin() -> Element {
+    rsx! { StubPage { id: "admin-stub".to_string(), title: "管理後台".to_string() } }
+}
+
+#[component]
+pub fn EventMgmt() -> Element {
+    rsx! { StubPage { id: "event-mgmt-stub".to_string(), title: "活動管理".to_string() } }
+}
+
+#[component]
+pub fn AdminSales() -> Element {
+    rsx! { StubPage { id: "admin-sales-stub".to_string(), title: "銷售管理".to_string() } }
+}
+
+#[component]
+pub fn AdminSystem() -> Element {
+    rsx! { StubPage { id: "admin-system-stub".to_string(), title: "系統健康".to_string() } }
 }
 
 #[component]

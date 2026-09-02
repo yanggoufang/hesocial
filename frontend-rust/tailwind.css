@@ -63,4 +63,74 @@
   .hs-enter-page {
     animation: hs-fade 0.8s ease 0.4s both;
   }
+
+  @keyframes hs-dropdown-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes hs-dropdown-out {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+
+  .hs-dropdown-enter {
+    animation: hs-dropdown-in 0.3s ease both;
+  }
+
+  .hs-dropdown-exit {
+    animation: hs-dropdown-out 0.3s ease both;
+  }
+
+  @keyframes hs-mobile-in {
+    from {
+      opacity: 0;
+      grid-template-rows: 0fr;
+    }
+    to {
+      opacity: 1;
+      grid-template-rows: 1fr;
+    }
+  }
+
+  @keyframes hs-mobile-out {
+    from {
+      opacity: 1;
+      grid-template-rows: 1fr;
+    }
+    to {
+      opacity: 0;
+      grid-template-rows: 0fr;
+    }
+  }
+
+  .hs-mobile-enter,
+  .hs-mobile-exit {
+    display: grid;
+  }
+
+  .hs-mobile-enter {
+    animation: hs-mobile-in 0.3s ease both;
+  }
+
+  .hs-mobile-exit {
+    animation: hs-mobile-out 0.3s ease both;
+  }
+
+  .hs-mobile-enter > .hs-mobile-inner,
+  .hs-mobile-exit > .hs-mobile-inner {
+    overflow: hidden;
+  }
 }

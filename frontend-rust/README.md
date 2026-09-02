@@ -3,10 +3,14 @@
 Rust/WASM replacement for `frontend/`. Round 1 proved the toolchain (Dioxus
 0.7 CSR → static assets, Tailwind tokens, three Rust test layers). Round 2
 ports `/login`. Round 3 ports the `/events` list page (filters, cards,
-pagination, `GET /api/events`). Other application pages are not ported; `/`,
-`/register`, `/forgot-password`, `/profile`, and `/events/:id` exist as stubs
-so login links, the OAuth-callback regression, and event-detail links can be
-exercised.
+pagination, `GET /api/events`). Round 4 ports the shared Navbar/Footer shell
+around every route, including the user-menu exit animation (CSS keyframes plus
+a Rust presence state so the node stays mounted while it animates out). Other
+application pages are not ported; `/`, `/register`, `/forgot-password`,
+`/profile`, `/profile/registrations`, `/events/:id`, `/vvip`, `/admin`,
+`/event-mgmt`, `/admin/sales`, and `/admin/system` exist as stubs so login
+links, the OAuth-callback regression, event-detail links, and the signed-in
+dropdown can be exercised.
 
 Pinned crate versions are in `Cargo.toml` / `Cargo.lock`.
 
@@ -104,8 +108,11 @@ cargo test --test logic
 Covers toggle helpers plus login error selection, `POST /api/auth/login`
 JSON parsing, Bearer header formatting, OAuth `?token=` extraction, the
 claim-before-`/complete-profile`→`/profile` redirect ordering, events query
-strings, filter→page-1 reset, pagination range, and the
-`success: false` / malformed-body collapse to `total: 0, totalPages: 1`.
+strings, filter→page-1 reset, pagination range, the
+`success: false` / malformed-body collapse to `total: 0, totalPages: 1`,
+exact-path nav highlighting, session entries for signed-out / signed-in /
+admin, the `viewAdmin` gate (`admin` | `super_admin`), and dropdown
+presence (mounted through exit).
 No browser, no wasm.
 
 ### 2. Component (`wasm-bindgen-test`)
@@ -119,8 +126,10 @@ Uses the runner set in `.cargo/config.toml`. Renders `Home`, `/login`, and
 `/events` through `VirtualDom` + `dioxus-ssr` inside Node via
 `wasm-bindgen-test-runner`. Asserts Traditional Chinese copy, password
 masking, LinkedIn permanently disabled, submit disabled while in flight,
-events loading/empty states, card fields, and exclusivity badge/star/diamond
-selection (including `exclusivityLevel: null`).
+events loading/empty states, card fields, exclusivity badge/star/diamond
+selection (including `exclusivityLevel: null`), signed-out vs signed-in vs
+admin navbar markup, dropdown open/closed/exiting, mobile Menu/X toggle, and
+footer copy.
 
 ### 3. WebDriver E2E (`thirtyfour`)
 
@@ -145,8 +154,10 @@ cargo test --test e2e -- --nocapture
    `localStorage.hesocial_token` + navigate `/`, in-flight submit disable,
    Google full-page navigation, password reveal, OAuth
    `/complete-profile?token=` claimed **before** the `/profile` redirect,
-   the `/events` list, search filtering, pagination, and an API 500 that
-   yields the empty state rather than a crash.
+   the `/events` list, search filtering, pagination, an API 500 that
+   yields the empty state rather than a crash, the signed-out shell,
+   user-menu open/close including the exit class, mobile toggle, admin
+   entries only for `role: admin`, and logout back to the signed-out shell.
 5. `driver.quit()` closes the browser and chromedriver. `StaticHarness::shutdown`
    joins the HTTP thread. Nothing is left running.
 
@@ -166,9 +177,12 @@ frontend-rust/
   src/events.rs       # query string, parse, badge/price/image helpers, GET
   src/icons.rs        # Lucide SVG Icon enum (add a variant to scale)
   src/logic.rs        # pure toggle helpers
+  src/permissions.rs  # AuthSnapshot + Can flags (navbar wires view_admin)
+  src/shell.rs        # nav items, active-path, session entries, Presence
   src/pages.rs        # page modules; Events is the first extracted page
   src/pages/events.rs # Events container + EventsScreen + EventCard
-  src/ui.rs           # Route + App + Login + remaining stubs
+  src/pages/shell.rs  # NavbarScreen + Footer
+  src/ui.rs           # Route + App + Shell layout + Login + remaining stubs
   src/main.rs         # claim_oauth_token_on_boot(); dioxus::launch(App)
   tests/logic.rs
   tests/wasm.rs

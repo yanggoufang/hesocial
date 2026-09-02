@@ -10,9 +10,36 @@ pub enum IconName {
     ChevronLeft,
     ChevronRight,
     Diamond,
+    Menu,
+    X,
+    Crown,
+    User,
+    LogOut,
+    Settings,
+    Shield,
+    Activity,
+    TrendingUp,
+    Mail,
+    Phone,
 }
 
 impl IconName {
+    pub fn from_nav_icon(name: &str) -> Option<Self> {
+        match name {
+            "crown" => Some(Self::Crown),
+            "user" => Some(Self::User),
+            "log-out" => Some(Self::LogOut),
+            "calendar" => Some(Self::Calendar),
+            "settings" => Some(Self::Settings),
+            "shield" => Some(Self::Shield),
+            "activity" => Some(Self::Activity),
+            "trending-up" => Some(Self::TrendingUp),
+            "menu" => Some(Self::Menu),
+            "x" => Some(Self::X),
+            _ => None,
+        }
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Calendar => "calendar",
@@ -23,6 +50,17 @@ impl IconName {
             Self::ChevronLeft => "chevron-left",
             Self::ChevronRight => "chevron-right",
             Self::Diamond => "diamond",
+            Self::Menu => "menu",
+            Self::X => "x",
+            Self::Crown => "crown",
+            Self::User => "user",
+            Self::LogOut => "log-out",
+            Self::Settings => "settings",
+            Self::Shield => "shield",
+            Self::Activity => "activity",
+            Self::TrendingUp => "trending-up",
+            Self::Mail => "mail",
+            Self::Phone => "phone",
         }
     }
 }
@@ -77,6 +115,49 @@ pub fn Icon(
                 },
                 IconName::Diamond => rsx! {
                     path { d: "M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z" }
+                },
+                IconName::Menu => rsx! {
+                    line { x1: "4", x2: "20", y1: "12", y2: "12" }
+                    line { x1: "4", x2: "20", y1: "6", y2: "6" }
+                    line { x1: "4", x2: "20", y1: "18", y2: "18" }
+                },
+                IconName::X => rsx! {
+                    path { d: "M18 6 6 18" }
+                    path { d: "m6 6 12 12" }
+                },
+                IconName::Crown => rsx! {
+                    path { d: "M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" }
+                    path { d: "M5 21h14" }
+                },
+                IconName::User => rsx! {
+                    path { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" }
+                    circle { cx: "12", cy: "7", r: "4" }
+                },
+                IconName::LogOut => rsx! {
+                    path { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" }
+                    polyline { points: "16 17 21 12 16 7" }
+                    line { x1: "21", x2: "9", y1: "12", y2: "12" }
+                },
+                IconName::Settings => rsx! {
+                    path { d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" }
+                    circle { cx: "12", cy: "12", r: "3" }
+                },
+                IconName::Shield => rsx! {
+                    path { d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" }
+                },
+                IconName::Activity => rsx! {
+                    path { d: "M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" }
+                },
+                IconName::TrendingUp => rsx! {
+                    polyline { points: "22 7 13.5 15.5 8.5 10.5 2 17" }
+                    polyline { points: "16 7 22 7 22 13" }
+                },
+                IconName::Mail => rsx! {
+                    rect { width: "20", height: "16", x: "2", y: "4", rx: "2" }
+                    path { d: "m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" }
+                },
+                IconName::Phone => rsx! {
+                    path { d: "M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" }
                 },
             }
         }

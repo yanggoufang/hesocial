@@ -9,6 +9,13 @@ use hesocial_frontend::events::{
     parse_events_response, shows_diamond, star_count,
 };
 use hesocial_frontend::logic::{next_toggled, toggle_label};
+use hesocial_frontend::permissions::{
+    AuthSnapshot, MembershipTier, Role, VerificationStatus, permissions,
+};
+use hesocial_frontend::shell::{
+    Presence, SessionKind, is_active_path, presence_after_animation_end, presence_is_mounted,
+    presence_toggle, primary_nav_items, session_entries,
+};
 
 #[test]
 fn off_state_uses_off_label() {
@@ -290,4 +297,196 @@ fn price_prefers_vvip_then_vip_and_treats_zero_as_missing() {
     assert_eq!(format_price(None, Some(12000.0)), "NT$ 12,000");
     assert_eq!(format_price(Some(0.0), Some(8000.0)), "NT$ 8,000");
     assert_eq!(format_price(None, None), "價格洽詢");
+}
+
+#[test]
+fn active_route_is_exact_pathname_match() {
+    assert!(is_active_path("/", "/"));
+    assert!(is_active_path("/events", "/events"));
+    assert!(is_active_path("/vvip", "/vvip"));
+    assert!(!is_active_path("/events", "/"));
+    assert!(!is_active_path("/", "/events"));
+    assert!(
+        !is_active_path("/events/11", "/events"),
+        "React uses location.pathname === path, not a prefix match"
+    );
+    assert!(!is_active_path("/events", "/events/11"));
+    assert!(!is_active_path("/login", "/"));
+}
+
+#[test]
+fn primary_nav_items_match_react_navbar() {
+    let items = primary_nav_items();
+    let pairs: Vec<(&str, &str)> = items.iter().map(|item| (item.name, item.path)).collect();
+    assert_eq!(
+        pairs,
+        vec![("首頁", "/"), ("精選活動", "/events"), ("VVIP專區", "/vvip")]
+    );
+    assert!(items[0].icon.is_none());
+    assert!(items[1].icon.is_none());
+    assert_eq!(items[2].icon.as_deref(), Some("crown"));
+}
+
+fn kinds(entries: &[hesocial_frontend::shell::SessionEntry]) -> Vec<SessionKind> {
+    entries.iter().map(|entry| entry.kind).collect()
+}
+
+#[test]
+fn signed_out_session_yields_login_and_register() {
+    let entries = session_entries(false, false);
+    assert_eq!(kinds(&entries), vec![SessionKind::Login, SessionKind::Register]);
+    assert_eq!(entries[0].href, Some("/login"));
+    assert_eq!(entries[0].label, "登入");
+    assert_eq!(entries[1].href, Some("/register"));
+    assert_eq!(entries[1].label, "註冊");
+}
+
+#[test]
+fn signed_in_session_yields_user_links_without_admin() {
+    let entries = session_entries(true, false);
+    assert_eq!(
+        kinds(&entries),
+        vec![
+            SessionKind::Profile,
+            SessionKind::Registrations,
+            SessionKind::Logout,
+        ]
+    );
+    assert_eq!(entries[0].href, Some("/profile"));
+    assert_eq!(entries[0].label, "個人檔案");
+    assert_eq!(entries[1].href, Some("/profile/registrations"));
+    assert_eq!(entries[1].label, "我的報名");
+    assert_eq!(entries[2].href, None);
+    assert_eq!(entries[2].label, "登出");
+    assert!(
+        !kinds(&entries).contains(&SessionKind::Admin),
+        "viewAdmin false must not emit admin entries"
+    );
+}
+
+#[test]
+fn admin_session_appends_the_four_admin_entries() {
+    let entries = session_entries(true, true);
+    assert_eq!(
+        kinds(&entries),
+        vec![
+            SessionKind::Profile,
+            SessionKind::Registrations,
+            SessionKind::Admin,
+            SessionKind::EventMgmt,
+            SessionKind::Sales,
+            SessionKind::SystemHealth,
+            SessionKind::Logout,
+        ]
+    );
+    assert_eq!(entries[2].href, Some("/admin"));
+    assert_eq!(entries[2].label, "管理後台");
+    assert_eq!(entries[3].href, Some("/event-mgmt"));
+    assert_eq!(entries[3].label, "活動管理");
+    assert_eq!(entries[4].href, Some("/admin/sales"));
+    assert_eq!(entries[4].label, "銷售管理");
+    assert_eq!(entries[5].href, Some("/admin/system"));
+    assert_eq!(entries[5].label, "系統健康");
+}
+
+#[test]
+fn view_admin_is_admin_or_super_admin_only() {
+    let none = permissions(&AuthSnapshot::default());
+    assert!(!none.view_admin);
+    assert!(!none.access);
+
+    let signed_out_admin_claim = permissions(&AuthSnapshot {
+        is_authenticated: false,
+        role: Some(Role::Admin),
+        ..AuthSnapshot::default()
+    });
+    assert!(
+        signed_out_admin_claim.view_admin,
+        "React's isAdmin is role-level >= 2, independent of isAuthenticated"
+    );
+    assert!(!signed_out_admin_claim.access);
+
+    let user = permissions(&AuthSnapshot {
+        is_authenticated: true,
+        role: Some(Role::User),
+        ..AuthSnapshot::default()
+    });
+    assert!(user.access);
+    assert!(!user.view_admin);
+
+    let no_role = permissions(&AuthSnapshot {
+        is_authenticated: true,
+        role: None,
+        ..AuthSnapshot::default()
+    });
+    assert!(no_role.access);
+    assert!(!no_role.view_admin);
+
+    let admin = permissions(&AuthSnapshot {
+        is_authenticated: true,
+        role: Some(Role::Admin),
+        ..AuthSnapshot::default()
+    });
+    assert!(admin.view_admin);
+    assert!(!admin.manage_super_admin);
+
+    let super_admin = permissions(&AuthSnapshot {
+        is_authenticated: true,
+        role: Some(Role::SuperAdmin),
+        ..AuthSnapshot::default()
+    });
+    assert!(super_admin.view_admin);
+    assert!(super_admin.manage_super_admin);
+}
+
+#[test]
+fn permission_primitive_exposes_the_rest_of_the_react_can_flags() {
+    let diamond_verified = permissions(&AuthSnapshot {
+        is_authenticated: true,
+        role: Some(Role::User),
+        membership_tier: Some(MembershipTier::Diamond),
+        is_verified: true,
+        verification_status: Some(VerificationStatus::Approved),
+    });
+    assert!(diamond_verified.access);
+    assert!(!diamond_verified.view_admin);
+    assert!(diamond_verified.access_vvip);
+    assert!(diamond_verified.access_premium_events);
+    assert!(!diamond_verified.access_exclusive_events);
+    assert!(diamond_verified.upload_media);
+    assert!(diamond_verified.register_for_events);
+    assert!(diamond_verified.member_features);
+
+    let black_unverified = permissions(&AuthSnapshot {
+        is_authenticated: true,
+        membership_tier: Some(MembershipTier::BlackCard),
+        is_verified: false,
+        verification_status: Some(VerificationStatus::Pending),
+        ..AuthSnapshot::default()
+    });
+    assert!(!black_unverified.access_vvip);
+    assert!(black_unverified.access_exclusive_events);
+    assert!(!black_unverified.register_for_events);
+}
+
+#[test]
+fn dropdown_presence_stays_mounted_through_exit() {
+    assert_eq!(presence_toggle(Presence::Hidden), Presence::Entering);
+    assert!(presence_is_mounted(Presence::Entering));
+    assert_eq!(
+        presence_after_animation_end(Presence::Entering),
+        Presence::Shown
+    );
+
+    assert_eq!(presence_toggle(Presence::Shown), Presence::Exiting);
+    assert!(
+        presence_is_mounted(Presence::Exiting),
+        "exit animation requires the node to stay mounted"
+    );
+    assert!(!presence_is_mounted(Presence::Hidden));
+    assert_eq!(
+        presence_after_animation_end(Presence::Exiting),
+        Presence::Hidden
+    );
+    assert_eq!(presence_toggle(Presence::Exiting), Presence::Entering);
 }

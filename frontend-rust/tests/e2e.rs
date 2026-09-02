@@ -124,7 +124,12 @@ fn start_static_server(root: PathBuf) -> StaticHarness {
                     thread::sleep(Duration::from_millis(1500));
                 }
 
-                let (status, payload) = if email == "ok@example.com" && password == "secret"
+                let (status, payload) = if email == "admin@example.com" && password == "secret" {
+                    (
+                        200,
+                        r#"{"success":true,"data":{"token":"e2e-admin-token","user":{"id":"9","email":"admin@example.com","role":"admin"}}}"#,
+                    )
+                } else if email == "ok@example.com" && password == "secret"
                     || email == "slow@example.com"
                 {
                     (
@@ -702,6 +707,218 @@ async fn events_api_failure_shows_empty_state_not_a_crash() -> WebDriverResult<(
         assert!(body.contains("找不到符合條件的活動。"));
         assert!(body.contains("請嘗試調整您的篩選條件，或稍後再試。"));
         assert!(!body.contains("松露季私宴"));
+        Ok(())
+    })
+    .await
+}
+
+async fn wait_gone(driver: &WebDriver, id: &str) -> WebDriverResult<()> {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(20);
+    loop {
+        if driver.find(By::Id(id)).await.is_err() {
+            return Ok(());
+        }
+        if tokio::time::Instant::now() >= deadline {
+            panic!("timed out waiting for #{id} to unmount");
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+}
+
+async fn element_class(driver: &WebDriver, id: &str) -> WebDriverResult<String> {
+    let el = wait_present(driver, id).await?;
+    Ok(el.attr("class").await?.unwrap_or_default())
+}
+
+async fn login_as(driver: &WebDriver, url: &str, email: &str, password: &str) -> WebDriverResult<()> {
+    driver.goto(&format!("{url}login")).await?;
+    wait_present(driver, "email").await?;
+    driver.find(By::Id("email")).await?.send_keys(email).await?;
+    driver
+        .find(By::Id("password"))
+        .await?
+        .send_keys(password)
+        .await?;
+    driver.find(By::Id("login-submit")).await?.click().await?;
+    wait_present(driver, "nav-user-button").await?;
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn signed_out_shell_renders_nav_and_footer() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        driver.goto(&url).await?;
+        wait_present(&driver, "nav").await?;
+        wait_present(&driver, "footer").await?;
+        wait_present(&driver, "nav-login").await?;
+        wait_present(&driver, "nav-register").await?;
+        let body = driver.find(By::Tag("body")).await?.text().await?;
+        for needle in [
+            "首頁",
+            "精選活動",
+            "VVIP專區",
+            "登入",
+            "註冊",
+            "專為高淨值人士打造的頂級社交平台，提供獨家尊榮體驗與精緻社交活動。",
+            "私人晚宴",
+            "concierge@hesocial.com",
+            "系統正常運行",
+        ] {
+            assert!(body.contains(needle), "missing {needle:?} in {body:?}");
+        }
+        assert!(
+            driver.find(By::Id("nav-user-button")).await.is_err(),
+            "avatar must not render signed out"
+        );
+        let home = wait_present(&driver, "nav-item-home").await?;
+        let class = home.attr("class").await?.unwrap_or_default();
+        assert!(
+            class.contains("text-luxury-gold"),
+            "home route must highlight 首頁, class={class}"
+        );
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn user_dropdown_opens_and_closes_with_exit_class() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        login_as(&driver, &url, "ok@example.com", "secret").await?;
+        wait_present(&driver, "nav-user-button").await?;
+        assert!(
+            driver.find(By::Id("nav-login")).await.is_err(),
+            "登入 must not render signed in"
+        );
+        driver.find(By::Id("nav-user-button")).await?.click().await?;
+        wait_present(&driver, "nav-user-menu").await?;
+        let open_class = element_class(&driver, "nav-user-menu").await?;
+        assert!(
+            open_class.contains("hs-dropdown-enter"),
+            "open dropdown must use enter class, class={open_class}"
+        );
+        wait_present(&driver, "nav-profile").await?;
+        wait_present(&driver, "nav-registrations").await?;
+        wait_present(&driver, "nav-logout").await?;
+        assert!(
+            driver.find(By::Id("nav-admin")).await.is_err(),
+            "plain user must not see admin entries"
+        );
+
+        driver.find(By::Id("nav-user-button")).await?.click().await?;
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+        let mut saw_exit = false;
+        loop {
+            match driver.find(By::Id("nav-user-menu")).await {
+                Ok(el) => {
+                    let class = el.attr("class").await?.unwrap_or_default();
+                    if class.contains("hs-dropdown-exit") {
+                        saw_exit = true;
+                    }
+                }
+                Err(_) => break,
+            }
+            if tokio::time::Instant::now() >= deadline {
+                panic!("dropdown did not unmount after close; saw_exit={saw_exit}");
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        assert!(
+            saw_exit,
+            "exit class never appeared; CSS presence did not keep the node mounted while animating out"
+        );
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn mobile_toggle_opens_and_closes_panel() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        driver.set_window_rect(0, 0, 375, 812).await?;
+        driver.goto(&url).await?;
+        wait_present(&driver, "nav-mobile-toggle").await?;
+        assert!(
+            driver.find(By::Id("nav-mobile-panel")).await.is_err(),
+            "mobile panel starts closed"
+        );
+        driver
+            .find(By::Id("nav-mobile-toggle"))
+            .await?
+            .click()
+            .await?;
+        wait_present(&driver, "nav-mobile-panel").await?;
+        let class = element_class(&driver, "nav-mobile-panel").await?;
+        assert!(
+            class.contains("hs-mobile-enter"),
+            "open mobile panel must use enter class, class={class}"
+        );
+        tokio::time::sleep(Duration::from_millis(400)).await;
+        let panel = driver.find(By::Id("nav-mobile-panel")).await?.text().await?;
+        for needle in ["首頁", "精選活動", "VVIP專區", "登入", "註冊"] {
+            assert!(panel.contains(needle), "missing {needle:?} in {panel:?}");
+        }
+
+        driver
+            .find(By::Id("nav-mobile-toggle"))
+            .await?
+            .click()
+            .await?;
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+        let mut saw_exit = false;
+        loop {
+            match driver.find(By::Id("nav-mobile-panel")).await {
+                Ok(el) => {
+                    let class = el.attr("class").await?.unwrap_or_default();
+                    if class.contains("hs-mobile-exit") {
+                        saw_exit = true;
+                    }
+                }
+                Err(_) => break,
+            }
+            if tokio::time::Instant::now() >= deadline {
+                panic!("mobile panel did not unmount; saw_exit={saw_exit}");
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        assert!(saw_exit, "mobile exit class never appeared");
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_dropdown_shows_admin_entries_only_for_admin() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        login_as(&driver, &url, "admin@example.com", "secret").await?;
+        driver.find(By::Id("nav-user-button")).await?.click().await?;
+        wait_present(&driver, "nav-admin").await?;
+        wait_present(&driver, "nav-event-mgmt").await?;
+        wait_present(&driver, "nav-sales").await?;
+        wait_present(&driver, "nav-system").await?;
+        let menu = driver.find(By::Id("nav-user-menu")).await?.text().await?;
+        for needle in ["管理後台", "活動管理", "銷售管理", "系統健康"] {
+            assert!(menu.contains(needle), "missing {needle:?} in {menu:?}");
+        }
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn logout_clears_token_and_returns_signed_out_shell() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        login_as(&driver, &url, "ok@example.com", "secret").await?;
+        let token = local_storage_get(&driver, "hesocial_token").await?;
+        assert_eq!(token.as_deref(), Some("e2e-login-token"));
+        driver.find(By::Id("nav-user-button")).await?.click().await?;
+        wait_present(&driver, "nav-logout").await?;
+        driver.find(By::Id("nav-logout")).await?.click().await?;
+        wait_present(&driver, "nav-login").await?;
+        wait_present(&driver, "nav-register").await?;
+        wait_gone(&driver, "nav-user-button").await?;
+        let token = local_storage_get(&driver, "hesocial_token").await?;
+        assert_eq!(token, None, "logout must clear hesocial_token");
         Ok(())
     })
     .await

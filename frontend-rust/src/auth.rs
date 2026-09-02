@@ -9,6 +9,7 @@ pub const OAUTH_LANDING_REDIRECT: &str = "/profile";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoginOk {
     pub token: String,
+    pub user: Option<crate::permissions::AuthUser>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,6 +49,9 @@ pub fn parse_login_response(body: &str) -> Result<LoginOk, String> {
         {
             Some(token) => Ok(LoginOk {
                 token: token.to_string(),
+                user: value
+                    .pointer("/data/user")
+                    .map(crate::permissions::AuthUser::from_json),
             }),
             None => Err(LOGIN_FAILED_FALLBACK.to_string()),
         }
@@ -117,6 +121,15 @@ pub fn store_token(token: &str) {
         }
     }
     let _ = token;
+}
+
+pub fn clear_token() {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(storage) = local_storage() {
+            let _ = storage.remove_item(TOKEN_STORAGE_KEY);
+        }
+    }
 }
 
 pub fn read_stored_token() -> Option<String> {

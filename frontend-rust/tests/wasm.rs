@@ -6,7 +6,8 @@ use dioxus::history::{History, MemoryHistory};
 use dioxus::prelude::*;
 use dioxus::router::components::HistoryProvider;
 use hesocial_frontend::events::{Event, Pagination, Pricing, Venue};
-use hesocial_frontend::ui::{EventCard, EventsScreen, LoginScreen, Route};
+use hesocial_frontend::shell::Presence;
+use hesocial_frontend::ui::{EventCard, EventsScreen, Footer, LoginScreen, NavbarScreen, Route};
 use wasm_bindgen_test::wasm_bindgen_test;
 
 #[component]
@@ -348,4 +349,241 @@ fn vvip_and_invitation_only_select_stars_and_diamond() {
         html.contains("data-icon=\"diamond\""),
         "Invitation Only must render diamond: {html}"
     );
+}
+
+#[component]
+fn NavAt(
+    pathname: String,
+    is_authenticated: bool,
+    view_admin: bool,
+    user_menu: Presence,
+    mobile: Presence,
+) -> Element {
+    rsx! {
+        NavbarScreen {
+            pathname,
+            is_authenticated,
+            view_admin,
+            user_menu,
+            mobile,
+        }
+    }
+}
+
+fn render_nav(
+    pathname: &str,
+    is_authenticated: bool,
+    view_admin: bool,
+    user_menu: Presence,
+    mobile: Presence,
+) -> String {
+    let mut vdom = VirtualDom::new_with_props(
+        NavAt,
+        NavAtProps {
+            pathname: pathname.into(),
+            is_authenticated,
+            view_admin,
+            user_menu,
+            mobile,
+        },
+    );
+    vdom.rebuild_in_place();
+    dioxus_ssr::render(&vdom)
+}
+
+#[wasm_bindgen_test]
+fn signed_out_shell_shows_login_register_and_hides_user_menu() {
+    let html = render_nav("/", false, false, Presence::Hidden, Presence::Hidden);
+    for needle in [
+        "id=\"nav\"",
+        "HeSocial",
+        "首頁",
+        "精選活動",
+        "VVIP專區",
+        "id=\"nav-login\"",
+        "href=\"/login\"",
+        "登入",
+        "id=\"nav-register\"",
+        "href=\"/register\"",
+        "註冊",
+        "id=\"nav-mobile-toggle\"",
+        "data-icon=\"menu\"",
+        "data-icon=\"crown\"",
+    ] {
+        assert!(
+            html.contains(needle),
+            "expected {needle:?} in signed-out navbar, got: {html}"
+        );
+    }
+    assert!(
+        !html.contains("id=\"nav-user-button\""),
+        "avatar must not render signed out: {html}"
+    );
+    assert!(
+        !html.contains("id=\"nav-user-menu\""),
+        "dropdown must not render when closed: {html}"
+    );
+    assert!(
+        !html.contains("管理後台"),
+        "admin entry must not render signed out: {html}"
+    );
+}
+
+#[wasm_bindgen_test]
+fn signed_in_shell_shows_avatar_and_hides_login_register() {
+    let html = render_nav("/events", true, false, Presence::Hidden, Presence::Hidden);
+    assert!(
+        html.contains("id=\"nav-user-button\""),
+        "avatar missing: {html}"
+    );
+    assert!(html.contains("data-icon=\"user\""), "user icon missing: {html}");
+    assert!(
+        !html.contains("id=\"nav-login\""),
+        "登入 must not render signed in: {html}"
+    );
+    assert!(
+        !html.contains("id=\"nav-register\""),
+        "註冊 must not render signed in: {html}"
+    );
+    assert!(
+        !html.contains("id=\"nav-user-menu\""),
+        "dropdown starts closed: {html}"
+    );
+    assert!(!html.contains("管理後台"), "non-admin must not see admin: {html}");
+    let events = opening_tag(&html, "nav-item-events");
+    assert!(
+        events.contains("text-luxury-gold") && events.contains("bg-luxury-gold/10"),
+        "current /events item must be highlighted, tag={events}"
+    );
+}
+
+#[wasm_bindgen_test]
+fn signed_in_dropdown_open_lists_user_links_without_admin() {
+    let html = render_nav("/", true, false, Presence::Entering, Presence::Hidden);
+    assert!(html.contains("id=\"nav-user-menu\""), "dropdown missing: {html}");
+    assert!(
+        html.contains("hs-dropdown-enter"),
+        "open dropdown must use the enter class: {html}"
+    );
+    for needle in [
+        "id=\"nav-profile\"",
+        "href=\"/profile\"",
+        "個人檔案",
+        "id=\"nav-registrations\"",
+        "href=\"/profile/registrations\"",
+        "我的報名",
+        "id=\"nav-logout\"",
+        "登出",
+        "data-icon=\"log-out\"",
+        "data-icon=\"calendar\"",
+    ] {
+        assert!(
+            html.contains(needle),
+            "expected {needle:?} in open dropdown, got: {html}"
+        );
+    }
+    assert!(!html.contains("id=\"nav-admin\""), "admin missing for user: {html}");
+}
+
+#[wasm_bindgen_test]
+fn admin_dropdown_renders_admin_entries() {
+    let html = render_nav("/", true, true, Presence::Shown, Presence::Hidden);
+    for needle in [
+        "id=\"nav-admin\"",
+        "href=\"/admin\"",
+        "管理後台",
+        "id=\"nav-event-mgmt\"",
+        "href=\"/event-mgmt\"",
+        "活動管理",
+        "id=\"nav-sales\"",
+        "href=\"/admin/sales\"",
+        "銷售管理",
+        "id=\"nav-system\"",
+        "href=\"/admin/system\"",
+        "系統健康",
+        "data-icon=\"shield\"",
+        "data-icon=\"settings\"",
+        "data-icon=\"trending-up\"",
+        "data-icon=\"activity\"",
+    ] {
+        assert!(
+            html.contains(needle),
+            "expected {needle:?} in admin dropdown, got: {html}"
+        );
+    }
+}
+
+#[wasm_bindgen_test]
+fn dropdown_exit_stays_mounted_with_exit_class() {
+    let html = render_nav("/", true, false, Presence::Exiting, Presence::Hidden);
+    let menu = opening_tag(&html, "nav-user-menu");
+    assert!(!menu.is_empty(), "exiting dropdown must stay mounted: {html}");
+    assert!(
+        menu.contains("hs-dropdown-exit"),
+        "exiting dropdown must keep the exit class, tag={menu}"
+    );
+    let closed = render_nav("/", true, false, Presence::Hidden, Presence::Hidden);
+    assert!(
+        !closed.contains("id=\"nav-user-menu\""),
+        "hidden presence must unmount the dropdown: {closed}"
+    );
+}
+
+#[wasm_bindgen_test]
+fn mobile_toggle_swaps_menu_and_x_and_mounts_panel() {
+    let closed = render_nav("/", false, false, Presence::Hidden, Presence::Hidden);
+    let toggle = opening_tag(&closed, "nav-mobile-toggle");
+    assert!(toggle.contains("data-icon=\"menu\"") || closed.contains("data-icon=\"menu\""));
+    assert!(
+        !closed.contains("id=\"nav-mobile-panel\""),
+        "mobile panel starts unmounted: {closed}"
+    );
+
+    let open = render_nav("/", false, false, Presence::Hidden, Presence::Entering);
+    assert!(open.contains("id=\"nav-mobile-panel\""), "panel missing: {open}");
+    assert!(open.contains("hs-mobile-enter"), "mobile enter class missing: {open}");
+    assert!(open.contains("data-icon=\"x\""), "open toggle must show X: {open}");
+    assert!(
+        opening_tag(&open, "nav-mobile-panel").contains("href=\"/vvip\"")
+            || open.contains("VVIP專區"),
+        "mobile panel must list nav items: {open}"
+    );
+}
+
+#[wasm_bindgen_test]
+fn footer_renders_react_copy() {
+    let mut vdom = VirtualDom::new(Footer);
+    vdom.rebuild_in_place();
+    let html = dioxus_ssr::render(&vdom);
+    for needle in [
+        "id=\"footer\"",
+        "HeSocial",
+        "專為高淨值人士打造的頂級社交平台，提供獨家尊榮體驗與精緻社交活動。",
+        "服務項目",
+        "私人晚宴",
+        "豪華遊艇派對",
+        "藝術品鑑會",
+        "商務社交",
+        "會員專區",
+        "Platinum 會員",
+        "Diamond 會員",
+        "Black Card 會員",
+        "專屬顧問服務",
+        "聯絡我們",
+        "+886-2-2345-6789",
+        "concierge@hesocial.com",
+        "台北市信義區松仁路",
+        "© 2024 HeSocial. 版權所有 | 隱私政策 | 服務條款",
+        "企業級安全認證",
+        "系統正常運行",
+        "data-icon=\"crown\"",
+        "data-icon=\"phone\"",
+        "data-icon=\"mail\"",
+        "data-icon=\"map-pin\"",
+    ] {
+        assert!(
+            html.contains(needle),
+            "expected {needle:?} in footer, got: {html}"
+        );
+    }
 }
