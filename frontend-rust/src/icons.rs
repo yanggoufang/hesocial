@@ -23,6 +23,18 @@ pub enum IconName {
     Phone,
     Briefcase,
     Award,
+    ArrowRight,
+    Clock,
+    Heart,
+    Share2,
+    Shirt,
+    Check,
+    AlertCircle,
+    Lock,
+    DollarSign,
+    Plus,
+    Eye,
+    EyeOff,
 }
 
 impl IconName {
@@ -65,6 +77,18 @@ impl IconName {
             Self::Phone => "phone",
             Self::Briefcase => "briefcase",
             Self::Award => "award",
+            Self::ArrowRight => "arrow-right",
+            Self::Clock => "clock",
+            Self::Heart => "heart",
+            Self::Share2 => "share-2",
+            Self::Shirt => "shirt",
+            Self::Check => "check",
+            Self::AlertCircle => "alert-circle",
+            Self::Lock => "lock",
+            Self::DollarSign => "dollar-sign",
+            Self::Plus => "plus",
+            Self::Eye => "eye",
+            Self::EyeOff => "eye-off",
         }
     }
 }
@@ -170,6 +194,57 @@ pub fn Icon(
                 IconName::Award => rsx! {
                     path { d: "m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" }
                     circle { cx: "12", cy: "8", r: "6" }
+                },
+                IconName::ArrowRight => rsx! {
+                    path { d: "M5 12h14" }
+                    path { d: "m12 5 7 7-7 7" }
+                },
+                IconName::Clock => rsx! {
+                    circle { cx: "12", cy: "12", r: "10" }
+                    polyline { points: "12 6 12 12 16 14" }
+                },
+                IconName::Heart => rsx! {
+                    path { d: "M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" }
+                },
+                IconName::Share2 => rsx! {
+                    circle { cx: "18", cy: "5", r: "3" }
+                    circle { cx: "6", cy: "12", r: "3" }
+                    circle { cx: "18", cy: "19", r: "3" }
+                    line { x1: "8.59", x2: "15.42", y1: "13.51", y2: "17.49" }
+                    line { x1: "15.41", x2: "8.59", y1: "6.51", y2: "10.49" }
+                },
+                IconName::Shirt => rsx! {
+                    path { d: "M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" }
+                },
+                IconName::Check => rsx! {
+                    path { d: "M20 6 9 17l-5-5" }
+                },
+                IconName::AlertCircle => rsx! {
+                    circle { cx: "12", cy: "12", r: "10" }
+                    line { x1: "12", x2: "12", y1: "8", y2: "12" }
+                    line { x1: "12", x2: "12.01", y1: "16", y2: "16" }
+                },
+                IconName::Lock => rsx! {
+                    rect { width: "18", height: "11", x: "3", y: "11", rx: "2", ry: "2" }
+                    path { d: "M7 11V7a5 5 0 0 1 10 0v4" }
+                },
+                IconName::DollarSign => rsx! {
+                    line { x1: "12", x2: "12", y1: "2", y2: "22" }
+                    path { d: "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" }
+                },
+                IconName::Plus => rsx! {
+                    path { d: "M5 12h14" }
+                    path { d: "M12 5v14" }
+                },
+                IconName::Eye => rsx! {
+                    path { d: "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" }
+                    circle { cx: "12", cy: "12", r: "3" }
+                },
+                IconName::EyeOff => rsx! {
+                    path { d: "M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" }
+                    path { d: "M14.084 14.158a3 3 0 0 1-4.242-4.242" }
+                    path { d: "M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" }
+                    path { d: "m2 2 20 20" }
                 },
             }
         }

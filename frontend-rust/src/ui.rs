@@ -2,16 +2,21 @@ use crate::auth::{
     GOOGLE_LOGIN_FAILED, claim_oauth_token_on_boot, clear_token, login_with_password,
     password_input_type, read_stored_token, store_token, validate_stored_token,
 };
-use crate::logic::{next_toggled, toggle_label};
 use crate::pages::events::{EventDetail, Events};
+use crate::pages::home::Home;
 use crate::pages::profile::{ProfileBody, ProfileGuardLoading};
 use crate::permissions::{RouteGuard, Session, permissions, user_route_guard};
+use crate::register::{
+    RegisterForm, push_interest, register_account, remove_interest, validate_step,
+};
 use crate::shell::{Presence, presence_after_animation_end, presence_toggle};
 use dioxus::prelude::*;
 use std::str::FromStr;
 
-pub use crate::pages::events::{EventCard, EventsScreen};
+pub use crate::pages::events::{EventCard, EventDetailScreen, EventsScreen};
+pub use crate::pages::home::HomeScreen;
 pub use crate::pages::profile::ProfileScreen;
+pub use crate::pages::register::RegisterScreen;
 pub use crate::pages::shell::{Footer, NavbarScreen};
 
 #[derive(Routable, Clone, PartialEq, Debug)]
@@ -28,12 +33,17 @@ pub enum Route {
         ForgotPassword {},
         #[route("/events")]
         Events {},
+        #[route("/events/:id/register")]
+        EventRegister { id: String },
+        #[route("/events/:id/participants")]
+        EventParticipants { id: String },
         #[route("/events/:id")]
         EventDetail { id: String },
         #[route("/vvip")]
         Vvip {},
         #[route("/profile/registrations")]
         MyRegistrations {},
+        #[redirect("/dashboard", || Route::Profile {})]
         #[redirect("/complete-profile", || Route::Profile {})]
         #[route("/profile")]
         Profile {},
@@ -124,28 +134,6 @@ fn Shell() -> Element {
                 Outlet::<Route> {}
             }
             Footer {}
-        }
-    }
-}
-
-#[component]
-pub fn Home() -> Element {
-    let mut toggled = use_signal(|| false);
-
-    rsx! {
-        main { class: "min-h-screen bg-luxury-midnight-black text-luxury-platinum p-8",
-            h1 {
-                id: "scaffold-heading",
-                class: "font-luxury text-luxury-gold text-4xl mb-6",
-                "HeSocial"
-            }
-            button {
-                id: "toggle-btn",
-                class: "luxury-button",
-                r#type: "button",
-                onclick: move |_| toggled.set(next_toggled(toggled())),
-                "{toggle_label(toggled())}"
-            }
         }
     }
 }
@@ -479,11 +467,112 @@ pub fn LoginScreen(
 
 #[component]
 pub fn Register() -> Element {
+    let navigator = use_navigator();
+    let session = try_use_context::<Signal<Session>>();
+    let mut form = use_signal(RegisterForm::default);
+
     rsx! {
-        main {
-            id: "register-stub",
-            class: "min-h-screen bg-luxury-midnight-black text-luxury-platinum p-8",
-            h1 { "立即申請加入" }
+        RegisterScreen {
+            form: form(),
+            on_email: move |value: String| form.write().email = value,
+            on_password: move |value: String| form.write().password = value,
+            on_confirm_password: move |value: String| form.write().confirm_password = value,
+            on_first_name: move |value: String| form.write().first_name = value,
+            on_last_name: move |value: String| form.write().last_name = value,
+            on_age: move |value: String| form.write().age = value,
+            on_profession: move |value: String| form.write().profession = value,
+            on_annual_income: move |value: String| form.write().annual_income = value,
+            on_net_worth: move |value: String| form.write().net_worth = value,
+            on_membership_tier: move |value: String| form.write().membership_tier = value,
+            on_bio: move |value: String| form.write().bio = value,
+            on_new_interest: move |value: String| form.write().new_interest = value,
+            on_toggle_password: move |_| {
+                let show = form.peek().show_password;
+                form.write().show_password = !show;
+            },
+            on_toggle_confirm: move |_| {
+                let show = form.peek().show_confirm_password;
+                form.write().show_confirm_password = !show;
+            },
+            on_add_interest: move |_| {
+                let current = form.peek().interests.clone();
+                let raw = form.peek().new_interest.clone();
+                if let Some(next) = push_interest(&current, &raw) {
+                    let mut form = form.write();
+                    form.interests = next;
+                    form.new_interest.clear();
+                }
+            },
+            on_remove_interest: move |interest: String| {
+                let current = form.peek().interests.clone();
+                form.write().interests = remove_interest(&current, &interest);
+            },
+            on_prev: move |_| {
+                let step = form.peek().step;
+                if step > 1 {
+                    let mut form = form.write();
+                    form.step = step - 1;
+                    form.error = None;
+                }
+            },
+            on_next: move |_| {
+                let snapshot = form.peek().clone();
+                if snapshot.submitting {
+                    return;
+                }
+                match validate_step(&snapshot) {
+                    Err(message) => form.write().error = Some(message.to_string()),
+                    Ok(()) if snapshot.step < 3 => {
+                        let mut form = form.write();
+                        form.error = None;
+                        form.step = snapshot.step + 1;
+                    }
+                    Ok(()) => {
+                        form.write().submitting = true;
+                        form.write().error = None;
+                        spawn(async move {
+                            match register_account(&snapshot).await {
+                                Ok(ok) => {
+                                    store_token(&ok.token);
+                                    if let Some(mut session) = session {
+                                        session.set(Session {
+                                            token: Some(ok.token.clone()),
+                                            user: ok.user.clone(),
+                                            restoring: false,
+                                        });
+                                    }
+                                    navigator.push(Route::Profile {});
+                                }
+                                Err(message) => {
+                                    let mut form = form.write();
+                                    form.error = Some(message);
+                                    form.submitting = false;
+                                }
+                            }
+                        });
+                    }
+                }
+            },
+        }
+    }
+}
+
+#[component]
+pub fn EventRegister(id: String) -> Element {
+    rsx! {
+        StubPage {
+            id: "event-register-stub".to_string(),
+            title: format!("活動報名 {id}"),
+        }
+    }
+}
+
+#[component]
+pub fn EventParticipants(id: String) -> Element {
+    rsx! {
+        StubPage {
+            id: "event-participants-stub".to_string(),
+            title: format!("活動參與者 {id}"),
         }
     }
 }

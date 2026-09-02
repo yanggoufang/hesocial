@@ -9,12 +9,13 @@ a Rust presence state so the node stays mounted while it animates out). Round 5
 restores the session on boot (`GET /api/auth/validate`) so a stored token
 rehydrates `AuthSnapshot` (and `view_admin`) instead of leaving a token-only
 shell, and ports the read-only `/profile` view (`GET /api/auth/profile`).
-Profile editing (`PUT`, the form, interest chips) is not wired. Other
-application pages are not ported; `/`, `/register`, `/forgot-password`,
-`/profile/registrations`, `/events/:id`, `/vvip`, `/admin`, `/event-mgmt`,
-`/admin/sales`, and `/admin/system` exist as stubs so login links, the
-OAuth-callback regression, event-detail links, and the signed-in dropdown can
-be exercised.
+Round 6 ports the remaining public pages: `/` (landing), `/events/:id`
+(`GET /api/events/{id}`), and `/register` (`POST /api/auth/register`).
+`/forgot-password` is still a stub — the React app only links there from
+`/login` and has no route or page. Profile editing (`PUT`, the form, interest
+chips) is not wired. `/profile/registrations`, `/events/:id/register`,
+`/events/:id/participants`, `/vvip`, `/admin`, `/event-mgmt`, `/admin/sales`,
+and `/admin/system` remain stubs.
 
 Pinned crate versions are in `Cargo.toml` / `Cargo.lock`.
 
@@ -26,7 +27,7 @@ Pinned crate versions are in `Cargo.toml` / `Cargo.lock`.
 | `thirtyfour` | **0.37.5** | W3C WebDriver client with `WebDriver::managed()`: downloads a matching chromedriver, spawns it, and tears it down on `quit()`. Chosen over `fantoccini` for that lifecycle and Chrome capability helpers (`set_headless`, `set_no_sandbox`). Requires rustc **1.88+**. |
 | `wasm-bindgen-test` | **0.3.77** | Matches installed `wasm-bindgen` 0.2.127. |
 | `tiny_http` | **0.12.0** | In-test static file server. No long-lived `dx serve`. |
-| `gloo-net` | **0.6** | Wasm-only `fetch` for `POST /api/auth/login`, `GET /api/auth/validate`, `GET /api/auth/profile`, and `GET /api/events`. |
+| `gloo-net` | **0.6** | Wasm-only `fetch` for `POST /api/auth/login`, `POST /api/auth/register`, `GET /api/auth/validate`, `GET /api/auth/profile`, `GET /api/events`, and `GET /api/events/{id}`. |
 | `serde` / `serde_json` | **1** | Login and events request/response JSON. |
 | `web-sys` | **0.3** | Wasm `window.location` + `localStorage`. |
 | `js-sys` | **0.3** | Wasm-only `Date` for `zh-TW` event timestamps. |
@@ -118,8 +119,10 @@ exact-path nav highlighting, session entries for signed-out / signed-in /
 admin, the `viewAdmin` gate (`admin` | `super_admin`), dropdown
 presence (mounted through exit), `GET /api/auth/validate` parsing, the
 logout-on-any-validate-failure rule, `AuthSnapshot` restore from the
-server role, null-field profile rendering (Google sign-ups), and the
-`UserRoute` guard's `/login` fallback.
+server role, null-field profile rendering (Google sign-ups), the
+`UserRoute` guard's `/login` fallback, `GET /api/events/{id}` parse
+(including 404 and JSON-encoded D1 columns), dress-code/occupancy helpers,
+and the three-step register validators plus `POST /api/auth/register` parse.
 No browser, no wasm.
 
 ### 2. Component (`wasm-bindgen-test`)
@@ -130,14 +133,16 @@ cargo test --target wasm32-unknown-unknown --test wasm
 ```
 
 Uses the runner set in `.cargo/config.toml`. Renders `Home`, `/login`,
-`/events`, and `/profile` through `VirtualDom` + `dioxus-ssr` inside Node via
-`wasm-bindgen-test-runner`. Asserts Traditional Chinese copy, password
-masking, LinkedIn permanently disabled, submit disabled while in flight,
-events loading/empty states, card fields, exclusivity badge/star/diamond
-selection (including `exclusivityLevel: null`), signed-out vs signed-in vs
-admin navbar markup, dropdown open/closed/exiting, mobile Menu/X toggle,
-footer copy, a complete profile, a Google user with null financials, and
-signed-out `/profile` redirecting toward `/login`.
+`/events`, `/events/:id`, `/register`, and `/profile` through `VirtualDom` +
+`dioxus-ssr` inside Node via `wasm-bindgen-test-runner`. Asserts Traditional
+Chinese copy, password masking, LinkedIn permanently disabled, submit
+disabled while in flight, events loading/empty states, card fields,
+exclusivity badge/star/diamond selection (including `exclusivityLevel: null`),
+signed-out vs signed-in vs admin navbar markup, dropdown open/closed/exiting,
+mobile Menu/X toggle, footer copy, a complete profile, a Google user with
+null financials, signed-out `/profile` redirecting toward `/login`, the
+landing-page CTAs, event-detail loading/not-found/guest-vs-member CTAs, and
+register step-1/step-3 validation and in-flight disable.
 
 ### 3. WebDriver E2E (`thirtyfour`)
 
@@ -153,9 +158,10 @@ cargo test --test e2e -- --nocapture
 2. Bind `tiny_http` on `127.0.0.1:0`. The **thread owns the `Server`**. A
    An `AtomicBool` stop flag plus `recv_timeout(50ms)` lets `shutdown()` join
    the thread; the listener is then gone (proven by `harness_starts_and_stops_twice`).
-   `/api/auth/login`, `/api/auth/google`, `GET /api/auth/validate`,
-   `GET /api/auth/profile`, and `GET /api/events` are stubbed
-   in-process — the test never calls a real backend.
+   `/api/auth/login`, `/api/auth/register`, `/api/auth/google`,
+   `GET /api/auth/validate`, `GET /api/auth/profile`, `GET /api/events`,
+   and `GET /api/events/{id}` are stubbed in-process — the test never
+   calls a real backend.
 3. `WebDriver::managed(chrome)` downloads a matching chromedriver, spawns it,
    and launches headless Chrome (`--headless`, `--no-sandbox`, `--disable-gpu`,
    `--disable-dev-shm-usage`).
@@ -169,7 +175,8 @@ cargo test --test e2e -- --nocapture
    entries only for `role: admin`, logout back to the signed-out shell,
    a stored admin token plus a valid validate response restoring
    `view_admin`, a 401 validate clearing the token onto the signed-out
-   shell, and signed-out `/profile` redirecting to `/login`.
+   shell, signed-out `/profile` redirecting to `/login`, and list→detail
+   navigation from an event card to `GET /api/events/{id}`.
 5. `driver.quit()` closes the browser and chromedriver. `StaticHarness::shutdown`
    joins the HTTP thread. Nothing is left running.
 
@@ -186,17 +193,20 @@ frontend-rust/
   tailwind.css        # Tailwind v3 input + luxury classes + hs-enter keyframes
   assets/tailwind.css # generated; gitignored — do not commit
   src/auth.rs         # login parse, token key, OAuth claim-before-redirect, validate restore
-  src/events.rs       # query string, parse, badge/price/image helpers, GET
+  src/events.rs       # list + GET /api/events/{id} parse, dress-code/occupancy helpers
   src/icons.rs        # Lucide SVG Icon enum (add a variant to scale)
   src/logic.rs        # pure toggle helpers
   src/permissions.rs  # AuthSnapshot + Can flags + UserRoute guard
   src/profile.rs      # profile parse, null-field display, GET /api/auth/profile
+  src/register.rs     # 3-step validation, wan→amount, POST /api/auth/register parse
   src/shell.rs        # nav items, active-path, session entries, Presence
-  src/pages.rs        # page modules; Events is the first extracted page
-  src/pages/events.rs # Events container + EventsScreen + EventCard
+  src/pages.rs        # page modules
+  src/pages/home.rs   # landing Home + HomeScreen
+  src/pages/events.rs # Events list + EventDetail container/screen + EventCard
+  src/pages/register.rs # RegisterScreen (container lives in ui.rs to own Route)
   src/pages/profile.rs # read-only ProfileScreen (no edit form)
   src/pages/shell.rs  # NavbarScreen + Footer
-  src/ui.rs           # Route + App + Shell layout + Login + remaining stubs
+  src/ui.rs           # Route + App + Shell layout + Login + Register + remaining stubs
   src/main.rs         # claim_oauth_token_on_boot(); dioxus::launch(App)
   tests/logic.rs
   tests/wasm.rs

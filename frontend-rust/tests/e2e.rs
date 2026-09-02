@@ -191,6 +191,47 @@ fn start_static_server(root: PathBuf) -> StaticHarness {
                 continue;
             }
 
+            if let Some(id) = path_only.strip_prefix("/api/events/") {
+                if !id.is_empty() && !id.contains('/') && *request.method() == Method::Get {
+                    let (status, payload) = stub_event_detail_payload(id);
+                    let header = Header::from_bytes(b"Content-Type", b"application/json")
+                        .expect("json content-type");
+                    let _ = request.respond(
+                        Response::from_string(payload)
+                            .with_status_code(StatusCode::from(status))
+                            .with_header(header),
+                    );
+                    continue;
+                }
+            }
+
+            if path_only == "/api/auth/register" && *request.method() == Method::Post {
+                let mut body = String::new();
+                let _ = request.as_reader().read_to_string(&mut body);
+                let parsed: serde_json::Value =
+                    serde_json::from_str(&body).unwrap_or(serde_json::Value::Null);
+                let email = parsed.get("email").and_then(|v| v.as_str()).unwrap_or("");
+                let (status, payload) = if email == "taken@example.com" {
+                    (
+                        400,
+                        r#"{"success":false,"error":"User with this email already exists"}"#,
+                    )
+                } else {
+                    (
+                        201,
+                        r#"{"success":true,"data":{"token":"e2e-register-token","user":{"id":"2","email":"new@example.com","role":"user"}}}"#,
+                    )
+                };
+                let header = Header::from_bytes(b"Content-Type", b"application/json")
+                    .expect("json content-type");
+                let _ = request.respond(
+                    Response::from_string(payload)
+                        .with_status_code(StatusCode::from(status))
+                        .with_header(header),
+                );
+                continue;
+            }
+
             if path_only == "/api/auth/google" {
                 let header = Header::from_bytes(b"Content-Type", b"text/html; charset=utf-8")
                     .expect("html content-type");
@@ -364,7 +405,10 @@ fn stub_validate_payload(token: Option<&str>) -> (u16, String) {
 
 fn stub_profile_payload(token: Option<&str>) -> (u16, String) {
     match stub_user_json(token) {
-        Some(user) => (200, format!(r#"{{"success":true,"data":{{"user":{user}}}}}"#)),
+        Some(user) => (
+            200,
+            format!(r#"{{"success":true,"data":{{"user":{user}}}}}"#),
+        ),
         None => (
             401,
             r#"{"success":false,"error":"Access token required"}"#.to_string(),
@@ -805,7 +849,12 @@ async fn element_class(driver: &WebDriver, id: &str) -> WebDriverResult<String> 
     Ok(el.attr("class").await?.unwrap_or_default())
 }
 
-async fn login_as(driver: &WebDriver, url: &str, email: &str, password: &str) -> WebDriverResult<()> {
+async fn login_as(
+    driver: &WebDriver,
+    url: &str,
+    email: &str,
+    password: &str,
+) -> WebDriverResult<()> {
     driver.goto(&format!("{url}login")).await?;
     wait_present(driver, "email").await?;
     driver.find(By::Id("email")).await?.send_keys(email).await?;
@@ -929,7 +978,11 @@ async fn mobile_toggle_opens_and_closes_panel() -> WebDriverResult<()> {
             "open mobile panel must use enter class, class={class}"
         );
         tokio::time::sleep(Duration::from_millis(400)).await;
-        let panel = driver.find(By::Id("nav-mobile-panel")).await?.text().await?;
+        let panel = driver
+            .find(By::Id("nav-mobile-panel"))
+            .await?
+            .text()
+            .await?;
         for needle in ["首頁", "精選活動", "VVIP專區", "登入", "註冊"] {
             assert!(panel.contains(needle), "missing {needle:?} in {panel:?}");
         }
@@ -966,7 +1019,11 @@ async fn mobile_toggle_opens_and_closes_panel() -> WebDriverResult<()> {
 async fn admin_dropdown_shows_admin_entries_only_for_admin() -> WebDriverResult<()> {
     with_browser(|driver, url| async move {
         login_as(&driver, &url, "admin@example.com", "secret").await?;
-        driver.find(By::Id("nav-user-button")).await?.click().await?;
+        driver
+            .find(By::Id("nav-user-button"))
+            .await?
+            .click()
+            .await?;
         wait_present(&driver, "nav-admin").await?;
         wait_present(&driver, "nav-event-mgmt").await?;
         wait_present(&driver, "nav-sales").await?;
@@ -986,7 +1043,11 @@ async fn logout_clears_token_and_returns_signed_out_shell() -> WebDriverResult<(
         login_as(&driver, &url, "ok@example.com", "secret").await?;
         let token = local_storage_get(&driver, "hesocial_token").await?;
         assert_eq!(token.as_deref(), Some("e2e-login-token"));
-        driver.find(By::Id("nav-user-button")).await?.click().await?;
+        driver
+            .find(By::Id("nav-user-button"))
+            .await?
+            .click()
+            .await?;
         wait_present(&driver, "nav-logout").await?;
         driver.find(By::Id("nav-logout")).await?.click().await?;
         wait_present(&driver, "nav-login").await?;
@@ -1013,11 +1074,18 @@ async fn hard_reload_with_admin_token_restores_user_and_admin_entry() -> WebDriv
     with_browser(|driver, url| async move {
         seed_token(&driver, &url, "e2e-admin-token").await?;
         wait_present(&driver, "nav-user-button").await?;
-        driver.find(By::Id("nav-user-button")).await?.click().await?;
+        driver
+            .find(By::Id("nav-user-button"))
+            .await?
+            .click()
+            .await?;
         wait_present(&driver, "nav-admin").await?;
         wait_present(&driver, "nav-event-mgmt").await?;
         let menu = driver.find(By::Id("nav-user-menu")).await?.text().await?;
-        assert!(menu.contains("管理後台"), "restored admin must reveal admin entry, menu={menu:?}");
+        assert!(
+            menu.contains("管理後台"),
+            "restored admin must reveal admin entry, menu={menu:?}"
+        );
         let token = local_storage_get(&driver, "hesocial_token").await?;
         assert_eq!(token.as_deref(), Some("e2e-admin-token"));
         Ok(())
@@ -1026,7 +1094,8 @@ async fn hard_reload_with_admin_token_restores_user_and_admin_entry() -> WebDriv
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn hard_reload_with_invalid_token_clears_session_and_signed_out_shell() -> WebDriverResult<()> {
+async fn hard_reload_with_invalid_token_clears_session_and_signed_out_shell() -> WebDriverResult<()>
+{
     with_browser(|driver, url| async move {
         seed_token(&driver, &url, "expired-token").await?;
         wait_present(&driver, "nav-login").await?;
@@ -1059,10 +1128,75 @@ async fn signed_out_profile_redirects_to_login() -> WebDriverResult<()> {
             tokio::time::sleep(Duration::from_millis(150)).await;
         };
         wait_text(&driver, "login-heading", "歡迎回來").await?;
+        assert!(last.contains("/login"), "must land on login, url={last}");
+        Ok(())
+    })
+    .await
+}
+
+fn stub_event_detail_payload(id: &str) -> (u16, String) {
+    if id == "11" {
+        (
+            200,
+            r#"{
+                "success": true,
+                "data": {
+                    "id": 11,
+                    "name": "松露季私宴",
+                    "description": "白松露當季，主廚八道式無菜單。",
+                    "dateTime": "2026-10-04T12:00:00.000Z",
+                    "registrationDeadline": "2026-09-20T12:00:00.000Z",
+                    "venue": {
+                        "name": "Taipei Private Dining Room",
+                        "address": "Da'an",
+                        "rating": 5,
+                        "amenities": ["Valet"]
+                    },
+                    "exclusivityLevel": "VVIP",
+                    "pricing": {"vip": 15000, "vvip": 18000, "currency": "TWD"},
+                    "currentAttendees": 3,
+                    "capacity": 12,
+                    "images": ["https://media.example/e11.webp"],
+                    "organizer": "Wei Chen",
+                    "tags": ["晚宴"],
+                    "dressCode": 4,
+                    "amenities": ["專車接送"],
+                    "privacyGuarantees": ["匿名參與"],
+                    "requirements": [{"description": "需通過身份審核"}]
+                }
+            }"#
+            .to_string(),
+        )
+    } else {
+        (
+            404,
+            r#"{"success":false,"error":"Event not found"}"#.to_string(),
+        )
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn events_list_navigates_to_event_detail() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        driver.goto(&format!("{url}events")).await?;
+        wait_present(&driver, "event-card-11").await?;
+        driver
+            .find(By::Css("#event-card-11 a[href='/events/11']"))
+            .await?
+            .click()
+            .await?;
+        wait_text(&driver, "event-detail-heading", "松露季私宴").await?;
+        let current = driver.current_url().await?.to_string();
         assert!(
-            last.contains("/login"),
-            "must land on login, url={last}"
+            current.contains("/events/11"),
+            "expected detail URL, got {current}"
         );
+        let body = driver.find(By::Tag("body")).await?.text().await?;
+        assert!(
+            body.contains("主辦：Wei Chen"),
+            "organizer missing in {body:?}"
+        );
+        assert!(body.contains("登入後報名"), "guest CTA missing in {body:?}");
         Ok(())
     })
     .await

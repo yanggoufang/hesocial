@@ -218,6 +218,148 @@ pub fn format_event_datetime(iso: &str) -> String {
     iso.to_string()
 }
 
+pub const EVENT_DETAIL_API_PATH: &str = "/api/events";
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct EventDetail {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub date_time: String,
+    pub registration_deadline: String,
+    pub venue_name: String,
+    pub venue_address: String,
+    pub venue_rating: f64,
+    pub venue_amenities: Vec<String>,
+    pub exclusivity_level: Option<String>,
+    pub pricing: Pricing,
+    pub current_attendees: u32,
+    pub capacity: u32,
+    pub images: Vec<String>,
+    pub organizer: String,
+    pub tags: Vec<String>,
+    pub dress_code: i32,
+    pub amenities: Vec<String>,
+    pub privacy_guarantees: Vec<String>,
+    pub requirements: Vec<String>,
+}
+
+pub fn dress_code_text(level: i32) -> &'static str {
+    match level {
+        1 => "休閒",
+        2 => "商務休閒",
+        3 => "正式",
+        4 => "晚宴正裝",
+        5 => "黑領結/長禮服",
+        _ => "未指定",
+    }
+}
+
+pub fn detail_exclusivity_color(level: Option<&str>) -> &'static str {
+    match level {
+        Some("VIP") => "bg-blue-500/20 text-blue-400 border-blue-500/30",
+        Some("VVIP") => "bg-luxury-gold/20 text-luxury-gold border-luxury-gold/30",
+        Some("Invitation Only") => "bg-purple-500/20 text-purple-400 border-purple-500/30",
+        _ => "bg-gray-500/20 text-gray-400 border-gray-500/30",
+    }
+}
+
+pub fn occupancy_percent(current: u32, capacity: u32) -> u32 {
+    if capacity == 0 {
+        0
+    } else {
+        ((current as u64 * 100) / capacity as u64) as u32
+    }
+}
+
+pub fn spots_remaining(current: u32, capacity: u32) -> u32 {
+    capacity.saturating_sub(current)
+}
+
+pub fn is_full(current: u32, capacity: u32) -> bool {
+    current >= capacity
+}
+
+pub fn venue_star_count(rating: f64) -> u32 {
+    if rating.is_nan() || rating <= 0.0 {
+        0
+    } else {
+        rating.trunc() as u32
+    }
+}
+
+pub fn price_kind_label(vvip: Option<f64>, _vip: Option<f64>) -> &'static str {
+    if js_truthy_amount(vvip).is_some() {
+        "VVIP 價格"
+    } else {
+        "VIP 價格"
+    }
+}
+
+pub fn gallery_image<'a>(images: &'a [String], index: usize) -> &'a str {
+    images
+        .get(index)
+        .map(String::as_str)
+        .filter(|url| !url.is_empty())
+        .unwrap_or(PLACEHOLDER_IMAGE)
+}
+
+pub fn wrap_image_index(index: i32, len: usize) -> usize {
+    if len == 0 {
+        return 0;
+    }
+    let len = len as i32;
+    ((index % len) + len) as usize % len as usize
+}
+
+pub fn format_event_date(iso: &str) -> String {
+    #[cfg(target_arch = "wasm32")]
+    {
+        return format_event_date_js(iso);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    iso.to_string()
+}
+
+pub fn format_event_time(iso: &str) -> String {
+    #[cfg(target_arch = "wasm32")]
+    {
+        return format_event_time_js(iso);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    iso.to_string()
+}
+
+pub fn parse_event_detail_response(status: u16, body: &str) -> Option<EventDetail> {
+    if !(200..300).contains(&status) {
+        return None;
+    }
+    let value: Value = serde_json::from_str(body).ok()?;
+    if value.get("success").and_then(Value::as_bool) != Some(true) {
+        return None;
+    }
+    parse_event_detail(value.get("data")?)
+}
+
+pub async fn fetch_event_detail(id: &str) -> Option<EventDetail> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let url = format!("{EVENT_DETAIL_API_PATH}/{id}");
+        let response = match gloo_net::http::Request::get(&url).send().await {
+            Ok(response) => response,
+            Err(_) => return None,
+        };
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        return parse_event_detail_response(status, &body);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let _ = id;
+        None
+    }
+}
+
 pub async fn fetch_events(filters: &EventFilters) -> EventsView {
     #[cfg(target_arch = "wasm32")]
     {
@@ -234,6 +376,31 @@ pub async fn fetch_events(filters: &EventFilters) -> EventsView {
     }
     #[cfg(not(target_arch = "wasm32"))]
     empty_view(filters)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn format_event_date_js(iso: &str) -> String {
+    use wasm_bindgen::JsValue;
+    let date = js_sys::Date::new(&JsValue::from_str(iso));
+    if date.get_time().is_nan() {
+        return iso.to_string();
+    }
+    let date_opts = js_sys::Object::new();
+    let _ = js_sys::Reflect::set(&date_opts, &"year".into(), &"numeric".into());
+    let _ = js_sys::Reflect::set(&date_opts, &"month".into(), &"long".into());
+    let _ = js_sys::Reflect::set(&date_opts, &"day".into(), &"numeric".into());
+    let _ = js_sys::Reflect::set(&date_opts, &"weekday".into(), &"long".into());
+    date.to_locale_date_string("zh-TW", &date_opts).into()
+}
+
+#[cfg(target_arch = "wasm32")]
+fn format_event_time_js(iso: &str) -> String {
+    use wasm_bindgen::JsValue;
+    let date = js_sys::Date::new(&JsValue::from_str(iso));
+    if date.get_time().is_nan() {
+        return iso.to_string();
+    }
+    format!("{:02}:{:02}", date.get_hours(), date.get_minutes())
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -257,6 +424,65 @@ fn empty_view(filters: &EventFilters) -> EventsView {
     EventsView {
         events: Vec::new(),
         pagination: collapse_on_error(filters.page, filters.limit),
+    }
+}
+
+fn parse_event_detail(value: &Value) -> Option<EventDetail> {
+    let event = parse_event(value)?;
+    let venue = value.get("venue").and_then(parse_venue).unwrap_or_default();
+    Some(EventDetail {
+        id: event.id,
+        name: event.name,
+        description: event.description,
+        date_time: event.date_time,
+        registration_deadline: json_string(value.get("registrationDeadline"))
+            .or_else(|| json_string(value.get("registration_deadline")))
+            .unwrap_or_default(),
+        venue_name: venue.name,
+        venue_address: venue.address,
+        venue_rating: venue.rating,
+        venue_amenities: parse_string_list(value.get("venue").and_then(|v| v.get("amenities"))),
+        exclusivity_level: event.exclusivity_level,
+        pricing: event.pricing,
+        current_attendees: event.current_attendees,
+        capacity: event.capacity,
+        images: event
+            .images
+            .unwrap_or_else(|| parse_string_list(value.get("images"))),
+        organizer: json_string(value.get("organizer")).unwrap_or_default(),
+        tags: parse_string_list(value.get("tags")),
+        dress_code: json_i32(value.get("dressCode")).unwrap_or(0),
+        amenities: parse_string_list(value.get("amenities")),
+        privacy_guarantees: parse_string_list(value.get("privacyGuarantees")),
+        requirements: parse_string_list(value.get("requirements")),
+    })
+}
+
+fn parse_string_list(value: Option<&Value>) -> Vec<String> {
+    let Some(value) = value else {
+        return Vec::new();
+    };
+    match value {
+        Value::Null => Vec::new(),
+        Value::Array(items) => items.iter().filter_map(parse_list_item).collect(),
+        Value::String(text) => {
+            if text.is_empty() {
+                Vec::new()
+            } else if let Ok(parsed) = serde_json::from_str::<Value>(text) {
+                parse_string_list(Some(&parsed))
+            } else {
+                vec![text.clone()]
+            }
+        }
+        _ => Vec::new(),
+    }
+}
+
+fn parse_list_item(value: &Value) -> Option<String> {
+    match value {
+        Value::String(text) if !text.is_empty() => Some(text.clone()),
+        Value::Object(_) => json_string(value.get("description")).filter(|s| !s.is_empty()),
+        _ => None,
     }
 }
 
@@ -327,6 +553,14 @@ fn json_id(value: Option<&Value>) -> Option<String> {
 fn json_string(value: Option<&Value>) -> Option<String> {
     match value? {
         Value::String(s) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn json_i32(value: Option<&Value>) -> Option<i32> {
+    match value? {
+        Value::Number(n) => n.as_i64().map(|v| v as i32),
+        Value::String(s) => s.parse().ok(),
         _ => None,
     }
 }

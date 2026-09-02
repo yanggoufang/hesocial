@@ -354,5 +354,3 @@ fn FooterLink(label: &'static str) -> Element {
         }
     }
 }
-
-

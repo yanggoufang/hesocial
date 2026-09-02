@@ -103,8 +103,16 @@ pub fn permissions(snapshot: &AuthSnapshot) -> Can {
     let role_level = snapshot.role.map(Role::level).unwrap_or(0);
     let is_admin = role_level >= 2;
     let is_super_admin = role_level >= 3;
-    let is_diamond = snapshot.membership_tier.map(MembershipTier::level).unwrap_or(0) >= 2;
-    let is_black_card = snapshot.membership_tier.map(MembershipTier::level).unwrap_or(0) >= 3;
+    let is_diamond = snapshot
+        .membership_tier
+        .map(MembershipTier::level)
+        .unwrap_or(0)
+        >= 2;
+    let is_black_card = snapshot
+        .membership_tier
+        .map(MembershipTier::level)
+        .unwrap_or(0)
+        >= 3;
     let is_verified = snapshot.is_verified;
 
     Can {
@@ -188,13 +196,23 @@ impl Session {
 impl AuthUser {
     pub fn from_json(value: &serde_json::Value) -> Self {
         Self {
-            id: value
-                .get("id")
-                .and_then(|v| v.as_str().map(str::to_string).or_else(|| v.as_i64().map(|n| n.to_string()))),
-            email: value.get("email").and_then(|v| v.as_str()).map(str::to_string),
+            id: value.get("id").and_then(|v| {
+                v.as_str()
+                    .map(str::to_string)
+                    .or_else(|| v.as_i64().map(|n| n.to_string()))
+            }),
+            email: value
+                .get("email")
+                .and_then(|v| v.as_str())
+                .map(str::to_string),
             role: Role::parse(value.get("role").and_then(|v| v.as_str())),
-            membership_tier: MembershipTier::parse(value.get("membershipTier").and_then(|v| v.as_str())),
-            is_verified: value.get("isVerified").and_then(|v| v.as_bool()).unwrap_or(false),
+            membership_tier: MembershipTier::parse(
+                value.get("membershipTier").and_then(|v| v.as_str()),
+            ),
+            is_verified: value
+                .get("isVerified")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
             verification_status: VerificationStatus::parse(
                 value.get("verificationStatus").and_then(|v| v.as_str()),
             ),

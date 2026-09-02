@@ -5,11 +5,13 @@ use std::rc::Rc;
 use dioxus::history::{History, MemoryHistory};
 use dioxus::prelude::*;
 use dioxus::router::components::HistoryProvider;
-use hesocial_frontend::events::{Event, Pagination, Pricing, Venue};
+use hesocial_frontend::events::{Event, EventDetail, Pagination, Pricing, Venue};
 use hesocial_frontend::profile::ProfileUser;
+use hesocial_frontend::register::{REGISTER_PASSWORD_MISMATCH, RegisterForm};
 use hesocial_frontend::shell::Presence;
 use hesocial_frontend::ui::{
-    EventCard, EventsScreen, Footer, LoginScreen, NavbarScreen, ProfileScreen, Route,
+    EventCard, EventDetailScreen, EventsScreen, Footer, HomeScreen, LoginScreen, NavbarScreen,
+    ProfileScreen, RegisterScreen, Route,
 };
 use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -184,12 +186,7 @@ fn render_card(event: Event) -> String {
 }
 
 #[component]
-fn ScreenAt(
-    events: Vec<Event>,
-    loading: bool,
-    page: u32,
-    total_pages: u32,
-) -> Element {
+fn ScreenAt(events: Vec<Event>, loading: bool, page: u32, total_pages: u32) -> Element {
     let total = if events.is_empty() { 0 } else { 12 };
     rsx! {
         EventsScreen {
@@ -293,7 +290,10 @@ fn event_card_renders_fields_and_placeholder_rules() {
 fn null_exclusivity_renders_empty_gray_badge_without_stars() {
     let html = render_card(sample_event());
     let badge = opening_tag(&html, "event-badge-11");
-    assert!(!badge.is_empty(), "null exclusivity still renders the span: {html}");
+    assert!(
+        !badge.is_empty(),
+        "null exclusivity still renders the span: {html}"
+    );
     assert!(
         badge.contains("bg-gray-500/20") && badge.contains("text-gray-400"),
         "null level must use the default gray classes, tag={badge}"
@@ -439,7 +439,10 @@ fn signed_in_shell_shows_avatar_and_hides_login_register() {
         html.contains("id=\"nav-user-button\""),
         "avatar missing: {html}"
     );
-    assert!(html.contains("data-icon=\"user\""), "user icon missing: {html}");
+    assert!(
+        html.contains("data-icon=\"user\""),
+        "user icon missing: {html}"
+    );
     assert!(
         !html.contains("id=\"nav-login\""),
         "登入 must not render signed in: {html}"
@@ -452,7 +455,10 @@ fn signed_in_shell_shows_avatar_and_hides_login_register() {
         !html.contains("id=\"nav-user-menu\""),
         "dropdown starts closed: {html}"
     );
-    assert!(!html.contains("管理後台"), "non-admin must not see admin: {html}");
+    assert!(
+        !html.contains("管理後台"),
+        "non-admin must not see admin: {html}"
+    );
     let events = opening_tag(&html, "nav-item-events");
     assert!(
         events.contains("text-luxury-gold") && events.contains("bg-luxury-gold/10"),
@@ -463,7 +469,10 @@ fn signed_in_shell_shows_avatar_and_hides_login_register() {
 #[wasm_bindgen_test]
 fn signed_in_dropdown_open_lists_user_links_without_admin() {
     let html = render_nav("/", true, false, Presence::Entering, Presence::Hidden);
-    assert!(html.contains("id=\"nav-user-menu\""), "dropdown missing: {html}");
+    assert!(
+        html.contains("id=\"nav-user-menu\""),
+        "dropdown missing: {html}"
+    );
     assert!(
         html.contains("hs-dropdown-enter"),
         "open dropdown must use the enter class: {html}"
@@ -485,7 +494,10 @@ fn signed_in_dropdown_open_lists_user_links_without_admin() {
             "expected {needle:?} in open dropdown, got: {html}"
         );
     }
-    assert!(!html.contains("id=\"nav-admin\""), "admin missing for user: {html}");
+    assert!(
+        !html.contains("id=\"nav-admin\""),
+        "admin missing for user: {html}"
+    );
 }
 
 #[wasm_bindgen_test]
@@ -520,7 +532,10 @@ fn admin_dropdown_renders_admin_entries() {
 fn dropdown_exit_stays_mounted_with_exit_class() {
     let html = render_nav("/", true, false, Presence::Exiting, Presence::Hidden);
     let menu = opening_tag(&html, "nav-user-menu");
-    assert!(!menu.is_empty(), "exiting dropdown must stay mounted: {html}");
+    assert!(
+        !menu.is_empty(),
+        "exiting dropdown must stay mounted: {html}"
+    );
     assert!(
         menu.contains("hs-dropdown-exit"),
         "exiting dropdown must keep the exit class, tag={menu}"
@@ -543,9 +558,18 @@ fn mobile_toggle_swaps_menu_and_x_and_mounts_panel() {
     );
 
     let open = render_nav("/", false, false, Presence::Hidden, Presence::Entering);
-    assert!(open.contains("id=\"nav-mobile-panel\""), "panel missing: {open}");
-    assert!(open.contains("hs-mobile-enter"), "mobile enter class missing: {open}");
-    assert!(open.contains("data-icon=\"x\""), "open toggle must show X: {open}");
+    assert!(
+        open.contains("id=\"nav-mobile-panel\""),
+        "panel missing: {open}"
+    );
+    assert!(
+        open.contains("hs-mobile-enter"),
+        "mobile enter class missing: {open}"
+    );
+    assert!(
+        open.contains("data-icon=\"x\""),
+        "open toggle must show X: {open}"
+    );
     assert!(
         opening_tag(&open, "nav-mobile-panel").contains("href=\"/vvip\"")
             || open.contains("VVIP專區"),
@@ -694,7 +718,10 @@ fn profile_renders_complete_user() {
         !html.contains("編輯個人資料"),
         "edit controls are next round: {html}"
     );
-    assert!(!html.contains("name=\"firstName\""), "must not wire the edit form: {html}");
+    assert!(
+        !html.contains("name=\"firstName\""),
+        "must not wire the edit form: {html}"
+    );
 }
 
 #[wasm_bindgen_test]
@@ -703,16 +730,31 @@ fn profile_renders_google_user_with_null_financials() {
     assert!(html.contains("Ada Li"), "name missing: {html}");
     assert!(html.contains("google@example.com"), "email missing: {html}");
     assert!(html.contains("Platinum 會員"), "tier missing: {html}");
-    assert!(html.contains(" 歲"), "null age must still render React's 歲 suffix: {html}");
-    assert!(!html.contains("null"), "must not stringify JSON null: {html}");
+    assert!(
+        html.contains(" 歲"),
+        "null age must still render React's 歲 suffix: {html}"
+    );
+    assert!(
+        !html.contains("null"),
+        "must not stringify JSON null: {html}"
+    );
     assert!(
         html.contains("/api/placeholder/150/150"),
         "null picture falls back to placeholder: {html}"
     );
     assert!(html.contains("Level 3"), "privacy missing: {html}");
-    assert!(html.contains("參與精選社交活動"), "platinum benefits missing: {html}");
-    assert!(!html.contains("8000000"), "annualIncome must not render: {html}");
-    assert!(!html.contains("50000000"), "netWorth must not render: {html}");
+    assert!(
+        html.contains("參與精選社交活動"),
+        "platinum benefits missing: {html}"
+    );
+    assert!(
+        !html.contains("8000000"),
+        "annualIncome must not render: {html}"
+    );
+    assert!(
+        !html.contains("50000000"),
+        "netWorth must not render: {html}"
+    );
 }
 
 #[wasm_bindgen_test]
@@ -725,5 +767,305 @@ fn signed_out_profile_redirects_to_login() {
     assert!(
         !html.contains("id=\"profile-heading\"") || html.contains("歡迎回來"),
         "signed-out visitor must not see the profile body: {html}"
+    );
+}
+
+#[component]
+fn HomeAt() -> Element {
+    rsx! { HomeScreen { toggled: false } }
+}
+
+fn render_home_screen() -> String {
+    let mut vdom = VirtualDom::new(HomeAt);
+    vdom.rebuild_in_place();
+    dioxus_ssr::render(&vdom)
+}
+
+#[wasm_bindgen_test]
+fn home_landing_renders_react_copy_and_ctas() {
+    let html = render_home_screen();
+    for needle in [
+        "id=\"scaffold-heading\"",
+        "HeSocial",
+        "專為高淨值人士打造的頂級社交平台",
+        "在奢華環境中遇見志同道合的菁英",
+        "申請加入",
+        "探索活動",
+        "href=\"/register\"",
+        "href=\"/events\"",
+        "為什麼選擇 HeSocial",
+        "頂級會員制",
+        "隱私保障",
+        "AI智能配對",
+        "獨家活動",
+        "會員方案",
+        "Platinum",
+        "Diamond",
+        "Black Card",
+        "最受歡迎",
+        "NT$50,000",
+        "NT$120,000",
+        "邀請制",
+        "準備開始您的尊榮社交之旅？",
+        "立即申請加入",
+        "id=\"toggle-btn\"",
+        "data-icon=\"crown\"",
+        "data-icon=\"arrow-right\"",
+    ] {
+        assert!(
+            html.contains(needle),
+            "expected {needle:?} in home markup, got: {html}"
+        );
+    }
+}
+
+fn sample_detail() -> EventDetail {
+    EventDetail {
+        id: "11".into(),
+        name: "松露季私宴".into(),
+        description: "白松露當季，主廚八道式無菜單。".into(),
+        date_time: "2026-10-04T12:00:00.000Z".into(),
+        registration_deadline: "2026-09-20T12:00:00.000Z".into(),
+        venue_name: "Taipei Private Dining Room".into(),
+        venue_address: "Da'an".into(),
+        venue_rating: 5.0,
+        venue_amenities: vec!["Valet".into()],
+        exclusivity_level: Some("VVIP".into()),
+        pricing: Pricing {
+            vvip: Some(18000.0),
+            vip: Some(15000.0),
+            currency: "TWD".into(),
+        },
+        current_attendees: 3,
+        capacity: 12,
+        images: vec![
+            "https://media.example/e11.webp".into(),
+            "https://media.example/e11b.webp".into(),
+        ],
+        organizer: "Wei Chen".into(),
+        tags: vec!["晚宴".into()],
+        dress_code: 4,
+        amenities: vec!["專車接送".into()],
+        privacy_guarantees: vec!["匿名參與".into()],
+        requirements: vec!["需通過身份審核".into()],
+    }
+}
+
+#[component]
+fn DetailAt(loading: bool, event: Option<EventDetail>, is_authenticated: bool) -> Element {
+    rsx! {
+        EventDetailScreen {
+            loading,
+            event,
+            image_index: 0,
+            is_authenticated,
+        }
+    }
+}
+
+fn render_detail(loading: bool, event: Option<EventDetail>, is_authenticated: bool) -> String {
+    let mut vdom = VirtualDom::new_with_props(
+        DetailAt,
+        DetailAtProps {
+            loading,
+            event,
+            is_authenticated,
+        },
+    );
+    vdom.rebuild_in_place();
+    dioxus_ssr::render(&vdom)
+}
+
+#[wasm_bindgen_test]
+fn event_detail_loading_and_not_found() {
+    let loading = render_detail(true, None, false);
+    assert!(
+        loading.contains("id=\"event-detail-loading\""),
+        "loading id missing: {loading}"
+    );
+    assert!(
+        loading.contains("載入活動資訊中..."),
+        "loading copy missing: {loading}"
+    );
+    assert!(
+        !loading.contains("id=\"event-detail-heading\""),
+        "heading must not render while loading: {loading}"
+    );
+
+    let missing = render_detail(false, None, false);
+    assert!(
+        missing.contains("id=\"event-detail-not-found\""),
+        "not-found id missing: {missing}"
+    );
+    assert!(
+        missing.contains("活動未找到"),
+        "not-found title missing: {missing}"
+    );
+    assert!(
+        missing.contains("抱歉，您要查看的活動不存在或已被移除。"),
+        "not-found copy missing: {missing}"
+    );
+    assert!(
+        missing.contains("href=\"/events\""),
+        "back-to-list missing: {missing}"
+    );
+    assert!(
+        missing.contains("data-icon=\"alert-circle\""),
+        "alert icon missing: {missing}"
+    );
+}
+
+#[wasm_bindgen_test]
+fn event_detail_loaded_guest_and_member() {
+    let guest = render_detail(false, Some(sample_detail()), false);
+    for needle in [
+        "id=\"event-detail-heading\"",
+        "松露季私宴",
+        "主辦：Wei Chen",
+        "晚宴",
+        "白松露當季，主廚八道式無菜單。",
+        "Taipei Private Dining Room",
+        "Da&#39;an",
+        "專車接送",
+        "匿名參與",
+        "需通過身份審核",
+        "晚宴正裝",
+        "3/12 人",
+        "NT$ 18,000",
+        "VVIP 價格",
+        "登入後報名",
+        "href=\"/login\"",
+        "需要登入會員帳號才能報名活動",
+        "https://media.example/e11.webp",
+        "id=\"event-detail-prev-image\"",
+        "data-icon=\"shirt\"",
+        "data-icon=\"clock\"",
+        "data-icon=\"heart\"",
+    ] {
+        assert!(
+            guest.contains(needle),
+            "expected {needle:?} in guest detail, got: {guest}"
+        );
+    }
+    assert!(
+        !guest.contains("立即報名") || guest.contains("登入後報名"),
+        "guest must see login CTA: {guest}"
+    );
+
+    let member = render_detail(false, Some(sample_detail()), true);
+    assert!(
+        member.contains("立即報名"),
+        "signed-in must see register CTA: {member}"
+    );
+    assert!(
+        member.contains("href=\"/events/11/register\""),
+        "register href missing: {member}"
+    );
+    assert!(
+        member.contains("查看參與者"),
+        "participants missing: {member}"
+    );
+    assert!(
+        !member.contains("登入後報名"),
+        "signed-in must not see guest CTA: {member}"
+    );
+}
+
+#[component]
+fn RegisterAt(form: RegisterForm) -> Element {
+    rsx! { RegisterScreen { form } }
+}
+
+fn render_register(form: RegisterForm) -> String {
+    let mut vdom = VirtualDom::new_with_props(RegisterAt, RegisterAtProps { form });
+    vdom.rebuild_in_place();
+    dioxus_ssr::render(&vdom)
+}
+
+#[wasm_bindgen_test]
+fn register_step1_copy_and_validation_error() {
+    let html = render_register(RegisterForm::default());
+    for needle in [
+        "id=\"register-heading\"",
+        "加入 HeSocial",
+        "申請成為尊榮會員，開啟您的頂級社交之旅",
+        "步驟 1: 帳戶設定",
+        "電子郵件 *",
+        "密碼 *",
+        "確認密碼 *",
+        "下一步",
+        "上一步",
+        "已有帳戶？",
+        "立即登入",
+        "href=\"/login\"",
+        "id=\"register-prev\"",
+        "id=\"register-next\"",
+        "data-icon=\"crown\"",
+        "data-icon=\"mail\"",
+        "data-icon=\"lock\"",
+    ] {
+        assert!(
+            html.contains(needle),
+            "expected {needle:?} in register step 1, got: {html}"
+        );
+    }
+    let prev = opening_tag(&html, "register-prev");
+    assert!(
+        prev.contains("disabled=") || prev.contains(" disabled>"),
+        "prev must be disabled on step 1, tag={prev}"
+    );
+
+    let mut mismatch = RegisterForm::default();
+    mismatch.error = Some(REGISTER_PASSWORD_MISMATCH.to_string());
+    let err = render_register(mismatch);
+    assert!(
+        err.contains("id=\"register-error\""),
+        "error banner missing: {err}"
+    );
+    assert!(
+        err.contains(REGISTER_PASSWORD_MISMATCH),
+        "mismatch copy missing: {err}"
+    );
+}
+
+#[wasm_bindgen_test]
+fn register_step3_membership_and_submitting() {
+    let mut form = RegisterForm {
+        step: 3,
+        interests: vec!["藝術".into()],
+        ..RegisterForm::default()
+    };
+    let html = render_register(form.clone());
+    for needle in [
+        "步驟 3: 會員資格",
+        "年收入 (新台幣萬元) *",
+        "淨資產 (新台幣萬元) *",
+        "會員等級 *",
+        "Platinum",
+        "Diamond",
+        "Black Card",
+        "NT$50,000/年",
+        "邀請制",
+        "興趣愛好 *",
+        "藝術",
+        "提交申請",
+        "data-icon=\"dollar-sign\"",
+        "data-icon=\"plus\"",
+    ] {
+        assert!(
+            html.contains(needle),
+            "expected {needle:?} in register step 3, got: {html}"
+        );
+    }
+    form.submitting = true;
+    let busy = render_register(form);
+    let next = opening_tag(&busy, "register-next");
+    assert!(
+        next.contains("disabled=") || next.contains(" disabled>"),
+        "next must disable while submitting, tag={next}"
+    );
+    assert!(
+        busy.contains("提交申請中..."),
+        "in-flight copy missing: {busy}"
     );
 }

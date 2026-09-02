@@ -4,9 +4,11 @@ use hesocial_frontend::auth::{
     parse_login_response, parse_validate_response, password_input_type, session_after_validate,
 };
 use hesocial_frontend::events::{
-    EventFilters, PAGE_LIMIT, collapse_on_error, events_query_string, exclusivity_color,
-    exclusivity_label, first_image, format_price, page_after_filter_change, page_in_range,
-    parse_events_response, shows_diamond, star_count,
+    EventFilters, PAGE_LIMIT, PLACEHOLDER_IMAGE, collapse_on_error, detail_exclusivity_color,
+    dress_code_text, events_query_string, exclusivity_color, exclusivity_label, first_image,
+    format_price, gallery_image, is_full, occupancy_percent, page_after_filter_change,
+    page_in_range, parse_event_detail_response, parse_events_response, price_kind_label,
+    shows_diamond, spots_remaining, star_count, venue_star_count, wrap_image_index,
 };
 use hesocial_frontend::logic::{next_toggled, toggle_label};
 use hesocial_frontend::permissions::{
@@ -17,6 +19,13 @@ use hesocial_frontend::profile::{
     PROFILE_API_PATH, display_age, display_full_name, display_optional, display_optional_i64,
     display_privacy_level, membership_benefits, membership_color_class, parse_profile_response,
     profile_picture_src,
+};
+use hesocial_frontend::register::{
+    REGISTER_AGE_RANGE, REGISTER_API_PATH, REGISTER_FAILED_FALLBACK, REGISTER_INCOME_ASSET,
+    REGISTER_INCOME_MIN, REGISTER_INTEREST_REQUIRED, REGISTER_NETWORTH_MIN,
+    REGISTER_PASSWORD_MISMATCH, REGISTER_PASSWORD_SHORT, REGISTER_REQUIRED, RegisterForm,
+    parse_register_response, push_interest, registration_payload, remove_interest, step_title,
+    validate_step,
 };
 use hesocial_frontend::shell::{
     Presence, SessionKind, is_active_path, presence_after_animation_end, presence_is_mounted,
@@ -326,7 +335,11 @@ fn primary_nav_items_match_react_navbar() {
     let pairs: Vec<(&str, &str)> = items.iter().map(|item| (item.name, item.path)).collect();
     assert_eq!(
         pairs,
-        vec![("首頁", "/"), ("精選活動", "/events"), ("VVIP專區", "/vvip")]
+        vec![
+            ("首頁", "/"),
+            ("精選活動", "/events"),
+            ("VVIP專區", "/vvip")
+        ]
     );
     assert!(items[0].icon.is_none());
     assert!(items[1].icon.is_none());
@@ -340,7 +353,10 @@ fn kinds(entries: &[hesocial_frontend::shell::SessionEntry]) -> Vec<SessionKind>
 #[test]
 fn signed_out_session_yields_login_and_register() {
     let entries = session_entries(false, false);
-    assert_eq!(kinds(&entries), vec![SessionKind::Login, SessionKind::Register]);
+    assert_eq!(
+        kinds(&entries),
+        vec![SessionKind::Login, SessionKind::Register]
+    );
     assert_eq!(entries[0].href, Some("/login"));
     assert_eq!(entries[0].label, "登入");
     assert_eq!(entries[1].href, Some("/register"));
@@ -581,7 +597,10 @@ fn parse_validate_success_extracts_user_and_feeds_auth_snapshot() {
 
     let session = session_after_validate("stored-jwt", Ok(user));
     assert_eq!(session.token.as_deref(), Some("stored-jwt"));
-    assert!(session.view_admin(), "restored admin role must light up view_admin");
+    assert!(
+        session.view_admin(),
+        "restored admin role must light up view_admin"
+    );
     assert!(permissions(&session.snapshot()).view_admin);
     assert!(!session.restoring);
 }
@@ -597,10 +616,7 @@ fn parse_validate_rejects_success_false() {
 
 #[test]
 fn parse_validate_401_is_failure() {
-    let err = parse_validate_response(
-        401,
-        r#"{"success":false,"error":"Access token required"}"#,
-    );
+    let err = parse_validate_response(401, r#"{"success":false,"error":"Access token required"}"#);
     assert!(err.is_err());
     let session = session_after_validate("stored-jwt", err);
     assert_eq!(session.token, None);
@@ -687,16 +703,33 @@ fn user_route_guard_allows_authenticated_snapshot() {
 fn parse_profile_complete_user() {
     let profile = parse_profile_response(COMPLETE_PROFILE_BODY).expect("complete body");
     assert_eq!(profile.email.as_deref(), Some("ok@example.com"));
-    assert_eq!(display_full_name(profile.first_name.as_deref(), profile.last_name.as_deref()), "Wei Chen");
+    assert_eq!(
+        display_full_name(profile.first_name.as_deref(), profile.last_name.as_deref()),
+        "Wei Chen"
+    );
     assert_eq!(display_age(profile.age), "42 歲");
     assert_eq!(display_optional(profile.profession.as_deref()), "投資人");
     assert_eq!(display_privacy_level(profile.privacy_level), "Level 4");
-    assert_eq!(profile.interests, vec!["藝術".to_string(), "遊艇".to_string()]);
-    assert_eq!(profile_picture_src(profile.profile_picture.as_deref()), "https://media.example/p.jpg");
-    assert_eq!(membership_color_class(profile.membership_tier_label()), "text-blue-400");
+    assert_eq!(
+        profile.interests,
+        vec!["藝術".to_string(), "遊艇".to_string()]
+    );
+    assert_eq!(
+        profile_picture_src(profile.profile_picture.as_deref()),
+        "https://media.example/p.jpg"
+    );
+    assert_eq!(
+        membership_color_class(profile.membership_tier_label()),
+        "text-blue-400"
+    );
     assert_eq!(
         membership_benefits(profile.membership_tier_label()),
-        &["VIP活動優先預訂", "專屬社交顧問", "私人活動邀請", "高端場地折扣"]
+        &[
+            "VIP活動優先預訂",
+            "專屬社交顧問",
+            "私人活動邀請",
+            "高端場地折扣"
+        ]
     );
 }
 
@@ -723,12 +756,231 @@ fn parse_profile_google_null_fields_match_react_interpolation() {
     );
     assert_eq!(display_privacy_level(profile.privacy_level), "Level 3");
     assert_eq!(membership_color_class(Some("Platinum")), "text-gray-400");
-    assert_eq!(membership_color_class(Some("Black Card")), "text-luxury-gold");
+    assert_eq!(
+        membership_color_class(Some("Black Card")),
+        "text-luxury-gold"
+    );
     assert_eq!(membership_color_class(None), "text-luxury-platinum");
 }
 
 #[test]
 fn parse_profile_success_false_is_error() {
-    assert!(parse_profile_response(r#"{"success":false,"error":"Authentication required"}"#).is_err());
+    assert!(
+        parse_profile_response(r#"{"success":false,"error":"Authentication required"}"#).is_err()
+    );
     assert!(parse_profile_response("not-json").is_err());
+}
+
+#[test]
+fn dress_code_and_detail_badge_match_event_detail_page() {
+    assert_eq!(dress_code_text(1), "休閒");
+    assert_eq!(dress_code_text(2), "商務休閒");
+    assert_eq!(dress_code_text(3), "正式");
+    assert_eq!(dress_code_text(4), "晚宴正裝");
+    assert_eq!(dress_code_text(5), "黑領結/長禮服");
+    assert_eq!(dress_code_text(0), "未指定");
+    assert_eq!(dress_code_text(9), "未指定");
+    assert_eq!(
+        detail_exclusivity_color(Some("Invitation Only")),
+        "bg-purple-500/20 text-purple-400 border-purple-500/30"
+    );
+    assert_eq!(
+        exclusivity_color(Some("Invitation Only")),
+        "bg-gray-500/20 text-gray-400 border-gray-500/30",
+        "list helper must stay unchanged"
+    );
+}
+
+#[test]
+fn occupancy_and_gallery_helpers() {
+    assert_eq!(occupancy_percent(3, 12), 25);
+    assert_eq!(occupancy_percent(0, 0), 0);
+    assert_eq!(spots_remaining(3, 12), 9);
+    assert_eq!(spots_remaining(12, 12), 0);
+    assert!(is_full(12, 12));
+    assert!(!is_full(11, 12));
+    assert_eq!(venue_star_count(5.0), 5);
+    assert_eq!(venue_star_count(4.7), 4);
+    assert_eq!(venue_star_count(0.0), 0);
+    assert_eq!(wrap_image_index(-1, 3), 2);
+    assert_eq!(wrap_image_index(3, 3), 0);
+    assert_eq!(wrap_image_index(1, 3), 1);
+    assert_eq!(wrap_image_index(0, 0), 0);
+    assert_eq!(gallery_image(&[], 0), PLACEHOLDER_IMAGE);
+    assert_eq!(
+        gallery_image(&["https://a.webp".into()], 0),
+        "https://a.webp"
+    );
+    assert_eq!(price_kind_label(Some(15000.0), Some(12000.0)), "VVIP 價格");
+    assert_eq!(price_kind_label(None, Some(12000.0)), "VIP 價格");
+}
+
+#[test]
+fn parse_event_detail_success_and_null_lists() {
+    let body = r#"{
+        "success": true,
+        "data": {
+            "id": 11,
+            "name": "松露季私宴",
+            "description": "白松露當季。",
+            "dateTime": "2026-10-04T12:00:00.000Z",
+            "registrationDeadline": "2026-09-20T12:00:00.000Z",
+            "venue": {
+                "name": "Taipei Private Dining Room",
+                "address": "Da'an",
+                "rating": 5,
+                "amenities": ["Valet", "Wine cellar"]
+            },
+            "exclusivityLevel": "VVIP",
+            "pricing": {"vip": 15000, "vvip": 18000, "currency": "TWD"},
+            "currentAttendees": 3,
+            "capacity": 12,
+            "images": ["https://media.example/e11.webp", "https://media.example/e11b.webp"],
+            "organizer": "Wei Chen",
+            "tags": ["晚宴", "松露"],
+            "dressCode": 4,
+            "amenities": ["專車接送"],
+            "privacyGuarantees": ["匿名參與"],
+            "requirements": [{"description": "需通過身份審核"}]
+        }
+    }"#;
+    let detail = parse_event_detail_response(200, body).expect("detail");
+    assert_eq!(detail.id, "11");
+    assert_eq!(detail.name, "松露季私宴");
+    assert_eq!(detail.organizer, "Wei Chen");
+    assert_eq!(detail.dress_code, 4);
+    assert_eq!(detail.tags, vec!["晚宴", "松露"]);
+    assert_eq!(detail.amenities, vec!["專車接送"]);
+    assert_eq!(detail.privacy_guarantees, vec!["匿名參與"]);
+    assert_eq!(detail.requirements, vec!["需通過身份審核"]);
+    assert_eq!(detail.venue_amenities, vec!["Valet", "Wine cellar"]);
+    assert_eq!(detail.images.len(), 2);
+    assert_eq!(detail.exclusivity_level.as_deref(), Some("VVIP"));
+}
+
+#[test]
+fn parse_event_detail_404_and_encoded_json_columns() {
+    assert!(
+        parse_event_detail_response(404, r#"{"success":false,"error":"Event not found"}"#)
+            .is_none()
+    );
+    assert!(parse_event_detail_response(200, r#"{"success":false}"#).is_none());
+    assert!(parse_event_detail_response(200, "not-json").is_none());
+    let encoded = r#"{
+        "success": true,
+        "data": {
+            "id": "11",
+            "name": "松露季私宴",
+            "description": "x",
+            "dateTime": "2026-10-04T12:00:00.000Z",
+            "venue": {"name": "Room", "address": "Da'an", "rating": 4, "amenities": "[\"Valet\"]"},
+            "exclusivityLevel": null,
+            "pricing": {"vip": 15000, "currency": "TWD"},
+            "currentAttendees": 0,
+            "capacity": 12,
+            "images": "[\"https://media.example/e11.webp\"]",
+            "organizer": "Wei Chen",
+            "amenities": null,
+            "privacyGuarantees": null,
+            "requirements": "[{\"description\":\"需年滿18歲\"}]",
+            "dressCode": "3"
+        }
+    }"#;
+    let detail = parse_event_detail_response(200, encoded).expect("encoded columns");
+    assert_eq!(detail.images, vec!["https://media.example/e11.webp"]);
+    assert!(detail.amenities.is_empty());
+    assert!(detail.privacy_guarantees.is_empty());
+    assert_eq!(detail.requirements, vec!["需年滿18歲"]);
+    assert_eq!(detail.venue_amenities, vec!["Valet"]);
+    assert_eq!(detail.dress_code, 3);
+    assert_eq!(detail.tags.len(), 0);
+}
+
+#[test]
+fn register_step_validation_matches_react() {
+    let mut form = RegisterForm::default();
+    assert_eq!(validate_step(&form), Err(REGISTER_REQUIRED));
+    form.email = "a@b.c".into();
+    form.password = "short".into();
+    form.confirm_password = "other".into();
+    assert_eq!(validate_step(&form), Err(REGISTER_PASSWORD_MISMATCH));
+    form.confirm_password = "short".into();
+    assert_eq!(validate_step(&form), Err(REGISTER_PASSWORD_SHORT));
+    form.password = "longenough".into();
+    form.confirm_password = "longenough".into();
+    assert!(validate_step(&form).is_ok());
+
+    form.step = 2;
+    assert_eq!(validate_step(&form), Err(REGISTER_REQUIRED));
+    form.first_name = "Wei".into();
+    form.last_name = "Chen".into();
+    form.age = "17".into();
+    form.profession = "投資人".into();
+    assert_eq!(validate_step(&form), Err(REGISTER_AGE_RANGE));
+    form.age = "42".into();
+    assert!(validate_step(&form).is_ok());
+
+    form.step = 3;
+    assert_eq!(validate_step(&form), Err(REGISTER_INCOME_ASSET));
+    form.annual_income = "400".into();
+    form.net_worth = "3000".into();
+    assert_eq!(validate_step(&form), Err(REGISTER_INCOME_MIN));
+    form.annual_income = "500".into();
+    form.net_worth = "2000".into();
+    assert_eq!(validate_step(&form), Err(REGISTER_NETWORTH_MIN));
+    form.net_worth = "3000".into();
+    assert_eq!(validate_step(&form), Err(REGISTER_INTEREST_REQUIRED));
+    form.interests = vec!["藝術".into()];
+    assert!(validate_step(&form).is_ok());
+}
+
+#[test]
+fn register_interests_and_wan_conversion() {
+    let added = push_interest(&[], " 藝術 ").expect("trim");
+    assert_eq!(added, vec!["藝術"]);
+    assert!(push_interest(&added, "藝術").is_none());
+    assert!(push_interest(&added, "   ").is_none());
+    let ten: Vec<String> = (0..10).map(|i| i.to_string()).collect();
+    assert!(push_interest(&ten, "extra").is_none());
+    assert_eq!(remove_interest(&["a".into(), "b".into()], "a"), vec!["b"]);
+    let mut form = RegisterForm::default();
+    form.email = "a@b.c".into();
+    form.password = "longenough".into();
+    form.first_name = "Wei".into();
+    form.last_name = "Chen".into();
+    form.age = "42".into();
+    form.profession = "投資人".into();
+    form.annual_income = "500".into();
+    form.net_worth = "3000".into();
+    form.interests = vec!["藝術".into()];
+    let payload = registration_payload(&form);
+    assert_eq!(payload.annual_income, 5_000_000);
+    assert_eq!(payload.net_worth, 30_000_000);
+    assert_eq!(payload.age, 42);
+    assert_eq!(step_title(1), "步驟 1: 帳戶設定");
+    assert_eq!(step_title(2), "步驟 2: 個人資訊");
+    assert_eq!(step_title(3), "步驟 3: 會員資格");
+}
+
+#[test]
+fn parse_register_success_and_error_paths() {
+    assert_eq!(REGISTER_API_PATH, "/api/auth/register");
+    let ok = parse_register_response(
+        r#"{"success":true,"data":{"token":"jwt-reg","user":{"email":"a@b.c"}}}"#,
+    )
+    .expect("success");
+    assert_eq!(ok.token, "jwt-reg");
+    let err = parse_register_response(
+        r#"{"success":false,"error":"User with this email already exists"}"#,
+    )
+    .expect_err("duplicate");
+    assert_eq!(err, "User with this email already exists");
+    assert_eq!(
+        parse_register_response(r#"{"success":false}"#).unwrap_err(),
+        REGISTER_FAILED_FALLBACK
+    );
+    assert_eq!(
+        parse_register_response("not-json").unwrap_err(),
+        REGISTER_FAILED_FALLBACK
+    );
 }
