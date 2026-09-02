@@ -3,6 +3,11 @@ use hesocial_frontend::auth::{
     bearer_authorization, boot_claim_oauth, display_login_error, extract_oauth_token,
     parse_login_response, password_input_type,
 };
+use hesocial_frontend::events::{
+    EventFilters, PAGE_LIMIT, collapse_on_error, events_query_string, exclusivity_color,
+    exclusivity_label, first_image, format_price, page_after_filter_change, page_in_range,
+    parse_events_response, shows_diamond, star_count,
+};
 use hesocial_frontend::logic::{next_toggled, toggle_label};
 
 #[test]
@@ -114,4 +119,175 @@ fn boot_claims_oauth_token_before_complete_profile_redirect() {
     );
     assert_eq!(claimed.route, "/profile");
     assert_ne!(claimed.route, "/login");
+}
+
+fn default_filters() -> EventFilters {
+    EventFilters {
+        page: 1,
+        limit: PAGE_LIMIT,
+        search: String::new(),
+        category: "all".into(),
+        exclusivity_level: "all".into(),
+    }
+}
+
+#[test]
+fn events_query_omits_blank_and_all_filters() {
+    assert_eq!(events_query_string(&default_filters()), "page=1&limit=9");
+}
+
+#[test]
+fn events_query_appends_search_category_and_level() {
+    let filters = EventFilters {
+        page: 2,
+        limit: 9,
+        search: "Yacht".into(),
+        category: "yacht".into(),
+        exclusivity_level: "VIP".into(),
+    };
+    assert_eq!(
+        events_query_string(&filters),
+        "page=2&limit=9&search=Yacht&category=yacht&exclusivityLevel=VIP"
+    );
+}
+
+#[test]
+fn events_query_encodes_search_like_urlsearchparams() {
+    let mut filters = default_filters();
+    filters.search = "松露 私宴".into();
+    assert_eq!(
+        events_query_string(&filters),
+        "page=1&limit=9&search=%E6%9D%BE%E9%9C%B2+%E7%A7%81%E5%AE%B4"
+    );
+}
+
+#[test]
+fn changing_any_filter_resets_to_page_one() {
+    assert_eq!(page_after_filter_change(1), 1);
+    assert_eq!(page_after_filter_change(4), 1);
+    assert_eq!(page_after_filter_change(99), 1);
+}
+
+#[test]
+fn pagination_range_matches_react_handle_page_change() {
+    assert!(!page_in_range(0, 3));
+    assert!(page_in_range(1, 3));
+    assert!(page_in_range(3, 3));
+    assert!(!page_in_range(4, 3));
+    assert!(!page_in_range(1, 0));
+}
+
+#[test]
+fn error_and_empty_collapse_keeps_requested_page() {
+    let collapsed = collapse_on_error(4, 9);
+    assert_eq!(collapsed.page, 4);
+    assert_eq!(collapsed.limit, 9);
+    assert_eq!(collapsed.total, 0);
+    assert_eq!(collapsed.total_pages, 1);
+}
+
+#[test]
+fn parse_success_uses_payload_and_stringifies_numeric_id() {
+    let body = r#"{
+        "success": true,
+        "data": [{
+            "id": 11,
+            "name": "松露季私宴",
+            "description": "白松露當季。",
+            "dateTime": "2026-10-04T10:00:00.000Z",
+            "venue": {"name": "Taipei Private Dining Room", "address": "Da'an", "rating": 5},
+            "exclusivityLevel": null,
+            "pricing": {"vip": 15000, "vvip": 15000, "currency": "TWD"},
+            "currentAttendees": 0,
+            "capacity": 12,
+            "images": ["https://media.example/e11.webp"]
+        }],
+        "pagination": {"page": 1, "limit": 9, "total": 21, "totalPages": 3}
+    }"#;
+    let view = parse_events_response(body, 1, 9);
+    assert_eq!(view.events.len(), 1);
+    assert_eq!(view.events[0].id, "11");
+    assert_eq!(view.events[0].name, "松露季私宴");
+    assert_eq!(
+        view.events[0].venue.as_ref().map(|v| v.name.as_str()),
+        Some("Taipei Private Dining Room")
+    );
+    assert_eq!(view.events[0].exclusivity_level, None);
+    assert_eq!(view.pagination.total, 21);
+    assert_eq!(view.pagination.total_pages, 3);
+}
+
+#[test]
+fn parse_success_false_collapses_like_react() {
+    let view = parse_events_response(r#"{"success":false,"error":"nope"}"#, 3, 9);
+    assert!(view.events.is_empty());
+    assert_eq!(view.pagination.page, 3);
+    assert_eq!(view.pagination.total, 0);
+    assert_eq!(view.pagination.total_pages, 1);
+}
+
+#[test]
+fn parse_malformed_body_collapses_like_react() {
+    let view = parse_events_response("not-json", 2, 9);
+    assert!(view.events.is_empty());
+    assert_eq!(view.pagination.page, 2);
+    assert_eq!(view.pagination.total, 0);
+    assert_eq!(view.pagination.total_pages, 1);
+}
+
+#[test]
+fn null_exclusivity_uses_gray_badge_and_no_icons() {
+    assert_eq!(
+        exclusivity_color(None),
+        "bg-gray-500/20 text-gray-400 border-gray-500/30"
+    );
+    assert_eq!(exclusivity_label(None), "");
+    assert_eq!(star_count(None), 0);
+    assert!(!shows_diamond(None));
+}
+
+#[test]
+fn exclusivity_badge_and_stars_match_react_branches() {
+    assert_eq!(
+        exclusivity_color(Some("VIP")),
+        "bg-blue-500/20 text-blue-400 border-blue-500/30"
+    );
+    assert_eq!(
+        exclusivity_color(Some("VVIP")),
+        "bg-luxury-gold/20 text-luxury-gold border-luxury-gold/30"
+    );
+    assert_eq!(
+        exclusivity_color(Some("僅限邀請")),
+        "bg-purple-500/20 text-purple-400 border-purple-500/30"
+    );
+    assert_eq!(
+        exclusivity_color(Some("Invitation Only")),
+        "bg-gray-500/20 text-gray-400 border-gray-500/30"
+    );
+    assert_eq!(exclusivity_label(Some("VIP")), "VIP");
+    assert_eq!(star_count(Some("VIP")), 2);
+    assert_eq!(star_count(Some("VVIP")), 3);
+    assert_eq!(star_count(Some("Invitation Only")), 3);
+    assert_eq!(star_count(Some("僅限邀請")), 0);
+    assert!(shows_diamond(Some("Invitation Only")));
+    assert!(!shows_diamond(Some("僅限邀請")));
+    assert!(!shows_diamond(Some("VVIP")));
+}
+
+#[test]
+fn first_image_falls_back_to_placeholder() {
+    assert_eq!(first_image(None), "/api/placeholder/400/300");
+    assert_eq!(first_image(Some(&[])), "/api/placeholder/400/300");
+    assert_eq!(
+        first_image(Some(&["https://a.webp".into(), "https://b.webp".into()])),
+        "https://a.webp"
+    );
+}
+
+#[test]
+fn price_prefers_vvip_then_vip_and_treats_zero_as_missing() {
+    assert_eq!(format_price(Some(15000.0), Some(12000.0)), "NT$ 15,000");
+    assert_eq!(format_price(None, Some(12000.0)), "NT$ 12,000");
+    assert_eq!(format_price(Some(0.0), Some(8000.0)), "NT$ 8,000");
+    assert_eq!(format_price(None, None), "價格洽詢");
 }

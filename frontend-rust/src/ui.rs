@@ -3,7 +3,10 @@ use crate::auth::{
     store_token,
 };
 use crate::logic::{next_toggled, toggle_label};
+use crate::pages::events::{EventDetail, Events};
 use dioxus::prelude::*;
+
+pub use crate::pages::events::{EventCard, EventsScreen};
 
 #[derive(Routable, Clone, PartialEq, Debug)]
 pub enum Route {
@@ -15,6 +18,10 @@ pub enum Route {
     Register {},
     #[route("/forgot-password")]
     ForgotPassword {},
+    #[route("/events")]
+    Events {},
+    #[route("/events/:id")]
+    EventDetail { id: String },
     #[redirect("/complete-profile", || Route::Profile {})]
     #[route("/profile")]
     Profile {},

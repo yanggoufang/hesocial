@@ -1495,11 +1495,13 @@ dependencies = [
  "dioxus",
  "dioxus-ssr",
  "gloo-net",
+ "js-sys",
  "serde",
  "serde_json",
  "thirtyfour",
  "tiny_http",
  "tokio",
+ "wasm-bindgen",
  "wasm-bindgen-test",
  "web-sys",
 ]

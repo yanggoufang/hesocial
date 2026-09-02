@@ -147,6 +147,19 @@ fn start_static_server(root: PathBuf) -> StaticHarness {
                 continue;
             }
 
+            if path_only == "/api/events" && *request.method() == Method::Get {
+                let query = request.url().split_once('?').map(|(_, q)| q).unwrap_or("");
+                let (status, payload) = stub_events_payload(query);
+                let header = Header::from_bytes(b"Content-Type", b"application/json")
+                    .expect("json content-type");
+                let _ = request.respond(
+                    Response::from_string(payload)
+                        .with_status_code(StatusCode::from(status))
+                        .with_header(header),
+                );
+                continue;
+            }
+
             if path_only == "/api/auth/google" {
                 let header = Header::from_bytes(b"Content-Type", b"text/html; charset=utf-8")
                     .expect("html content-type");
@@ -277,6 +290,80 @@ async fn local_storage_get(driver: &WebDriver, key: &str) -> WebDriverResult<Opt
         serde_json::Value::Null => None,
         other => panic!("unexpected localStorage value for {key}: {other}"),
     })
+}
+
+fn query_param(query: &str, key: &str) -> String {
+    for pair in query.split('&') {
+        let mut parts = pair.splitn(2, '=');
+        let k = parts.next().unwrap_or("");
+        let v = parts.next().unwrap_or("");
+        if k == key {
+            return v.replace('+', " ");
+        }
+    }
+    String::new()
+}
+
+fn stub_events_payload(query: &str) -> (u16, String) {
+    let search = query_param(query, "search");
+    let page = query_param(query, "page");
+    if search.contains("FORCE_FAIL") {
+        return (500, r#"{"success":false}"#.to_string());
+    }
+
+    let truffle = r#"{
+        "id": 11,
+        "name": "松露季私宴",
+        "description": "白松露當季，主廚八道式無菜單。",
+        "dateTime": "2026-10-04T12:00:00.000Z",
+        "venue": {"name": "Taipei Private Dining Room", "address": "Da'an", "rating": 5},
+        "exclusivityLevel": null,
+        "pricing": {"vip": 15000, "vvip": 15000, "currency": "TWD"},
+        "currentAttendees": 0,
+        "capacity": 12,
+        "images": ["https://media.example/e11.webp"]
+    }"#;
+    let yacht = r#"{
+        "id": 2,
+        "name": "Autumn Yacht Social",
+        "description": "Sunset cruise around Keelung Harbor.",
+        "dateTime": "2026-10-10T12:00:00.000Z",
+        "venue": {"name": "Keelung Luxury Yacht", "address": "Pier 8", "rating": 4},
+        "exclusivityLevel": null,
+        "pricing": {"vip": 18000, "vvip": 18000, "currency": "TWD"},
+        "currentAttendees": 1,
+        "capacity": 30,
+        "images": ["https://media.example/e17.webp"]
+    }"#;
+    let sunrise = r#"{
+        "id": 16,
+        "name": "日出遊艇早餐",
+        "description": "清晨出海，海上日出佐香檳早餐。",
+        "dateTime": "2026-10-09T12:00:00.000Z",
+        "venue": {"name": "Keelung Luxury Yacht", "address": "Pier 8", "rating": 4},
+        "exclusivityLevel": null,
+        "pricing": {"vip": 16000, "vvip": 16000, "currency": "TWD"},
+        "currentAttendees": 0,
+        "capacity": 24,
+        "images": ["https://media.example/e16.webp"]
+    }"#;
+
+    let (data, page_num, total, total_pages) = if !search.is_empty() {
+        if search.contains("Yacht") {
+            (yacht.to_string(), 1, 1, 1)
+        } else {
+            (String::new(), 1, 0, 1)
+        }
+    } else if page == "2" {
+        (sunrise.to_string(), 2, 12, 2)
+    } else {
+        (format!("{truffle},{yacht}"), 1, 12, 2)
+    };
+
+    let payload = format!(
+        r#"{{"success":true,"data":[{data}],"pagination":{{"page":{page_num},"limit":9,"total":{total},"totalPages":{total_pages}}}}}"#
+    );
+    (200, payload)
 }
 
 async fn launch_chrome() -> WebDriverResult<WebDriver> {
@@ -519,6 +606,102 @@ async fn password_toggle_reveals_text() -> WebDriverResult<()> {
             .await?
             .convert()?;
         assert_eq!(after, "text");
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn events_list_renders_cards_from_stubbed_api() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        driver.goto(&format!("{url}events")).await?;
+        wait_text(&driver, "events-heading", "精選活動").await?;
+        wait_present(&driver, "event-card-11").await?;
+        wait_present(&driver, "event-card-2").await?;
+        wait_text(&driver, "events-page-label", "第 1 / 2 頁").await?;
+        let body = driver.find(By::Tag("body")).await?.text().await?;
+        for needle in [
+            "松露季私宴",
+            "Taipei Private Dining Room",
+            "Autumn Yacht Social",
+            "Keelung Luxury Yacht",
+            "NT$ 15,000",
+            "查看詳情",
+            "第 1 / 2 頁",
+        ] {
+            assert!(body.contains(needle), "missing {needle:?} in {body:?}");
+        }
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn events_search_filters_the_list() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        driver.goto(&format!("{url}events")).await?;
+        wait_present(&driver, "event-card-11").await?;
+        let search = wait_present(&driver, "events-search").await?;
+        search.send_keys("Yacht").await?;
+        wait_present(&driver, "event-card-2").await?;
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
+        loop {
+            let missing = driver.find(By::Id("event-card-11")).await.is_err();
+            let page = if let Ok(el) = driver.find(By::Id("events-page-label")).await {
+                el.text().await.unwrap_or_default()
+            } else {
+                String::new()
+            };
+            if missing && page.contains("第 1 / 1 頁") {
+                break;
+            }
+            if tokio::time::Instant::now() >= deadline {
+                panic!("search did not filter to Yacht-only page; page={page:?}");
+            }
+            tokio::time::sleep(Duration::from_millis(150)).await;
+        }
+        let body = driver.find(By::Tag("body")).await?.text().await?;
+        assert!(body.contains("Autumn Yacht Social"));
+        assert!(!body.contains("松露季私宴"));
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn events_pagination_moves_to_next_page() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        driver.goto(&format!("{url}events")).await?;
+        wait_present(&driver, "event-card-11").await?;
+        wait_text(&driver, "events-page-label", "第 1 / 2 頁").await?;
+        driver.find(By::Id("events-next")).await?.click().await?;
+        wait_present(&driver, "event-card-16").await?;
+        wait_text(&driver, "events-page-label", "第 2 / 2 頁").await?;
+        let body = driver.find(By::Tag("body")).await?.text().await?;
+        assert!(body.contains("日出遊艇早餐"));
+        assert!(!body.contains("松露季私宴"));
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn events_api_failure_shows_empty_state_not_a_crash() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        driver.goto(&format!("{url}events")).await?;
+        wait_present(&driver, "event-card-11").await?;
+        driver
+            .execute(
+                "const el = document.getElementById('events-search'); el.value = 'FORCE_FAIL'; el.dispatchEvent(new Event('input', { bubbles: true }));",
+                vec![],
+            )
+            .await?;
+        wait_present(&driver, "events-empty").await?;
+        wait_text(&driver, "events-heading", "精選活動").await?;
+        let body = driver.find(By::Tag("body")).await?.text().await?;
+        assert!(body.contains("找不到符合條件的活動。"));
+        assert!(body.contains("請嘗試調整您的篩選條件，或稍後再試。"));
+        assert!(!body.contains("松露季私宴"));
         Ok(())
     })
     .await
