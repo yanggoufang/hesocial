@@ -88,10 +88,12 @@ run_worker_first = ["/api/*"]
 
 Do **not** change `wrangler.toml` in this scaffold.
 
-`dx` auto-detects `tailwind.config.js` (Tailwind v3) and `tailwind.css`. Design
-tokens (`luxury-*`, Playfair/Inter, `.luxury-button`) are copied from
-`frontend/tailwind.config.js` / `frontend/src/styles/index.css`; only the
-`content` globs were pointed at `./src/**/*.{rs,html,css}`.
+`dx` picks the Tailwind version by looking for a config file: with a
+`tailwind.config.js` it fetches v3.4.15, without one v4.1.5. There is no config
+file here, so this crate is on **v4** and the design tokens live in `@theme` in
+`tailwind.css` — `--color-luxury-*`, `--font-luxury`, `--blur-luxury` — with
+`@source "./src"` replacing the v3 `content` globs. `.luxury-button` and
+friends stay in `@layer components`.
 
 Known build warning: `wasm-opt` aborted here (`SIGABRT`, "unsupported version of
 DWARF"). `dx` still copied the unoptimized `.wasm` (~1.8 MiB) and the page
@@ -189,8 +191,7 @@ The wasm layer is a different target and must be invoked separately.
 frontend-rust/
   Cargo.toml          # standalone crate; not in backend-rust workspace
   Dioxus.toml         # out_dir = dist, HTML title
-  tailwind.config.js  # reused luxury tokens; content globs → src/**/*.rs
-  tailwind.css        # Tailwind v3 input + luxury classes + hs-enter keyframes
+  tailwind.css        # Tailwind v4: @theme tokens + luxury classes + hs-* keyframes
   assets/tailwind.css # generated; gitignored — do not commit
   src/auth.rs         # login parse, token key, OAuth claim-before-redirect, validate restore
   src/events.rs       # list + GET /api/events/{id} parse, dress-code/occupancy helpers

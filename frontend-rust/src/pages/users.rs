@@ -465,7 +465,7 @@ pub fn AdminUsersScreen(
                     }
                 }
 
-                div { class: "bg-white rounded-lg shadow-sm border mb-6",
+                div { class: "bg-white rounded-lg shadow-sm border border-gray-200 mb-6",
                     div { class: "p-4 border-b border-gray-200",
                         div { class: "flex items-center justify-between",
                             h3 { class: "text-lg font-medium text-gray-900", "篩選與搜尋" }
@@ -554,7 +554,7 @@ pub fn AdminUsersScreen(
                     }
                 }
 
-                div { class: "bg-white rounded-lg shadow-sm border overflow-hidden",
+                div { class: "bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden",
                     div { class: "px-6 py-4 border-b border-gray-200",
                         div { class: "flex items-center justify-between",
                             h3 { id: "admin-users-heading", class: "text-lg font-medium text-gray-900",
@@ -685,7 +685,7 @@ fn StatsCards(stats: UserStats) -> Element {
     let admins = admin_count(&stats);
     rsx! {
         div { id: "admin-users-stats", class: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6",
-            div { class: "bg-white rounded-lg p-6 shadow-sm border",
+            div { class: "bg-white rounded-lg p-6 shadow-sm border border-gray-200",
                 div { class: "flex items-center justify-between",
                     div {
                         p { class: "text-sm font-medium text-gray-600", "總使用者數" }
@@ -694,7 +694,7 @@ fn StatsCards(stats: UserStats) -> Element {
                     Icon { name: IconName::Users, class: "w-8 h-8 text-blue-600".to_string() }
                 }
             }
-            div { class: "bg-white rounded-lg p-6 shadow-sm border",
+            div { class: "bg-white rounded-lg p-6 shadow-sm border border-gray-200",
                 div { class: "flex items-center justify-between",
                     div {
                         p { class: "text-sm font-medium text-gray-600", "近期註冊" }
@@ -703,7 +703,7 @@ fn StatsCards(stats: UserStats) -> Element {
                     Icon { name: IconName::User, class: "w-8 h-8 text-green-600".to_string() }
                 }
             }
-            div { class: "bg-white rounded-lg p-6 shadow-sm border",
+            div { class: "bg-white rounded-lg p-6 shadow-sm border border-gray-200",
                 div { class: "flex items-center justify-between",
                     div {
                         p { class: "text-sm font-medium text-gray-600", "待審核驗證" }
@@ -712,7 +712,7 @@ fn StatsCards(stats: UserStats) -> Element {
                     Icon { name: IconName::AlertTriangle, class: "w-8 h-8 text-yellow-600".to_string() }
                 }
             }
-            div { class: "bg-white rounded-lg p-6 shadow-sm border",
+            div { class: "bg-white rounded-lg p-6 shadow-sm border border-gray-200",
                 div { class: "flex items-center justify-between",
                     div {
                         p { class: "text-sm font-medium text-gray-600", "管理員" }
@@ -900,7 +900,7 @@ fn UserDetailModal(user: User, on_close_modal: EventHandler<()>) -> Element {
     rsx! {
         div {
             id: "admin-users-detail-modal",
-            class: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50",
+            class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50",
             div { class: "bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto",
                 div { class: "flex items-center justify-between mb-6",
                     h3 { class: "text-xl font-bold text-gray-900", "User Details" }
@@ -1010,7 +1010,7 @@ fn UserEditModal(
     rsx! {
         div {
             id: "admin-users-edit-modal",
-            class: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50",
+            class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50",
             div { class: "bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto",
                 div { class: "flex items-center justify-between mb-6",
                     h3 { class: "text-xl font-bold text-gray-900", "Edit User" }
@@ -1200,7 +1200,7 @@ fn UserDeleteModal(
     rsx! {
         div {
             id: "admin-users-delete-modal",
-            class: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50",
+            class: "fixed inset-0 bg-black/50 flex items-center justify-center z-50",
             div { class: "bg-white rounded-lg p-6 w-full max-w-md",
                 div { class: "flex items-center justify-between mb-4",
                     h3 { class: "text-lg font-bold text-gray-900", "Confirm Delete" }

@@ -435,7 +435,7 @@ pub fn EventMgmtScreen(
     let delete_open = (presence_is_mounted(delete_presence) || modal == EventMgmtModal::Delete)
         && selected_event.is_some();
     let form_class = format!(
-        "fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 {}",
+        "fixed inset-0 bg-black/50 overflow-y-auto h-full w-full z-50 {}",
         presence_class(form_presence, "hs-enter", "hs-exit")
     );
     let delete_class = format!(
@@ -746,7 +746,7 @@ fn EventFormPanel(
     let exclusions = list_to_lines(&form_data.exclusions);
     let form = std::rc::Rc::new(form_data.clone());
     rsx! {
-        div { class: "relative top-4 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white mb-4",
+        div { class: "relative top-4 mx-auto p-5 border border-gray-200 w-full max-w-4xl shadow-lg rounded-md bg-white mb-4",
             div { class: "flex items-center justify-between border-b pb-4 mb-6",
                 h3 { class: "text-2xl font-semibold text-gray-900", "{title}" }
                 button {

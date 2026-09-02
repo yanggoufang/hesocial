@@ -613,7 +613,7 @@ fn OpportunitiesPanel(
                     }
                 }
             }
-            div { class: "bg-white rounded-lg shadow-sm border overflow-hidden",
+            div { class: "bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden",
                 if loading {
                     div {
                         id: "admin-sales-opps-loading",

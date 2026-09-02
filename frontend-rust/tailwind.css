@@ -1,20 +1,32 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@source "./src";
+
+@theme {
+  --color-luxury-gold: #d4af37;
+  --color-luxury-platinum: #e5e4e2;
+  --color-luxury-champagne: #f7e7ce;
+  --color-luxury-midnight-black: #0c0c0c;
+
+  --font-luxury: "Playfair Display", serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  --blur-luxury: 20px;
+}
 
 @layer base {
   html {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: var(--font-sans);
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
+    font-family: var(--font-luxury);
   }
 }
 
 @layer components {
   .luxury-gradient {
-    @apply bg-gradient-to-br from-luxury-gold/20 via-luxury-platinum/10 to-luxury-champagne/30;
+    @apply bg-linear-to-br from-luxury-gold/20 via-luxury-platinum/10 to-luxury-champagne/30;
   }
 
   .luxury-glass {
@@ -31,6 +43,40 @@
     @apply px-8 py-3 border-2 border-luxury-gold text-luxury-gold font-medium rounded-lg
            hover:bg-luxury-gold hover:text-luxury-midnight-black transition-all duration-300
            shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+
+  .luxury-button-primary {
+    @apply px-8 py-3 bg-luxury-gold text-luxury-midnight-black font-medium rounded-lg
+           hover:bg-luxury-gold/90 transition-all duration-300
+           shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+
+  .luxury-button-secondary {
+    @apply px-8 py-3 border-2 border-luxury-gold text-luxury-gold font-medium rounded-lg
+           hover:bg-luxury-gold hover:text-luxury-midnight-black transition-all duration-300
+           shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+
+  .luxury-button-danger {
+    @apply px-8 py-3 bg-red-700 text-white font-medium rounded-lg
+           hover:bg-red-600 transition-all duration-300
+           shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+
+  .luxury-button-icon {
+    @apply inline-flex items-center justify-center p-2 rounded-lg text-luxury-gold
+           hover:bg-white/10 transition-colors;
+  }
+
+  .luxury-button-icon-danger {
+    @apply inline-flex items-center justify-center p-2 rounded-lg text-red-400
+           hover:bg-red-500/15 transition-colors;
+  }
+
+  .luxury-input {
+    @apply bg-luxury-midnight-black/50 border border-luxury-gold/30 rounded-lg px-4 py-3
+           text-luxury-platinum placeholder:text-luxury-platinum/50
+           focus:outline-none focus:border-luxury-gold transition-colors;
   }
 }
 

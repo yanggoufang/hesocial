@@ -324,7 +324,7 @@ pub fn EventDetailScreen(
                                 h2 { class: "text-2xl font-luxury font-semibold text-luxury-gold mb-4",
                                     "活動詳情"
                                 }
-                                div { class: "prose prose-invert max-w-none",
+                                div { class: "max-w-none",
                                     p { class: "text-luxury-platinum/80 leading-relaxed whitespace-pre-line",
                                         "{event.description}"
                                     }

@@ -435,7 +435,7 @@ pub fn AdminSystemScreen(
                         on_click: move |_| on_tab.call(SystemTab::Diagnostics),
                     }
                 }
-                div { class: "tab-content",
+                div {
                     match tab {
                         SystemTab::Overview => rsx! {
                             SystemOverviewTab {
