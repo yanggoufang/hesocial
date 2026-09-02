@@ -2,11 +2,15 @@ use crate::auth::{
     GOOGLE_LOGIN_FAILED, claim_oauth_token_on_boot, clear_token, login_with_password,
     password_input_type, read_stored_token, store_token, validate_stored_token,
 };
+use crate::pages::admin::{Admin, AdminSystem};
+use crate::pages::adminanalytics::AdminAnalytics;
 use crate::pages::events::{EventDetail, Events};
 use crate::pages::home::Home;
 use crate::pages::participants::{EventParticipants, EventPrivacySettings};
 use crate::pages::profile::{ProfileBody, ProfileGuardLoading};
 use crate::pages::registrations::{EventRegister, MyRegistrations};
+use crate::pages::sales::AdminSales;
+use crate::pages::users::AdminUsers;
 use crate::pages::vvip::Vvip;
 use crate::permissions::{RouteGuard, Session, permissions, user_route_guard};
 use crate::register::{
@@ -16,13 +20,17 @@ use crate::shell::{Presence, presence_after_animation_end, presence_toggle};
 use dioxus::prelude::*;
 use std::str::FromStr;
 
+pub use crate::pages::admin::{AdminScreen, AdminSystemScreen};
+pub use crate::pages::adminanalytics::AdminAnalyticsScreen;
 pub use crate::pages::events::{EventCard, EventDetailScreen, EventsScreen};
 pub use crate::pages::home::HomeScreen;
 pub use crate::pages::participants::{EventParticipantsScreen, EventPrivacySettingsScreen};
 pub use crate::pages::profile::ProfileScreen;
 pub use crate::pages::register::RegisterScreen;
 pub use crate::pages::registrations::{EventRegisterScreen, MyRegistrationsScreen};
+pub use crate::pages::sales::AdminSalesScreen;
 pub use crate::pages::shell::{Footer, NavbarScreen};
+pub use crate::pages::users::AdminUsersScreen;
 pub use crate::pages::vvip::{VvipRecruitmentScreen, VvipScreen};
 
 #[derive(Routable, Clone, PartialEq, Debug)]
@@ -57,6 +65,10 @@ pub enum Route {
         Profile {},
         #[route("/admin")]
         Admin {},
+        #[route("/admin/users")]
+        AdminUsers {},
+        #[route("/admin/analytics")]
+        AdminAnalytics {},
         #[route("/event-mgmt")]
         EventMgmt {},
         #[route("/admin/sales")]
@@ -600,23 +612,8 @@ fn StubPage(id: String, title: String) -> Element {
 }
 
 #[component]
-pub fn Admin() -> Element {
-    rsx! { StubPage { id: "admin-stub".to_string(), title: "管理後台".to_string() } }
-}
-
-#[component]
 pub fn EventMgmt() -> Element {
     rsx! { StubPage { id: "event-mgmt-stub".to_string(), title: "活動管理".to_string() } }
-}
-
-#[component]
-pub fn AdminSales() -> Element {
-    rsx! { StubPage { id: "admin-sales-stub".to_string(), title: "銷售管理".to_string() } }
-}
-
-#[component]
-pub fn AdminSystem() -> Element {
-    rsx! { StubPage { id: "admin-system-stub".to_string(), title: "系統健康".to_string() } }
 }
 
 #[component]

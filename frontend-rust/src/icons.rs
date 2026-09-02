@@ -48,6 +48,19 @@ pub enum IconName {
     Building,
     AlertTriangle,
     Zap,
+    Database,
+    Cloud,
+    BarChart3,
+    CheckCircle,
+    XCircle,
+    Server,
+    HardDrive,
+    Trash2,
+    UserCheck,
+    Download,
+    Target,
+    PieChart,
+    TrendingDown,
 }
 
 impl IconName {
@@ -115,6 +128,19 @@ impl IconName {
             Self::Building => "building",
             Self::AlertTriangle => "alert-triangle",
             Self::Zap => "zap",
+            Self::Database => "database",
+            Self::Cloud => "cloud",
+            Self::BarChart3 => "bar-chart-3",
+            Self::CheckCircle => "check-circle",
+            Self::XCircle => "x-circle",
+            Self::Server => "server",
+            Self::HardDrive => "hard-drive",
+            Self::Trash2 => "trash-2",
+            Self::UserCheck => "user-check",
+            Self::Download => "download",
+            Self::Target => "target",
+            Self::PieChart => "pie-chart",
+            Self::TrendingDown => "trending-down",
         }
     }
 }
@@ -328,6 +354,71 @@ pub fn Icon(
                     path { d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" }
                     path { d: "M12 9v4" }
                     path { d: "M12 17h.01" }
+                },
+                IconName::Database => rsx! {
+                    ellipse { cx: "12", cy: "5", rx: "9", ry: "3" }
+                    path { d: "M3 5V19A9 3 0 0 0 21 19V5" }
+                    path { d: "M3 12A9 3 0 0 0 21 12" }
+                },
+                IconName::Cloud => rsx! {
+                    path { d: "M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" }
+                },
+                IconName::BarChart3 => rsx! {
+                    path { d: "M3 3v16a2 2 0 0 0 2 2h16" }
+                    path { d: "M18 17V9" }
+                    path { d: "M13 17V5" }
+                    path { d: "M8 17v-3" }
+                },
+                IconName::CheckCircle => rsx! {
+                    path { d: "M21.801 10A10 10 0 1 1 17 3.335" }
+                    path { d: "m9 11 3 3L22 4" }
+                },
+                IconName::XCircle => rsx! {
+                    circle { cx: "12", cy: "12", r: "10" }
+                    path { d: "m15 9-6 6" }
+                    path { d: "m9 9 6 6" }
+                },
+                IconName::Server => rsx! {
+                    rect { width: "20", height: "8", x: "2", y: "2", rx: "2", ry: "2" }
+                    rect { width: "20", height: "8", x: "2", y: "14", rx: "2", ry: "2" }
+                    line { x1: "6", x2: "6.01", y1: "6", y2: "6" }
+                    line { x1: "6", x2: "6.01", y1: "18", y2: "18" }
+                },
+                IconName::HardDrive => rsx! {
+                    line { x1: "22", x2: "2", y1: "12", y2: "12" }
+                    path { d: "M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" }
+                    line { x1: "6", x2: "6.01", y1: "16", y2: "16" }
+                    line { x1: "10", x2: "10.01", y1: "16", y2: "16" }
+                },
+                IconName::Trash2 => rsx! {
+                    path { d: "M3 6h18" }
+                    path { d: "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" }
+                    path { d: "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" }
+                    line { x1: "10", x2: "10", y1: "11", y2: "17" }
+                    line { x1: "14", x2: "14", y1: "11", y2: "17" }
+                },
+                IconName::UserCheck => rsx! {
+                    path { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" }
+                    circle { cx: "9", cy: "7", r: "4" }
+                    polyline { points: "16 11 18 13 22 9" }
+                },
+                IconName::Download => rsx! {
+                    path { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }
+                    polyline { points: "7 10 12 15 17 10" }
+                    line { x1: "12", x2: "12", y1: "15", y2: "3" }
+                },
+                IconName::Target => rsx! {
+                    circle { cx: "12", cy: "12", r: "10" }
+                    circle { cx: "12", cy: "12", r: "6" }
+                    circle { cx: "12", cy: "12", r: "2" }
+                },
+                IconName::PieChart => rsx! {
+                    path { d: "M21.21 15.89A10 10 0 1 1 8 2.83" }
+                    path { d: "M22 12A10 10 0 0 0 12 2v10z" }
+                },
+                IconName::TrendingDown => rsx! {
+                    polyline { points: "22 17 13.5 8.5 8.5 13.5 2 7" }
+                    polyline { points: "16 17 22 17 22 11" }
                 },
                 IconName::Zap => rsx! {
                     path { d: "M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" }

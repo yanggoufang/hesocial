@@ -1,8 +1,12 @@
+pub mod admin;
+pub mod adminanalytics;
 pub mod events;
 pub mod home;
 pub mod participants;
 pub mod profile;
 pub mod register;
 pub mod registrations;
+pub mod sales;
 pub mod shell;
+pub mod users;
 pub mod vvip;

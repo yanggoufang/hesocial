@@ -124,6 +124,25 @@
 
 這條同時說明其他守衛的 `fallbackPath` 都要重新檢視:靜默導走對使用者是「壞掉」而不是「沒權限」。
 
+### 前端移植進度(2026-09-02)
+
+18 / 22 條路由已是 Rust。剩下 event-mgmt 那批四頁(`/event-mgmt`、`/event-mgmt/categories`、`/event-mgmt/venues`、`/event-mgmt/media/:eventId`);`/admin/backups` 依決策 #5 不移植,`/access-test` 待確認。
+
+移植過程中發現的 React 缺陷,Rust 版都已修掉:
+
+- **`UserManagement.tsx` 的刪除鈕可見性**:條件寫在 `users.map((user) => …)` 裏,`user` 遮蔽了 `useAuth()` 的 `user`,結果變成「列上那個人是 super_admin 才顯示刪除」。後端 DELETE 要求的是**操作者**是 super_admin,所以 React 對一般 admin 顯示了按不動的按鈕,對 super_admin 又藏起了真正能刪的列。Rust 版改用 `permissions().manage_super_admin`。
+- **VVIP 靜默導向**(見上節)。
+
+後端沒有對應 endpoint 而**刻意降級、不造假**的區塊(不是漏做):
+
+| 頁 | 缺的 API | 處理 |
+|---|---|---|
+| `/admin/system` | `/api/health/database`、`/api/health/r2-sync`、`/api/system/health/{detailed,metrics,diagnostics}` | 改用 `/api/health` + `/api/health/status` 拼,Security/Services 區塊不顯示 |
+| `/admin` | 硬編碼的「效能/最佳」卡 | 整卡拿掉 |
+| `/admin/analytics` | `POST /api/analytics/export`;overview 沒回 trends / category performance | 按鈕留著不做假下載;圖表走空狀態 |
+| `/events/:id/register` | `GET /api/registrations/check/{eventId}` | 改由 POST 失敗顯示錯誤橫幅 |
+| `/vvip` | — | React 三筆寫死活動與 156/12/45/28 統計全部拿掉 |
+
 ### Bundle 體積與 code splitting(2026-09-02)
 
 | 設定 | 首屏 wasm(gzip) | 對照 |
