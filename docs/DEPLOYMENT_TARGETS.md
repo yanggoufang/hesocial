@@ -12,7 +12,7 @@ one origin. Its committed configuration is `backend-rust/wrangler.toml`.
 | --- | --- | --- |
 | Site + API | Cloudflare Worker `hesocial-backend-rust` at `https://hesocial.ahexagram.com` | `backend-rust/wrangler.toml` — `routes` custom domains and `[assets]` |
 | API implementation | Rust (`workers-rs` + axum), compiled to wasm32 | `backend-rust/crates/worker` |
-| Frontend | React SPA served as Worker static assets | `[assets]` with `not_found_handling = "single-page-application"` |
+| Frontend | React SPA served as Worker static assets (the Rust SPA is built but not yet flipped on — see below) | `[assets]` with `not_found_handling = "single-page-application"` |
 | Database | Turso / libSQL over Hrana HTTP v2 | `backend-rust/crates/worker/src/db.rs`, `TURSO_URL` + `TURSO_AUTH_TOKEN` |
 | Media storage | Cloudflare R2, bucket `hesocial-media` | `MEDIA` binding |
 | Rate limiting | Cloudflare Rate Limit binding | `RATE_LIMITER` binding |
@@ -52,15 +52,36 @@ cross-bundle jump always lands somewhere real, and `Shell`'s navigation falls
 back to a full page load (`shell::hard_navigate`) when a path does not parse in
 the running bundle — that is how a member clicking 管理後台 crosses over.
 
-**The Worker must serve `dist-admin/index.html` for `/admin*` and
-`/event-mgmt*`, and `dist/index.html` for everything else.** A single
-`[assets]` directory cannot express that, so the cutover needs either two
-asset bindings or the Worker answering those prefixes itself.
+`build:web-rust` also merges the two into `frontend-rust/dist-worker`, which is
+the tree wrangler uploads. The merge is safe because dx hashes every asset
+filename, so the bundles' JS and wasm never collide and their tailwind CSS is
+byte-identical:
 
-Serving the wrong bundle for a path fails quietly rather than loudly: the
-router renders its `RouteMatchError` page *and* rewrites the address bar to
-`/`, so the URL and the content disagree. Verify both prefixes after any
-change to the asset routing.
+```
+dist-worker/index.html                      public entry (Cloudflare's SPA fallback)
+dist-worker/admin.html                      admin entry
+dist-worker/assets/…-<publichash>.js|wasm
+dist-worker/assets/…-<adminhash>.js|wasm
+dist-worker/assets/tailwind-….css           shared
+```
+
+One `[assets]` directory cannot route two entry points, so the Worker does it:
+`run_worker_first` covers `/admin`, `/admin/*`, `/event-mgmt` and
+`/event-mgmt/*`, and the fetch handler answers those with `/admin.html` from
+the `ASSETS` binding. The prefix test lives in `hesocial_core::spa` so it is
+covered by `cargo test -p core` rather than only in wasm — `/administrators`
+and `/event-mgmt-archive` must not match, and they are asserted not to.
+
+**The cutover itself is one line** — `directory = "../frontend-rust/dist-worker"`
+— and is deliberately not taken yet. The Rust SPA has only ever been served by
+the e2e harness, and a backend-only deploy must not silently replace the whole
+frontend. Until it is flipped, the admin prefixes reach the Worker, `/admin.html`
+misses in the React tree, and the handler falls through, so the behaviour is
+unchanged.
+
+After flipping, verify both prefixes. Serving the wrong bundle for a path fails
+quietly rather than loudly: the router renders its `RouteMatchError` page *and*
+rewrites the address bar to `/`, so the URL and the content disagree.
 
 ## Deploy
 

@@ -164,7 +164,10 @@ async fn google_callback_inner(
         return failure_redirect(&frontend_origin, "oauth_error");
     };
     let Some(user) = upsert_google_user(&state, &profile).await else {
-        worker::console_log!("oauth/callback: upsert_google_user failed for {}", profile.email);
+        worker::console_log!(
+            "oauth/callback: upsert_google_user failed for {}",
+            profile.email
+        );
         return failure_redirect(&frontend_origin, "oauth_error");
     };
     let Some(token) = issue_token(&state, &user) else {

@@ -20,10 +20,27 @@ command = "worker-build --release crates/worker"
 # fallback would answer unknown API paths with index.html instead of the JSON
 # 404 the contract expects. Build with VITE_API_URL=/api so the bundle calls
 # its own origin.
+#
+# The Rust SPA (frontend-rust) builds as two bundles so a member never
+# downloads the admin console. `npm run build:web-rust` merges them into
+# frontend-rust/dist-worker: the public entry at /index.html, the admin one at
+# /admin.html, hashed assets side by side. Cutting over is this one line:
+#
+#   directory = "../frontend-rust/dist-worker"
+#
+# It is deliberately NOT flipped yet - the Rust SPA has only ever been served
+# by the e2e harness, and a backend-only deploy must not silently swap the
+# whole frontend. See docs/DEPLOYMENT_TARGETS.md.
 [assets]
 directory = "../frontend/dist"
+binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+# /api/* must reach the Worker or the SPA fallback would answer an unknown API
+# path with index.html. The admin prefixes must reach it so it can hand back
+# /admin.html instead of the public entry; against the current React directory
+# that asset does not exist and the Worker falls through, which is why this is
+# safe to land before the cutover.
+run_worker_first = ["/api/*", "/admin", "/admin/*", "/event-mgmt", "/event-mgmt/*"]
 
 [vars]
 # The SPA is same-origin now, so this is not what lets the site call the API.

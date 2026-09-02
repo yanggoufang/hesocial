@@ -39,6 +39,14 @@ const RATE_LIMITER_DISABLED_ENV: &str = "AUTH_RATE_LIMIT_DISABLED";
 const RATE_LIMITER_KEY_HEADER: HeaderName = HeaderName::from_static("cf-connecting-ip");
 const RATE_LIMITER_UNKEYED_CLIENT: &str = "unknown";
 
+// The Rust SPA ships as two wasm bundles so a member never downloads the admin
+// console (see docs/DEPLOYMENT_TARGETS.md). Both are uploaded into one asset
+// directory - their hashed filenames do not collide - with the public
+// bundle's entry at /index.html and the admin one at /admin.html. Cloudflare's
+// SPA fallback only knows the former, so these prefixes run the Worker first
+// and are answered with the admin entry instead.
+const ASSETS_BINDING: &str = "ASSETS";
+
 #[derive(Clone)]
 pub struct AppState {
     allowed_origins: Vec<String>,
@@ -417,11 +425,34 @@ fn router(state: AppState) -> Router {
         .with_state(state)
 }
 
+async fn admin_bundle_entry(request: &HttpRequest, env: &Env) -> Option<Response> {
+    let assets = env.assets(ASSETS_BINDING).ok()?;
+    let mut entry = request.uri().clone().into_parts();
+    entry.path_and_query = Some(hesocial_core::spa::ADMIN_BUNDLE_ENTRY.parse().ok()?);
+    let url = axum::http::Uri::from_parts(entry).ok()?;
+    let response = SendFuture::new(assets.fetch(url.to_string(), None))
+        .await
+        .ok()?;
+    // A miss falls through to the SPA fallback rather than turning a real
+    // route into a 404 - which is what happens against an asset directory
+    // that has no admin entry, such as the React build still deployed today.
+    response
+        .status()
+        .is_success()
+        .then(|| response.map(Body::new))
+}
+
 #[event(fetch)]
 async fn fetch(
     request: HttpRequest,
     env: Env,
     _context: Context,
 ) -> Result<axum::http::Response<axum::body::Body>> {
+    if request.method() == Method::GET
+        && hesocial_core::spa::wants_admin_bundle(request.uri().path())
+        && let Some(response) = admin_bundle_entry(&request, &env).await
+    {
+        return Ok(response);
+    }
     Ok(router(AppState::from_env(&env)).call(request).await?)
 }

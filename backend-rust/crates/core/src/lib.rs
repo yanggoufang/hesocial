@@ -19,6 +19,7 @@ pub mod participants;
 pub mod pbkdf2;
 pub mod registrations;
 pub mod sales;
+pub mod spa;
 
 pub const JWT_EXPIRY_SECONDS: u64 = 7 * 24 * 60 * 60;
 
