@@ -425,14 +425,37 @@ fn router(state: AppState) -> Router {
         .with_state(state)
 }
 
+/// The asset store is reached with `fetch`, which needs an absolute URL. An
+/// origin-form request URI (`/admin`, what HTTP/1.1 actually sends) has no
+/// scheme or authority, and handing the resulting relative string to `fetch`
+/// hangs the isolate rather than failing, so the origin is reconstructed from
+/// the Host header whenever the URI does not carry one.
+fn request_origin(request: &HttpRequest) -> Option<String> {
+    let parts = request.uri().clone().into_parts();
+    if let (Some(scheme), Some(authority)) = (parts.scheme, parts.authority) {
+        return Some(format!("{scheme}://{authority}"));
+    }
+    let host = request
+        .headers()
+        .get(axum::http::header::HOST)?
+        .to_str()
+        .ok()?;
+    let scheme = if host.starts_with("localhost") || host.starts_with("127.0.0.1") {
+        "http"
+    } else {
+        "https"
+    };
+    Some(format!("{scheme}://{host}"))
+}
+
 async fn admin_bundle_entry(request: &HttpRequest, env: &Env) -> Option<Response> {
     let assets = env.assets(ASSETS_BINDING).ok()?;
-    let mut entry = request.uri().clone().into_parts();
-    entry.path_and_query = Some(hesocial_core::spa::ADMIN_BUNDLE_ENTRY.parse().ok()?);
-    let url = axum::http::Uri::from_parts(entry).ok()?;
-    let response = SendFuture::new(assets.fetch(url.to_string(), None))
-        .await
-        .ok()?;
+    let url = format!(
+        "{}{}",
+        request_origin(request)?,
+        hesocial_core::spa::ADMIN_BUNDLE_ENTRY
+    );
+    let response = SendFuture::new(assets.fetch(url, None)).await.ok()?;
     // A miss falls through to the SPA fallback rather than turning a real
     // route into a 404 - which is what happens against an asset directory
     // that has no admin entry, such as the React build still deployed today.
@@ -448,7 +471,10 @@ async fn fetch(
     env: Env,
     _context: Context,
 ) -> Result<axum::http::Response<axum::body::Body>> {
+    // The entry itself must never be intercepted, or the lookup below would
+    // ask the asset store for a path that routes straight back here.
     if request.method() == Method::GET
+        && request.uri().path() != hesocial_core::spa::ADMIN_BUNDLE_ENTRY
         && hesocial_core::spa::wants_admin_bundle(request.uri().path())
         && let Some(response) = admin_bundle_entry(&request, &env).await
     {

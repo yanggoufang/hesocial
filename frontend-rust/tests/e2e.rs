@@ -19,7 +19,10 @@ fn crate_root() -> PathBuf {
 
 fn find_dist() -> PathBuf {
     let root = crate_root();
+    // dist-worker first: it is the merged two-bundle tree the Worker actually
+    // serves, so the suite exercises what ships rather than the public half.
     let candidates = [
+        root.join("dist-worker"),
         root.join("dist"),
         root.join("dist/public"),
         root.join("target/dx/hesocial-frontend/release/web/public"),
@@ -31,8 +34,8 @@ fn find_dist() -> PathBuf {
         }
     }
     panic!(
-        "built SPA not found under frontend-rust/dist (looked for index.html). \
-         Run `dx bundle --web --release --out-dir dist` first."
+        "built SPA not found under frontend-rust/dist-worker or dist (looked for \
+         index.html). Run `npm run build:web-rust` first."
     );
 }
 
@@ -89,6 +92,15 @@ impl Drop for StaticHarness {
             let _ = handle.join();
         }
     }
+}
+
+fn hesocial_spa_admin_prefix(path: &str) -> bool {
+    ["/admin", "/event-mgmt"].iter().any(|prefix| {
+        path == *prefix
+            || path
+                .strip_prefix(prefix)
+                .is_some_and(|r| r.starts_with('/'))
+    })
 }
 
 fn start_static_server(root: PathBuf) -> StaticHarness {
@@ -245,7 +257,12 @@ fn start_static_server(root: PathBuf) -> StaticHarness {
             }
 
             let relative = path_only.trim_start_matches('/');
-            let mut path = if relative.is_empty() {
+            // Mirrors the Worker: the admin prefixes are answered with the
+            // admin bundle's entry while the browser URL stays put.
+            let admin_entry = root.join("admin.html");
+            let mut path = if admin_entry.exists() && hesocial_spa_admin_prefix(path_only) {
+                admin_entry
+            } else if relative.is_empty() {
                 root.join("index.html")
             } else {
                 root.join(relative)
@@ -1215,6 +1232,84 @@ async fn events_list_navigates_to_event_detail() -> WebDriverResult<()> {
             "organizer missing in {body:?}"
         );
         assert!(body.contains("登入後報名"), "guest CTA missing in {body:?}");
+        Ok(())
+    })
+    .await
+}
+
+async fn loaded_wasm(driver: &WebDriver) -> WebDriverResult<String> {
+    let value = driver
+        .execute(
+            "return performance.getEntriesByType('resource').map(e=>e.name)\
+             .filter(n=>n.endsWith('.wasm')).map(n=>n.split('/').pop()).join(',');",
+            vec![],
+        )
+        .await?;
+    Ok(value.json().as_str().unwrap_or_default().to_string())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn admin_prefixes_load_the_admin_bundle_and_others_do_not() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        seed_token(&driver, &url, "e2e-admin-token").await?;
+
+        let mut public_wasm = String::new();
+        for (path, marker) in [
+            ("", "在奢華環境中遇見志同道合的菁英"),
+            ("events/11", "松露季私宴"),
+            // Merely starting with the text of a prefix must not cross bundles.
+            ("administrators", "找不到這個頁面"),
+        ] {
+            driver.goto(&format!("{url}{path}")).await?;
+            wait_body_contains(&driver, marker).await?;
+            let wasm = loaded_wasm(&driver).await?;
+            if public_wasm.is_empty() {
+                public_wasm = wasm.clone();
+            }
+            assert_eq!(public_wasm, wasm, "/{path} must stay on the public bundle");
+        }
+
+        let mut admin_wasm = String::new();
+        for (path, marker) in [
+            ("admin", "管理後台"),
+            ("admin/users", "使用者管理"),
+            ("event-mgmt", "Event Dashboard"),
+        ] {
+            driver.goto(&format!("{url}{path}")).await?;
+            wait_body_contains(&driver, marker).await?;
+            let wasm = loaded_wasm(&driver).await?;
+            if admin_wasm.is_empty() {
+                admin_wasm = wasm.clone();
+            }
+            assert_eq!(admin_wasm, wasm, "/{path} must stay on the admin bundle");
+        }
+
+        assert_ne!(
+            public_wasm, admin_wasm,
+            "the two bundles must be different wasm files, else the split is not happening"
+        );
+        Ok(())
+    })
+    .await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn unknown_routes_render_the_404_page_not_the_router_dump() -> WebDriverResult<()> {
+    with_browser(|driver, url| async move {
+        for path in ["administrators", "events/11/nope", "admin.html", "a/b/c"] {
+            driver.goto(&format!("{url}{path}")).await?;
+            wait_present(&driver, "not-found").await?;
+            let body = driver.find(By::Tag("body")).await?.text().await?;
+            assert!(
+                !body.contains("Failed to parse route"),
+                "/{path} leaked the router's parse dump: {body:?}"
+            );
+            assert!(
+                !body.contains("Attempted Matches"),
+                "/{path} leaked the route table: {body:?}"
+            );
+            wait_present(&driver, "not-found-home").await?;
+        }
         Ok(())
     })
     .await

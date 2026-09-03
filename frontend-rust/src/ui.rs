@@ -113,6 +113,11 @@ pub enum Route {
         #[route("/admin/system")]
         #[cfg(feature = "admin-bundle")]
         AdminSystem {},
+        // Without this the router falls back to Dioxus's parse-failure screen,
+        // which prints every route it tried. Both bundles need it: each one is
+        // the other's unknown paths.
+        #[route("/:..segments")]
+        NotFound { segments: Vec<String> },
 }
 
 #[component]
@@ -637,6 +642,45 @@ pub fn ForgotPassword() -> Element {
             id: "forgot-password-stub",
             class: "min-h-screen bg-luxury-midnight-black text-luxury-platinum p-8",
             h1 { "忘記密碼" }
+        }
+    }
+}
+
+#[component]
+pub fn NotFound(segments: Vec<String>) -> Element {
+    let path = format!("/{}", segments.join("/"));
+    rsx! {
+        main {
+            id: "not-found",
+            class: "min-h-screen bg-luxury-midnight-black text-luxury-platinum px-6 py-24",
+            div { class: "max-w-xl mx-auto text-center hs-enter",
+                p { class: "text-luxury-gold/70 text-sm tracking-[0.3em] mb-4", "404" }
+                h1 { class: "font-luxury text-4xl text-luxury-gold mb-4", "找不到這個頁面" }
+                p { class: "text-luxury-platinum/70 mb-2", "您輸入的網址不存在或已經變更。" }
+                p {
+                    id: "not-found-path",
+                    class: "text-luxury-platinum/40 text-sm font-mono mb-10 break-all",
+                    "{path}"
+                }
+                div { class: "flex flex-wrap items-center justify-center gap-4",
+                    Link {
+                        id: "not-found-home",
+                        to: Route::Home {},
+                        class: "luxury-button inline-flex items-center gap-2",
+                        "回到首頁"
+                    }
+                    a {
+                        id: "not-found-events",
+                        href: "/events",
+                        class: "luxury-button-outline inline-flex items-center gap-2",
+                        onclick: move |evt| {
+                            evt.prevent_default();
+                            hard_navigate("/events");
+                        },
+                        "瀏覽活動"
+                    }
+                }
+            }
         }
     }
 }

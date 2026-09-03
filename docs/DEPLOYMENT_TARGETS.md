@@ -80,18 +80,28 @@ The Rust SPA needs no build-time API configuration. Every path in it is a
 same-origin literal (`/api/auth/login`), so the `VITE_API_URL=/api` the React
 build required has no equivalent here.
 
-**Verify both prefixes after any change to the asset routing.** Serving the
-wrong bundle for a path fails quietly rather than loudly: the router renders its
-`RouteMatchError` page *and* rewrites the address bar to `/`, so the URL and the
-content disagree. Worth checking by hand under `wrangler dev`:
+**Verify the routing after any change to it**, with the script rather than by
+eye — serving the wrong bundle fails quietly, rendering a 404 page while the
+address bar keeps the original URL:
 
-| Path | Expected |
-| --- | --- |
-| `/` | public bundle, landing page |
-| `/events/11` | public bundle, event detail (dynamic segment intact) |
-| `/admin` | admin bundle — signed out, redirects to `/login` |
-| `/administrators` | public bundle's SPA fallback, **not** the admin entry |
-| `/api/health` | JSON from the Worker, never `index.html` |
+```bash
+npm run verify:routing                      # against wrangler dev on :8787
+npm run verify:routing -- https://hesocial.ahexagram.com
+```
+
+It reads the two bundles' hashed script tags out of `dist-worker` and asserts
+which one each path is served, covering the public routes, the admin routes,
+the paths that merely look like an admin prefix (`/administrators`,
+`/admin-backup`, `/event-mgmt-archive`) and that no `/api/*` path receives the
+HTML fallback.
+
+Running it locally needs `wrangler dev`, and the installed wrangler (4.124.0)
+is older than this config's `compatibility_date`, so dev needs an override that
+deploys do not:
+
+```bash
+cd backend-rust && npx wrangler dev --local --compatibility-date 2026-08-22
+```
 
 ## Deploy
 

@@ -23,6 +23,7 @@
     "test:rust": "cd backend-rust && cargo test -p core",
     "test:web-rust": "cd frontend-rust && cargo test",
     "test:contract:rust": "cd contract && npm run test",
+    "verify:routing": "bash scripts/verify-spa-routing.sh",
     "test:coverage": "npm run test:frontend:coverage",
     "test:frontend:coverage": "cd frontend && npm run test:coverage",
     "setup": "npm install && cd frontend && npm install && cd ../contract && npm install",
