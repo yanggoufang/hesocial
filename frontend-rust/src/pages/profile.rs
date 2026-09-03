@@ -104,6 +104,16 @@ pub fn ProfileBody() -> Element {
             on_privacy_level: move |value: i64| {
                 mutate_edit(edit, |form| form.privacy_level = value);
             },
+            on_gender: move |value: String| {
+                mutate_edit(edit, |form| {
+                    form.gender = if value.is_empty() { None } else { Some(value) };
+                });
+            },
+            on_interested_in: move |value: String| {
+                mutate_edit(edit, |form| {
+                    form.interested_in = if value.is_empty() { None } else { Some(value) };
+                });
+            },
             on_new_interest: move |value: String| {
                 mutate_edit(edit, |form| form.new_interest = value);
             },
@@ -215,6 +225,8 @@ pub fn ProfileScreen(
     #[props(default)] on_profession: EventHandler<String>,
     #[props(default)] on_bio: EventHandler<String>,
     #[props(default)] on_privacy_level: EventHandler<i64>,
+    #[props(default)] on_gender: EventHandler<String>,
+    #[props(default)] on_interested_in: EventHandler<String>,
     #[props(default)] on_new_interest: EventHandler<String>,
     #[props(default)] on_add_interest: EventHandler<()>,
     #[props(default)] on_remove_interest: EventHandler<String>,
@@ -428,6 +440,35 @@ pub fn ProfileScreen(
                                                 option { value: "{value}", "{label}" }
                                             }
                                         }
+                                    }
+                                    div {
+                                        label { class: "block text-luxury-platinum text-sm font-medium mb-2", "性別" }
+                                        select {
+                                            name: "gender",
+                                            value: "{form.gender.clone().unwrap_or_default()}",
+                                            class: "w-full bg-luxury-midnight-black/50 border border-luxury-gold/30 rounded-lg px-4 py-3 text-luxury-platinum focus:outline-none focus:border-luxury-gold transition-colors",
+                                            onchange: move |evt| on_gender.call(evt.value()),
+                                            option { value: "", "請選擇" }
+                                            option { value: "female", "女性" }
+                                            option { value: "male", "男性" }
+                                            option { value: "non_binary", "非二元性別" }
+                                            option { value: "prefer_not_to_say", "不透露" }
+                                        }
+                                    }
+                                    div {
+                                        label { class: "block text-luxury-platinum text-sm font-medium mb-2", "感興趣的對象" }
+                                        select {
+                                            name: "interestedIn",
+                                            value: "{form.interested_in.clone().unwrap_or_default()}",
+                                            class: "w-full bg-luxury-midnight-black/50 border border-luxury-gold/30 rounded-lg px-4 py-3 text-luxury-platinum focus:outline-none focus:border-luxury-gold transition-colors",
+                                            onchange: move |evt| on_interested_in.call(evt.value()),
+                                            option { value: "", "請選擇" }
+                                            option { value: "female", "女性" }
+                                            option { value: "male", "男性" }
+                                            option { value: "everyone", "不限" }
+                                            option { value: "prefer_not_to_say", "不透露" }
+                                        }
+                                        p { class: "text-luxury-platinum/50 text-xs mt-2", "用於 VVIP 專區的參加者預覽篩選，可隨時修改" }
                                     }
                                     div {
                                         label { class: "block text-luxury-platinum text-sm font-medium mb-2", "興趣愛好" }
