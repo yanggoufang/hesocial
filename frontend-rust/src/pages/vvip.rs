@@ -238,16 +238,47 @@ pub fn VvipRecruitmentScreen(
                             for (index, attendee) in preview.attendees.iter().cloned().enumerate() {
                                 div {
                                     id: "vvip-preview-card-{index}",
-                                    class: "luxury-glass p-6 rounded-2xl hs-enter",
+                                    class: "luxury-glass p-6 rounded-2xl hs-enter overflow-hidden relative group hover:scale-[1.02] transition-transform duration-300",
                                     style: "--hs-from: 30px; animation-delay: {index as f32 * 0.1}s",
-                                    if let Some(profession) = attendee.profession.clone() {
-                                        p { class: "text-luxury-gold font-semibold mb-2", "{profession}" }
+                                    div { class: "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-luxury-gold via-luxury-platinum/50 to-transparent" }
+                                    div { class: "flex items-start gap-4 mb-4",
+                                        div {
+                                            class: "w-12 h-12 rounded-full bg-gradient-to-br from-luxury-gold/30 to-luxury-gold/10 border border-luxury-gold/30 flex items-center justify-center flex-shrink-0",
+                                            Icon {
+                                                name: IconName::Crown,
+                                                class: "w-6 h-6 text-luxury-gold".to_string(),
+                                            }
+                                        }
+                                        div { class: "flex-1 min-w-0",
+                                            if let Some(profession) = attendee.profession.clone() {
+                                                p { class: "text-luxury-gold font-semibold truncate", "{profession}" }
+                                            }
+                                            if let Some(industry) = attendee.industry.clone() {
+                                                p { class: "text-luxury-platinum/60 text-xs truncate", "{industry}" }
+                                            }
+                                        }
+                                        if let Some(tier) = attendee.membership_tier.clone() {
+                                            span {
+                                                class: {
+                                                    let base = "px-2.5 py-1 rounded-full text-xs font-medium border flex-shrink-0 ";
+                                                    let color = match tier.as_str() {
+                                                        "Black Card" => "bg-black text-luxury-gold border-luxury-gold/50",
+                                                        "Diamond" => "bg-blue-900/30 text-blue-200 border-blue-400/30",
+                                                        "Platinum" => "bg-gray-800/50 text-gray-300 border-gray-600/30",
+                                                        _ => "bg-luxury-gold/20 text-luxury-gold border-luxury-gold/30",
+                                                    };
+                                                    format!("{base}{color}")
+                                                },
+                                                "{tier}"
+                                            }
+                                        }
                                     }
-                                    if let Some(industry) = attendee.industry.clone() {
-                                        p { class: "text-luxury-platinum/80 text-sm mb-2", "{industry}" }
-                                    }
-                                    if let Some(tier) = attendee.membership_tier.clone() {
-                                        p { class: "text-luxury-gold text-sm", "{tier}" }
+                                    div { class: "pt-3 border-t border-white/5 flex items-center justify-between",
+                                        span { class: "text-xs text-luxury-platinum/40", "已驗證會員" }
+                                        Icon {
+                                            name: IconName::Check,
+                                            class: "w-4 h-4 text-green-400/60".to_string(),
+                                        }
                                     }
                                 }
                             }

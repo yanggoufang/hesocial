@@ -5,6 +5,7 @@ pub struct NavItem {
     pub icon: Option<&'static str>,
 }
 
+#[cfg(not(feature = "admin-bundle"))]
 pub const PRIMARY_NAV_ITEMS: &[NavItem] = &[
     NavItem {
         name: "首頁",
@@ -20,6 +21,35 @@ pub const PRIMARY_NAV_ITEMS: &[NavItem] = &[
         name: "VVIP專區",
         path: "/vvip",
         icon: Some("crown"),
+    },
+];
+
+#[cfg(feature = "admin-bundle")]
+pub const PRIMARY_NAV_ITEMS: &[NavItem] = &[
+    NavItem {
+        name: "管理後台",
+        path: "/admin",
+        icon: Some("shield"),
+    },
+    NavItem {
+        name: "活動管理",
+        path: "/event-mgmt",
+        icon: None,
+    },
+    NavItem {
+        name: "銷售管理",
+        path: "/admin/sales",
+        icon: None,
+    },
+    NavItem {
+        name: "系統健康",
+        path: "/admin/system",
+        icon: None,
+    },
+    NavItem {
+        name: "會員站",
+        path: "/",
+        icon: None,
     },
 ];
 

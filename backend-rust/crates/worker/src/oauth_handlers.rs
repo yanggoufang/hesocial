@@ -181,10 +181,17 @@ async fn google_callback_inner(
         user.annual_income,
         user.net_worth,
     );
-    redirect(
-        &success_redirect_url(&frontend_origin, &token, needs_completion),
-        true,
-    )
+    let is_vvip = user.is_verified == 1
+        && (user.membership_tier == "Diamond" || user.membership_tier == "Black Card");
+    let target = if needs_completion {
+        "complete-profile"
+    } else if is_vvip {
+        "vvip"
+    } else {
+        "events"
+    };
+    let redirect_url = format!("{}/{target}?token={token}", frontend_origin);
+    redirect(&redirect_url, true)
 }
 
 /// POST the authorization code to Google's token endpoint; returns the

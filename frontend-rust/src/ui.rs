@@ -24,6 +24,8 @@ use crate::pages::taxonomy::{EventCategories, EventVenues};
 use crate::pages::users::AdminUsers;
 #[cfg(not(feature = "admin-bundle"))]
 use crate::pages::vvip::Vvip;
+#[cfg(not(feature = "admin-bundle"))]
+use crate::permissions::MembershipTier;
 use crate::permissions::{RouteGuard, Session, permissions, user_route_guard};
 use crate::register::{
     RegisterForm, push_interest, register_account, remove_interest, validate_step,
@@ -257,6 +259,26 @@ pub fn Login() -> Element {
                     match login_with_password(&email_val, &password_val).await {
                         Ok(ok) => {
                             store_token(&ok.token);
+                            #[cfg(not(feature = "admin-bundle"))]
+                            let target = if let Some(user) = &ok.user {
+                                let snap = user.snapshot(true);
+                                let perms = permissions(&snap);
+                                let is_vvip = perms.member_features
+                                    && matches!(
+                                        snap.membership_tier,
+                                        Some(MembershipTier::Diamond)
+                                            | Some(MembershipTier::BlackCard)
+                                    );
+                                if is_vvip {
+                                    Route::Vvip {}
+                                } else {
+                                    Route::Events {}
+                                }
+                            } else {
+                                Route::Events {}
+                            };
+                            #[cfg(feature = "admin-bundle")]
+                            let target = Route::Admin {};
                             if let Some(mut session) = session {
                                 session.set(Session {
                                     token: Some(ok.token.clone()),
@@ -264,7 +286,7 @@ pub fn Login() -> Element {
                                     restoring: false,
                                 });
                             }
-                            navigator.push(Route::Home {});
+                            navigator.push(target);
                         }
                         Err(msg) => {
                             error.set(Some(msg));

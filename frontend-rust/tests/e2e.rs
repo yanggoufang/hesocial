@@ -602,7 +602,7 @@ async fn login_success_stores_token_and_navigates_home() -> WebDriverResult<()> 
             .send_keys("secret")
             .await?;
         driver.find(By::Id("login-submit")).await?.click().await?;
-        wait_text(&driver, "scaffold-heading", "HeSocial").await?;
+        wait_body_contains(&driver, "精選活動").await?;
         let token = local_storage_get(&driver, "hesocial_token").await?;
         assert_eq!(token.as_deref(), Some("e2e-login-token"));
         Ok(())
@@ -660,7 +660,7 @@ async fn login_submit_disabled_while_in_flight() -> WebDriverResult<()> {
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
         assert!(saw_disabled, "submit was never disabled while in flight");
-        wait_text(&driver, "scaffold-heading", "HeSocial").await?;
+        wait_body_contains(&driver, "精選活動").await?;
         Ok(())
     })
     .await
