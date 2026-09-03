@@ -12,7 +12,7 @@ one origin. Its committed configuration is `backend-rust/wrangler.toml`.
 | --- | --- | --- |
 | Site + API | Cloudflare Worker `hesocial-backend-rust` at `https://hesocial.ahexagram.com` | `backend-rust/wrangler.toml` — `routes` custom domains and `[assets]` |
 | API implementation | Rust (`workers-rs` + axum), compiled to wasm32 | `backend-rust/crates/worker` |
-| Frontend | React SPA served as Worker static assets (the Rust SPA is built but not yet flipped on — see below) | `[assets]` with `not_found_handling = "single-page-application"` |
+| Frontend | Rust/Dioxus SPA (`frontend-rust`), served as Worker static assets from two bundles | `[assets]` → `../frontend-rust/dist-worker`, `not_found_handling = "single-page-application"` |
 | Database | Turso / libSQL over Hrana HTTP v2 | `backend-rust/crates/worker/src/db.rs`, `TURSO_URL` + `TURSO_AUTH_TOKEN` |
 | Media storage | Cloudflare R2, bucket `hesocial-media` | `MEDIA` binding |
 | Rate limiting | Cloudflare Rate Limit binding | `RATE_LIMITER` binding |
@@ -28,11 +28,11 @@ Static assets are matched before the Worker runs. `/api/*` is exempted via
 SPA fallback would answer an unknown API path with `index.html` instead of the
 JSON error clients expect.
 
-## Rust SPA: two bundles (not yet wired to the Worker)
+## Rust SPA: two bundles
 
-`frontend-rust/` is the 22-route Rust/Dioxus SPA that replaces the React one.
-**Nothing in `wrangler.toml` or `package.json` points at it yet** — the Worker
-still serves `frontend/dist`. Wiring it is a deliberate, separate cutover.
+`frontend-rust/` is the 22-route Rust/Dioxus SPA that replaces the React one,
+and it is what `[assets]` now points at. `frontend/` is still in the repo and
+still builds, but nothing deploys it.
 
 It builds as **two** wasm bundles, because wasm-split is unusable
 (see `docs/rust-migration/ROADMAP.md`) and one bundle is 765,738 bytes gzipped:
@@ -72,26 +72,41 @@ the `ASSETS` binding. The prefix test lives in `hesocial_core::spa` so it is
 covered by `cargo test -p core` rather than only in wasm — `/administrators`
 and `/event-mgmt-archive` must not match, and they are asserted not to.
 
-**The cutover itself is one line** — `directory = "../frontend-rust/dist-worker"`
-— and is deliberately not taken yet. The Rust SPA has only ever been served by
-the e2e harness, and a backend-only deploy must not silently replace the whole
-frontend. Until it is flipped, the admin prefixes reach the Worker, `/admin.html`
-misses in the React tree, and the handler falls through, so the behaviour is
-unchanged.
+`dist-worker` is **gitignored and built**, so `npm run build:web-rust` must run
+before every `wrangler deploy`. A missing tree fails the deploy loudly; a stale
+one deploys quietly and ships an old site.
 
-After flipping, verify both prefixes. Serving the wrong bundle for a path fails
-quietly rather than loudly: the router renders its `RouteMatchError` page *and*
-rewrites the address bar to `/`, so the URL and the content disagree.
+The Rust SPA needs no build-time API configuration. Every path in it is a
+same-origin literal (`/api/auth/login`), so the `VITE_API_URL=/api` the React
+build required has no equivalent here.
+
+**Verify both prefixes after any change to the asset routing.** Serving the
+wrong bundle for a path fails quietly rather than loudly: the router renders its
+`RouteMatchError` page *and* rewrites the address bar to `/`, so the URL and the
+content disagree. Worth checking by hand under `wrangler dev`:
+
+| Path | Expected |
+| --- | --- |
+| `/` | public bundle, landing page |
+| `/events/11` | public bundle, event detail (dynamic segment intact) |
+| `/admin` | admin bundle — signed out, redirects to `/login` |
+| `/administrators` | public bundle's SPA fallback, **not** the admin entry |
+| `/api/health` | JSON from the Worker, never `index.html` |
 
 ## Deploy
 
 ```bash
-VITE_API_URL=/api npm run build:frontend    # frontend/dist is gitignored
-npx wrangler --cwd backend-rust deploy      # builds the wasm and uploads both
+npm run build:web-rust                  # frontend-rust/dist-worker is gitignored
+npx wrangler --cwd backend-rust deploy  # builds the wasm and uploads both
 ```
 
-`VITE_API_URL=/api` makes the bundle call its own origin. Rolling back is
-`npx wrangler --cwd backend-rust rollback`, or removing the custom domain.
+The first line is not optional: `[assets]` points at a build output that is not
+in git. Rolling back is `npx wrangler --cwd backend-rust rollback`, or removing
+the custom domain.
+
+To roll back to the React SPA instead, point `[assets]` at `../frontend/dist`
+and build it with `VITE_API_URL=/api npm run build:frontend` — React reads its
+API base at build time, so that variable matters there and nowhere else.
 
 ## Secrets
 

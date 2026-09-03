@@ -43,12 +43,12 @@ cd backend-rust  && cargo test -p core <test-name>
 
 **Monorepo** using npm workspaces: `frontend/` (React SPA) and `contract/` (Worker contract tests). The Rust crates `backend-rust/` and `frontend-rust/` are cargo, not npm.
 
-- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS. Entry: `frontend/src/main.tsx`. Dev port: **5173**. Being replaced by `frontend-rust/` (Dioxus, 22/22 routes ported, not yet deployed).
+- **Frontend**: **`frontend-rust/`** (Dioxus + Tailwind v4, 22/22 routes) is what deploys — `[assets]` points at its `dist-worker` tree. `frontend/` (React 18 + Vite) is still in the repo and still builds, but nothing serves it.
 - **Backend**: Rust (`workers-rs` + axum) compiled to wasm32, in `backend-rust/crates/worker`. Domain logic that can be tested on the host lives in `backend-rust/crates/core`.
 - **Database**: **Turso / libSQL** over Hrana HTTP (`backend-rust/crates/worker/src/db.rs`). Schema and seed are plain SQL in `backend-rust/sql/`; there is no migration runner.
 - **Archived**: the Node/Express API and its DuckDB database are in `archive/backend/` and are not built, tested, or deployed. See `archive/README.md`.
 - **Storage**: Cloudflare R2 for media and DB backups (optional in dev).
-- **Hosting target**: a single Cloudflare Worker (`backend-rust/wrangler.toml`) serves the Rust API and the React SPA from one origin at `hesocial.ahexagram.com`. Render is decommissioned.
+- **Hosting target**: a single Cloudflare Worker (`backend-rust/wrangler.toml`) serves the Rust API and the Rust SPA from one origin at `hesocial.ahexagram.com`. Render is decommissioned.
 - **Auth**: JWT + Google OAuth 2.0.
 
 ### Backend wiring gotchas
@@ -56,7 +56,11 @@ cd backend-rust  && cargo test -p core <test-name>
 - `crates/worker` only compiles for wasm32. Anything worth unit-testing belongs in `crates/core`, which `cargo test -p core` covers.
 - The contract suite in `contract/` runs the real Worker under workerd against a local `turso dev`. It refuses to run against a stale build, so run `cd backend-rust && npx wrangler deploy --dry-run` first.
 
-Frontend pages in `frontend/src/pages/` are lazy-loaded via React Router; route guards live in `frontend/src/components/RouteGuards.tsx` / `ProtectedRoute.tsx`.
+### Frontend wiring gotchas
+- Routes are the `Route` enum in `frontend-rust/src/ui.rs`. Page components live in `frontend-rust/src/pages/`; their testable logic lives in the matching top-level module (`src/events.rs` for `src/pages/events.rs`).
+- The `admin-bundle` cargo feature gates which routes compile in, producing the two deployed bundles. A route added to one bundle only will 404 in the other.
+- Guards come from `permissions()` in `src/permissions.rs`. Two admin routes fall back to `/admin`, not `/login` — see the guard table in `docs/rust-migration/ROADMAP.md`.
+- The e2e suite serves `frontend-rust/dist`, so `npm run build:web-rust` before running it.
 
 📖 **[API Reference](docs/api/API_REFERENCE.md)** · **[Architecture Docs](docs/architecture/)**
 
@@ -94,8 +98,8 @@ A Husky `pre-commit` hook runs `validate:docs`, `lint:fix`, `typecheck`, and `np
 ## Deployment Reminders
 
 - **Do not start or restart servers automatically** — ask the user to do it.
-- Frontend deploys require a build (`npm run build:frontend`) before serving.
-- Production hosting source of truth is `backend-rust/wrangler.toml`; see [Deployment Targets](docs/DEPLOYMENT_TARGETS.md). Deploying needs `VITE_API_URL=/api npm run build:frontend` first — `frontend/dist` is gitignored.
+- Frontend deploys require a build (`npm run build:web-rust`) before serving.
+- Production hosting source of truth is `backend-rust/wrangler.toml`; see [Deployment Targets](docs/DEPLOYMENT_TARGETS.md). **Deploying needs `npm run build:web-rust` first** — `[assets]` points at `frontend-rust/dist-worker`, which is gitignored, so a deploy without it ships a stale site or fails.
 - Cloudflare references in this repo mean R2 storage/backups/media unless a future Worker/Pages config is added.
 - Never commit `.env`, `.credentials.json`, or the `statsig/` directory.
 
