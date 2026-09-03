@@ -1,5 +1,11 @@
 # Command Documentation Discrepancies Analysis
 
+> **Archived stack.** This document describes the Node/Express + DuckDB backend,
+> which moved to `archive/backend/` on 2026-09-03 and is no longer built, tested
+> or deployed. The live API is the Rust Worker in `backend-rust/`. Kept for
+> history — see `archive/README.md` and
+> [Development Commands](commands/DEVELOPMENT_COMMANDS_UPDATED.md).
+
 **Generated**: October 3, 2025
 **Scope**: Complete audit of documented commands vs actual package.json scripts
 **Priority**: HIGH - Critical for developer workflow

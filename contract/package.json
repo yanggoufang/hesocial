@@ -1,0 +1,16 @@
+{
+  "name": "hesocial-contract",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Contract tests for the Rust Worker API, run under workerd against a local sqld.",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "@types/node": "^20.5.7",
+    "typescript": "^5.2.2",
+    "vitest": "^4.1.0"
+  }
+}

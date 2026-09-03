@@ -13,48 +13,48 @@ High-end social event platform for affluent individuals (NT$5M+ income, NT$30M+ 
 ```bash
 # Setup & development
 npm run setup                  # Install all workspace dependencies
-npm run dev                    # Start frontend (5173) + backend (5000) concurrently
-npm run dev:frontend           # Frontend only
-npm run dev:backend            # Backend only
+npm run dev                    # Start the React SPA (5173)
+npm run dev:frontend           # same thing
 
 # Build & quality gates
-npm run build                  # Build both workspaces
-npm run lint                   # ESLint frontend + backend
-npm run lint:fix               # Auto-fix lint issues
-npm run typecheck              # TS typecheck both workspaces
-npm run test                   # Run all tests (Vitest, frontend + backend)
+npm run build                  # Build the React SPA
+npm run build:worker           # Build the Rust Worker (wasm32)
+npm run build:web-rust         # Build the Rust SPA as two bundles + the merged tree
+npm run lint                   # ESLint the React SPA
+npm run lint:rust              # clippy over backend-rust
+npm run typecheck              # TS typecheck the React SPA
+npm run test                   # Pre-commit gate: React SPA (no test files) + cargo test -p core
+npm run test:rust              # backend-rust: cargo test -p core
+npm run test:web-rust          # frontend-rust: cargo test
+npm run test:contract:rust     # the Rust Worker under workerd against a local sqld
 npm run validate:all           # Docs + lint + typecheck + test (also the husky pre-commit gate)
+# NOTE: `frontend/` has no tests. The real suites need a build first and are NOT
+# in the gate: test:web-rust (293 logic + 22 e2e) and test:contract:rust (49).
 
-# Database
-npm run migrate:status         # Show migration state
-npm run migrate:up             # Apply pending migrations
-npm run migrate:rollback       # Rollback last migration
-npm run migrate:create         # Scaffold new migration
-npm run seed                   # Seed DuckDB with sample data
-
-# Single test — Vitest in both workspaces: use `-t` for test-name, positional for file
-cd backend  && npm run test -- -t "<name>"
-cd frontend && npm run test -- <file-pattern>
+# Single test
+cd frontend      && npm run test -- <file-pattern>
+cd frontend-rust && cargo test --test <suite> <test-name>
+cd backend-rust  && cargo test -p core <test-name>
 ```
 
 📖 **[Complete Development Commands](docs/commands/DEVELOPMENT_COMMANDS.md)**
 
 ## Architecture
 
-**Monorepo** using npm workspaces: `frontend/`, `backend/`, shared `database/` SQL schemas.
+**Monorepo** using npm workspaces: `frontend/` (React SPA) and `contract/` (Worker contract tests). The Rust crates `backend-rust/` and `frontend-rust/` are cargo, not npm.
 
-- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS. Entry: `frontend/src/main.tsx`. Dev port: **5173**.
-- **Backend**: Node.js 22 + Express + TypeScript, **ESM** (`"type": "module"`). Entry: `backend/src/server.ts`. Dev port: **5000**.
-- **Database**: **DuckDB** embedded file at repo root (`hesocial.duckdb`) — no external DB server. Schema: `database/duckdb-schema.sql`. Migrations managed via `backend/src/database/MigrationService.ts` (TS migrations live in `backend/src/database/migrations/*.migration.ts`).
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS. Entry: `frontend/src/main.tsx`. Dev port: **5173**. Being replaced by `frontend-rust/` (Dioxus, 22/22 routes ported, not yet deployed).
+- **Backend**: Rust (`workers-rs` + axum) compiled to wasm32, in `backend-rust/crates/worker`. Domain logic that can be tested on the host lives in `backend-rust/crates/core`.
+- **Database**: **Turso / libSQL** over Hrana HTTP (`backend-rust/crates/worker/src/db.rs`). Schema and seed are plain SQL in `backend-rust/sql/`; there is no migration runner.
+- **Archived**: the Node/Express API and its DuckDB database are in `archive/backend/` and are not built, tested, or deployed. See `archive/README.md`.
 - **Storage**: Cloudflare R2 for media and DB backups (optional in dev).
 - **Hosting target**: a single Cloudflare Worker (`backend-rust/wrangler.toml`) serves the Rust API and the React SPA from one origin at `hesocial.ahexagram.com`. Render is decommissioned.
 - **Auth**: JWT + Google OAuth 2.0.
 
 ### Backend wiring gotchas
-- ESM imports must use `.js` extensions on compiled TS files (e.g. `import ... from './routes/main.js'`) even in source — this is how the compiled output resolves.
-- Routes are composed in `backend/src/routes/index.ts` and loaded via an async dynamic import in `backend/src/routes/main.ts`; add new route modules there, not in `server.ts`.
-- `server.ts` installs a `BigInt.prototype.toJSON` monkeypatch so DuckDB `BIGINT` columns serialize to JSON — don't remove it, and prefer numbers over bigints in response shapes when safe.
-- Rate limiting: admin/event-management paths get a permissive limiter mounted *before* the general `/api` limiter in `server.ts`; mount order matters.
+- Routes are composed in `router()` in `backend-rust/crates/worker/src/lib.rs`; handlers live in the `*_handlers.rs` modules beside it.
+- `crates/worker` only compiles for wasm32. Anything worth unit-testing belongs in `crates/core`, which `cargo test -p core` covers.
+- The contract suite in `contract/` runs the real Worker under workerd against a local `turso dev`. It refuses to run against a stale build, so run `cd backend-rust && npx wrangler deploy --dry-run` first.
 
 Frontend pages in `frontend/src/pages/` are lazy-loaded via React Router; route guards live in `frontend/src/components/RouteGuards.tsx` / `ProtectedRoute.tsx`.
 
@@ -62,23 +62,17 @@ Frontend pages in `frontend/src/pages/` are lazy-loaded via React Router; route 
 
 ## Environment Setup
 
-Before first run, create `backend/.env` from the template:
+Worker configuration lives in `backend-rust/wrangler.toml`; secrets are set with `npx wrangler --cwd backend-rust secret put <NAME>` and are listed in [Deployment Targets](docs/DEPLOYMENT_TARGETS.md). Nothing in the live stack reads a `.env` file.
 
-```bash
-cp backend/.env.example backend/.env
-```
+## Database
 
-`.env.example` ships with placeholder credentials for JWT, Google/LinkedIn OAuth, Stripe, and Cloudflare R2. The app boots with placeholders but auth/payment/R2 features require real values. See [R2 Configuration](docs/configuration/R2_CONFIGURATION.md).
-
-## Database Modes
-
-There is only one dev entrypoint: `npm run dev`. It always uses the local DuckDB file; R2 backup/restore activates only when R2 env vars are set in `backend/.env`. (Older docs mention `npm run dev:duckdb` — that script does not exist; see `docs/COMMAND_DISCREPANCIES.md`.)
+Turso/libSQL, reached over Hrana HTTP. `TURSO_URL` is a var in `wrangler.toml`; `TURSO_AUTH_TOKEN` is a secret. For local work the contract tests stand up `~/.turso/turso dev --port 8481` and apply `backend-rust/sql/schema.sql` and `seed.sql` themselves.
 
 📖 **[Database System](docs/database/DATABASE_SYSTEM.md)**
 
 ## Test Accounts
 
-Seed accounts are created ONLY by the explicit `npm run seed` — server startup no longer seeds or resets them, so a fresh database has no users (and no working login) until you run seed. Changed passwords stay changed across restarts.
+Seed accounts come from `backend-rust/sql/seed.sql`, applied when a database is provisioned. A fresh database has no users, and no working login, until it is applied.
 
 - **Admin**: `admin@hesocial.com` / `admin123`
 - **Test User**: `test.platinum@example.com` / `test123`

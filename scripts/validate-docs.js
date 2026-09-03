@@ -53,8 +53,8 @@ class DocumentationValidator {
     try {
       this.packageJson = {
         root: JSON.parse(readFileSync(join(PROJECT_ROOT, 'package.json'), 'utf8')),
-        backend: JSON.parse(readFileSync(join(PROJECT_ROOT, 'backend', 'package.json'), 'utf8')),
-        frontend: JSON.parse(readFileSync(join(PROJECT_ROOT, 'frontend', 'package.json'), 'utf8'))
+        frontend: JSON.parse(readFileSync(join(PROJECT_ROOT, 'frontend', 'package.json'), 'utf8')),
+        contract: JSON.parse(readFileSync(join(PROJECT_ROOT, 'contract', 'package.json'), 'utf8'))
       };
       this.log('Loaded package.json files');
     } catch (error) {
@@ -99,8 +99,10 @@ class DocumentationValidator {
         'utf8'
       );
 
-      // Extract npm run commands using regex
-      const commandMatches = commandDocs.match(/npm run (\w+)/g) || [];
+      // Extract npm run commands. `\w` stops at the colon, so a bare \w+
+      // turned every `npm run validate:docs` into a claim about a script
+      // called `validate` and failed on it.
+      const commandMatches = commandDocs.match(/npm run ([\w:-]+)/g) || [];
 
       commandMatches.forEach(match => {
         const command = match.replace('npm run ', '');
@@ -119,15 +121,17 @@ class DocumentationValidator {
    */
   loadRoutes() {
     try {
-      const routesDir = join(PROJECT_ROOT, 'backend', 'src', 'routes');
-      const routeFiles = readdirSync(routesDir).filter(file => file.endsWith('.ts'));
+      const routesDir = join(PROJECT_ROOT, 'backend-rust', 'crates', 'worker', 'src');
+      const routeFiles = readdirSync(routesDir).filter(file => file.endsWith('.rs'));
 
       for (const file of routeFiles) {
         const filePath = join(routesDir, file);
         const content = readFileSync(filePath, 'utf8');
 
-        // Extract route definitions
-        const routeMatches = content.match(/router\.(get|post|put|delete|patch)\s*\(\s*['"`]([^'"`]+)['"`]/g) || [];
+        // Extract route definitions. axum spells the path first and the
+        // methods second - `.route("/api/x", get(h).post(h))` - so a match is
+        // the path plus every method chained onto it.
+        const routeMatches = content.match(/\.route\(\s*"([^"]+)"\s*,\s*(?:[\s\S]*?)\)/g) || [];
 
         routeMatches.forEach(match => {
           const methodMatch = match.match(/(get|post|put|delete|patch)/);
@@ -240,7 +244,7 @@ class DocumentationValidator {
    */
   validateDatabaseSchema() {
     try {
-      const schemaFile = join(PROJECT_ROOT, 'database', 'duckdb-schema.sql');
+      const schemaFile = join(PROJECT_ROOT, 'backend-rust', 'sql', 'schema.sql');
       const schemaContent = readFileSync(schemaFile, 'utf8');
 
       // Extract table names from schema
@@ -253,7 +257,7 @@ class DocumentationValidator {
       const requiredTables = [
         'users',
         'events',
-        'event_registrations',
+        'registrations',
         'event_privacy_overrides',
         'event_participant_access',
         'participant_view_logs',
@@ -282,10 +286,11 @@ class DocumentationValidator {
   validateFileStructure() {
     const requiredFiles = [
       'package.json',
-      'backend/package.json',
       'frontend/package.json',
-      'backend/src/server.ts',
-      'database/duckdb-schema.sql',
+      'contract/package.json',
+      'backend-rust/Cargo.toml',
+      'backend-rust/crates/worker/src/lib.rs',
+      'backend-rust/sql/schema.sql',
       'docs/api/API_REFERENCE_UPDATED.md',
       'docs/commands/DEVELOPMENT_COMMANDS_UPDATED.md',
       'docs/FEATURE_STATUS_MATRIX.md',

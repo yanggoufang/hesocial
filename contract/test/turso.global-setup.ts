@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const contractDirectory = dirname(fileURLToPath(import.meta.url))
-const rustDirectory = resolve(contractDirectory, '../../../backend-rust')
+const rustDirectory = resolve(contractDirectory, '../../backend-rust')
 
 export const TURSO_TEST_PORT = Number(process.env.TURSO_TEST_PORT ?? 8481)
 const endpoint = `http://127.0.0.1:${TURSO_TEST_PORT}/v2/pipeline`

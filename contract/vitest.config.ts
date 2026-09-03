@@ -3,10 +3,10 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cloudflareTest } from '@cloudflare/vitest-pool-workers'
 import { defineConfig } from 'vitest/config'
-import { TURSO_TEST_PORT } from './test/contract/turso.global-setup.js'
+import { TURSO_TEST_PORT } from './test/turso.global-setup.js'
 
-const backendDirectory = dirname(fileURLToPath(import.meta.url))
-const rustDirectory = resolve(backendDirectory, '../backend-rust')
+const contractDirectory = dirname(fileURLToPath(import.meta.url))
+const rustDirectory = resolve(contractDirectory, '../backend-rust')
 const wranglerConfigPath = resolve(rustDirectory, 'wrangler.test.toml')
 const workerShimPath = resolve(rustDirectory, 'crates/worker/build/worker/shim.mjs')
 
@@ -61,8 +61,8 @@ export default defineConfig({
     }),
   ],
   test: {
-    include: ['test/contract/rust.contract.test.ts'],
-    globalSetup: ['./test/contract/turso.global-setup.ts'],
+    include: ['test/rust.contract.test.ts'],
+    globalSetup: ['./test/turso.global-setup.ts'],
     hookTimeout: 30_000,
     testTimeout: 15_000,
     fileParallelism: false,

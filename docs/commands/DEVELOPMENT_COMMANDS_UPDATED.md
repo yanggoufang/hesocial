@@ -1,425 +1,129 @@
 # Development Commands
 
-**Last Updated**: October 3, 2025 - Complete Command Configuration Alignment
-**Scope**: All available npm scripts with verified functionality
-**Status**: 100% Accurate - All documented commands tested and working
+**Last Updated**: September 3, 2026 — Express backend archived
+**Scope**: every script in the root `package.json`, plus the Rust toolchain commands
+**Source of truth**: the root `package.json`. `npm run validate:docs` fails if this file names a script that does not exist.
+
+The Node/Express backend and its DuckDB database were archived to
+`archive/backend/` — see `archive/README.md`. The API is the Rust Worker in
+`backend-rust/`, and the SPA is being replaced by the Rust one in
+`frontend-rust/`. Commands that used to drive Express (`npm start`, the
+migration scripts, the seed script, and every `*:backend` variant) are gone from
+the root package rather than left pointing at an archived directory.
 
 ---
 
-## **Root Level Commands**
+## Setup
 
-### **Project Setup & Management**
 ```bash
-# Setup project (install all dependencies)
-npm run setup
-
-# Clean build directories
-npm run clean
-
-# Start both frontend and backend (development mode)
-npm run dev
-
-# Build entire project for production
-npm run build
-
-# Start production server
-npm run start
+npm run setup          # root + frontend + contract dependencies
+npm run clean          # remove frontend/dist
 ```
 
-### **Testing & Quality Control**
+Rust needs its own toolchain: a stable `cargo` with the `wasm32-unknown-unknown`
+target, `dx` (the Dioxus CLI) for the frontend, and `npx wrangler` for the
+Worker. `~/.turso/turso` is required by the contract tests.
+
+## Run
+
 ```bash
-# Run all tests (frontend + backend)
-npm run test
-
-# Run tests with coverage reports
-npm run test:coverage
-
-# Run frontend tests only
-npm run test:frontend
-
-# Run backend tests only
-npm run test:backend
-
-# Run frontend tests with coverage
-npm run test:frontend:coverage
-
-# Run backend tests with coverage
-npm run test:backend:coverage
-
-# Lint all code (frontend + backend)
-npm run lint
-
-# Fix linting issues automatically
-npm run lint:fix
-
-# Lint frontend code only
-npm run lint:frontend
-
-# Fix frontend linting issues
-npm run lint:frontend:fix
-
-# Lint backend code only
-npm run lint:backend
-
-# Fix backend linting issues
-npm run lint:backend:fix
-
-# Type check all code (frontend + backend)
-npm run typecheck
-
-# Type check frontend code only
-npm run typecheck:frontend
-
-# Type check backend code only
-npm run typecheck:backend
+npm run dev            # React SPA on :5173
+npm run preview        # preview the built React SPA
 ```
 
-### **Database Management**
+There is no backend dev server script. Run the Worker yourself when you need it:
+
 ```bash
-# Run database migrations (applies pending migrations)
-npm run migrate
-
-# Show migration status
-npm run migrate:status
-
-# Apply all pending migrations
-npm run migrate:up
-
-# Rollback to specific version
-npm run migrate:rollback
-
-# Generate new migration template
-npm run migrate:create
-
-# Validate migration integrity
-npm run migrate:validate
-
-# Seed database with sample data
-npm run seed
+cd backend-rust && npx wrangler dev
 ```
 
----
+Frontend-rust runs under the Dioxus CLI:
 
-## **Frontend Commands (cd frontend/)**
-
-### **Development**
 ```bash
-npm run dev          # Start Vite dev server (port 3000/5173)
-npm run build        # Build for production
-npm run preview      # Preview production build
+cd frontend-rust && dx serve
 ```
 
-### **Quality Control**
+## Build
+
 ```bash
-npm run lint         # ESLint with auto-fix
-npm run lint:fix     # Fix ESLint issues
-npm run typecheck    # TypeScript type checking
-npm run test         # Run Vitest tests
-npm run test:coverage # Run tests with coverage report
+npm run build          # React SPA -> frontend/dist
+npm run build:frontend # same thing
+npm run build:worker   # Rust Worker -> wasm32
+npm run build:web-rust # Rust SPA -> two bundles + the merged dist-worker tree
 ```
 
----
+`build:web-rust` is the two-bundle build described in
+[Deployment Targets](../DEPLOYMENT_TARGETS.md): a public bundle and an admin
+bundle, merged into `frontend-rust/dist-worker` for wrangler.
 
-## **Backend Commands (cd backend/)**
+## Test
 
-### **Development & Production**
 ```bash
-npm run dev          # Start development server with DuckDB (tsx watch)
-npm run build        # Compile TypeScript to JavaScript
-npm run start        # Start production server
+npm run test               # the pre-commit gate: React SPA + cargo test -p core
+npm run test:frontend      # React SPA only (Vitest)
+npm run test:coverage      # React SPA with coverage
+npm run test:rust          # backend-rust: cargo test -p core
+npm run test:web-rust      # frontend-rust: cargo test (logic + SSR + e2e)
+npm run test:contract:rust # the Rust Worker under workerd against a local sqld
 ```
 
-### **Database Management**
+`test:contract:rust` lives in the `contract/` workspace. It needs a built Worker
+shim, so run `cd backend-rust && npx wrangler deploy --dry-run` first — the
+config fails loudly if the shim is missing or older than the Rust sources.
+
+The `frontend-rust` e2e suite drives a real Chrome through WebDriver and serves
+`frontend-rust/dist`, so build it first with `npm run build:web-rust`.
+
+**`npm run test` is thinner than it looks.** `frontend/` has no test files at
+all — archiving the Express backend took the only Vitest suites the root `test`
+script ran, which is why `test:rust` is now part of it. The suites that actually
+carry the project (`test:web-rust`, 293 logic + 22 e2e; `test:contract:rust`,
+49) each need a build first, so they are not in the pre-commit gate. Run them
+before anything that matters.
+
+Single tests:
+
 ```bash
-npm run seed         # Seed database with sample data
-npm run migrate      # Run database migrations
-npm run migrate:status    # Show migration status
-npm run migrate:up        # Apply pending migrations
-npm run migrate:rollback  # Rollback to specific version
-npm run migrate:create    # Generate migration template
-npm run migrate:validate  # Validate migration integrity
+cd frontend       && npm run test -- <file-pattern>
+cd frontend-rust  && cargo test --test <suite> <test-name>
+cd backend-rust   && cargo test -p core <test-name>
 ```
 
-### **Quality Control**
+## Lint and typecheck
+
 ```bash
-npm run lint         # ESLint with auto-fix
-npm run typecheck    # TypeScript type checking
-npm run test         # Run Vitest tests
-npm run test:coverage # Run tests with coverage report
+npm run lint           # ESLint over the React SPA
+npm run lint:fix       # and fix
+npm run lint:rust      # clippy over the backend-rust workspace, -D warnings
+npm run typecheck      # tsc --noEmit over the React SPA
 ```
 
----
+`frontend-rust` has its own gates: `cargo fmt --check` and
+`cargo clippy --all-targets`.
 
-## **Development Workflow**
+## Documentation
 
-### **Getting Started**
-1. **Initial Setup**:
-   ```bash
-   npm run setup    # Installs all dependencies for root, frontend, and backend
-   ```
-
-2. **Environment Configuration**:
-   ```bash
-   # Copy environment template
-   cd backend && cp .env.example .env
-   # Update .env with your configuration
-   ```
-
-3. **Development**:
-   ```bash
-   npm run dev      # Starts both frontend (port 3000/5173) and backend (port 5000)
-   ```
-
-4. **Database Setup**:
-   ```bash
-   npm run migrate:status    # Check migration status
-   npm run migrate:up        # Apply pending migrations
-   npm run seed             # Seed with sample data (optional)
-   ```
-
-### **Common Development Tasks**
-
-#### **During Development**
 ```bash
-# Continuous development
-npm run dev                    # Start development servers
-npm run lint:fix               # Fix any linting issues
-npm run test                   # Run tests to verify changes
-npm run typecheck              # Ensure TypeScript compilation
+npm run validate:docs    # the pre-commit gate; checks scripts, routes, schema
+npm run generate:api-docs
+npm run monitor:docs
+npm run validate:all     # validate:docs + lint + typecheck + test
 ```
 
-#### **Before Committing**
+`validate:docs` reads the Rust Worker's route table in
+`backend-rust/crates/worker/src/`, the schema in `backend-rust/sql/schema.sql`,
+and the script list in this file.
+
+## Database
+
+The live database is Turso/libSQL, reached over Hrana HTTP by
+`backend-rust/crates/worker/src/db.rs`. Schema and seed data are plain SQL in
+`backend-rust/sql/`, applied by whoever provisions the database — there is no
+migration runner in the Rust stack. The DuckDB migration CLI and its
+migration and seed scripts went to `archive/backend/`.
+
+For a local database the contract tests already stand one up:
+
 ```bash
-npm run lint                  # Check code quality
-npm run test                  # Run all tests
-npm run typecheck             # Verify TypeScript types
-npm run migrate:status        # Check database status (if changed)
+~/.turso/turso dev --port 8481
 ```
-
-#### **Building for Production**
-```bash
-npm run clean                  # Clean previous builds
-npm run test                  # Ensure all tests pass
-npm run build                 # Build frontend and backend
-npm run start                 # Test production build locally
-```
-
-### **Database Management**
-
-#### **Migration Workflow**
-```bash
-npm run migrate:status        # Check current status
-npm run migrate:create        # Create new migration (when needed)
-npm run migrate:up            # Apply new migrations
-npm run migrate:rollback      # Rollback if issues (rare)
-npm run migrate:validate      # Validate migration integrity
-```
-
-#### **Database Reset (Development)**
-```bash
-# Reset database and reseed
-npm run migrate:rollback 0   # Rollback all migrations
-npm run migrate:up          # Apply all migrations
-npm run seed                # Seed with sample data
-```
-
----
-
-## **Environment Configuration**
-
-### **Single Development Mode**
-The HeSocial platform uses a **single development mode** with DuckDB as the embedded database:
-
-- **Development Command**: `npm run dev` - Starts both frontend and backend
-- **Database**: DuckDB embedded database (`hesocial.duckdb`)
-- **No Demo Mode**: All features use real database operations
-- **No Mock Data**: Development uses actual database with seeded sample data
-
-### **Configuration Files**
-- **Backend Environment**: `backend/.env` (copy from `.env.example`)
-- **Database**: Automatic DuckDB file creation and management
-- **Frontend**: Vite configuration (no additional setup required)
-
-### **Environment Variables**
-Key environment variables in `backend/.env`:
-```bash
-# Server
-PORT=5000
-NODE_ENV=development
-
-# Security
-JWT_SECRET=your-super-secret-jwt-key
-JWT_EXPIRES_IN=7d
-
-# External Services (Optional)
-GOOGLE_CLIENT_ID=your-google-client-id
-STRIPE_SECRET_KEY=your-stripe-secret-key
-R2_ACCOUNT_ID=your-cloudflare-account-id
-```
-
----
-
-## **Port Configuration**
-
-### **Development Ports**
-- **Frontend**: `http://localhost:3000` or `http://localhost:5173` (Vite default)
-- **Backend**: `http://localhost:5000`
-- **API Base URL**: `http://localhost:5000/api`
-
-### **Port Conflicts**
-If ports are in use, the development servers will automatically try alternative ports.
-
----
-
-## **Testing Strategy**
-
-### **Test Types**
-- **Unit Tests**: Individual component and function tests
-- **Integration Tests**: API endpoint and database interaction tests
-- **Coverage Reports**: Code coverage analysis for quality assurance
-
-### **Running Tests**
-```bash
-# All tests
-npm run test
-
-# Specific test suites
-npm run test:frontend         # Frontend component tests
-npm run test:backend          # Backend API tests
-
-# Coverage analysis
-npm run test:coverage         # Coverage reports for both
-npm run test:frontend:coverage # Frontend coverage
-npm run test:backend:coverage  # Backend coverage
-```
-
-### **Test Configuration**
-- **Framework**: Vitest for both frontend and backend
-- **Coverage**: Coverage reports generated in `coverage/` directories
-- **CI/CD**: Tests run automatically in continuous integration
-
----
-
-## **Build Process**
-
-### **Development Build**
-```bash
-npm run dev
-# - Frontend: Vite dev server with hot reload
-# - Backend: tsx watch with automatic TypeScript compilation
-# - Database: DuckDB with automatic connection
-```
-
-### **Production Build**
-```bash
-npm run build
-# - Frontend: TypeScript compilation + Vite build optimization
-# - Backend: TypeScript compilation to JavaScript
-# - Output: dist/ directories in both frontend and backend
-```
-
-### **Build Outputs**
-```
-frontend/dist/          # Production frontend build
-backend/dist/           # Production backend build
--- server.js            # Compiled backend server
--- Static assets         # Optimized frontend assets
-```
-
----
-
-## **Troubleshooting**
-
-### **Common Issues**
-
-#### **Port Already in Use**
-```bash
-# Kill existing processes
-pkill -f "node.*3000"   # Kill frontend
-pkill -f "node.*5000"   # Kill backend
-
-# Or use different ports
-PORT=5001 npm run dev:backend
-```
-
-#### **Database Issues**
-```bash
-# Check migration status
-npm run migrate:status
-
-# Reset database if corrupted
-rm backend/hesocial.duckdb
-npm run migrate:up
-npm run seed
-```
-
-#### **Dependency Issues**
-```bash
-# Clean and reinstall
-npm run clean
-rm -rf node_modules package-lock.json
-npm run setup
-```
-
-#### **TypeScript Compilation Errors**
-```bash
-# Check types
-npm run typecheck
-
-# Fix linting issues
-npm run lint:fix
-```
-
-### **Getting Help**
-- **Database Issues**: Check `npm run migrate:status`
-- **Build Issues**: Run `npm run typecheck` and `npm run lint`
-- **Test Failures**: Check individual test suites with `npm run test:frontend` or `npm run test:backend`
-- **Port Conflicts**: Kill existing processes or use alternative ports
-
----
-
-## **Development Best Practices**
-
-### **Code Quality**
-- **Always run**: `npm run lint:fix` before committing
-- **Type Safety**: `npm run typecheck` must pass
-- **Testing**: `npm run test` should pass before merging
-- **Migration**: Always check `npm run migrate:status` after database changes
-
-### **Git Workflow**
-```bash
-# Before committing
-npm run lint:fix
-npm run typecheck
-npm run test
-
-# After pulling changes
-npm run migrate:status  # Check if migrations needed
-npm run setup          # Install any new dependencies
-```
-
-### **Database Safety**
-- **Backups**: Database automatically backed up on graceful shutdown
-- **Migrations**: Always test migrations in development first
-- **Rollback**: Use `npm run migrate:rollback` if migration issues occur
-- **Reset**: Use rollback to 0 only in development environments
-
----
-
-## **Performance Notes**
-
-### **Development Performance**
-- **Hot Reload**: Frontend changes reflect immediately
-- **TypeScript Compilation**: Backend automatically recompiles on changes
-- **Database**: DuckDB provides fast local development performance
-
-### **Production Optimization**
-- **Frontend**: Vite optimization and code splitting
-- **Backend**: Compiled JavaScript for optimal performance
-- **Database**: DuckDB with production-optimized settings
-
----
-
-**Version**: 2.0 - Implementation-Accurate Documentation
-**Next Update**: After command configuration changes
-**Validation**: All commands tested and working ✅

@@ -1,5 +1,11 @@
 # Development Commands
 
+> **Archived stack.** This document describes the Node/Express + DuckDB backend,
+> which moved to `archive/backend/` on 2026-09-03 and is no longer built, tested
+> or deployed. The live API is the Rust Worker in `backend-rust/`. Kept for
+> history — see `archive/README.md` and
+> [Development Commands](DEVELOPMENT_COMMANDS_UPDATED.md).
+
 ## Root Level Commands
 
 ### Project Setup
