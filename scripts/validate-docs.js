@@ -53,9 +53,12 @@ class DocumentationValidator {
     try {
       this.packageJson = {
         root: JSON.parse(readFileSync(join(PROJECT_ROOT, 'package.json'), 'utf8')),
-        frontend: JSON.parse(readFileSync(join(PROJECT_ROOT, 'frontend', 'package.json'), 'utf8')),
         contract: JSON.parse(readFileSync(join(PROJECT_ROOT, 'contract', 'package.json'), 'utf8'))
       };
+      // frontend 已封存至 archive/frontend，僅用於歷史對照，不納入驗證
+      try {
+        this.packageJson.frontend = JSON.parse(readFileSync(join(PROJECT_ROOT, 'archive/frontend/package.json'), 'utf8'));
+      } catch {}
       this.log('Loaded package.json files');
     } catch (error) {
       this.log(`Failed to load package.json: ${error.message}`, 'error');
@@ -286,7 +289,7 @@ class DocumentationValidator {
   validateFileStructure() {
     const requiredFiles = [
       'package.json',
-      'frontend/package.json',
+      'archive/frontend/package.json',
       'contract/package.json',
       'backend-rust/Cargo.toml',
       'backend-rust/crates/worker/src/lib.rs',

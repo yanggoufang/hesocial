@@ -12,41 +12,40 @@ High-end social event platform for affluent individuals (NT$5M+ income, NT$30M+ 
 
 ```bash
 # Setup & development
-npm run setup                  # Install all workspace dependencies
-npm run dev                    # Start the React SPA (5173)
-npm run dev:frontend           # same thing
+npm run setup                  # Install workspace dependencies (contract)
+npm run dev                    # Dioxus dev server (dx serve)
 
 # Build & quality gates
-npm run build                  # Build the React SPA
+npm run build                  # Worker wasm + Rust SPA bundles
 npm run build:worker           # Build the Rust Worker (wasm32)
 npm run build:web-rust         # Build the Rust SPA as two bundles + the merged tree
-npm run lint                   # ESLint the React SPA
-npm run lint:rust              # clippy over backend-rust
-npm run typecheck              # TS typecheck the React SPA
-npm run test                   # Pre-commit gate: React SPA (no test files) + cargo test -p core
+npm run lint                   # clippy over backend-rust
+npm run lint:rust              # same thing
+npm run test                   # Pre-commit gate: cargo test -p core
 npm run test:rust              # backend-rust: cargo test -p core
 npm run test:web-rust          # frontend-rust: cargo test
 npm run test:contract:rust     # the Rust Worker under workerd against a local sqld
-npm run validate:all           # Docs + lint + typecheck + test (also the husky pre-commit gate)
-# NOTE: `frontend/` has no tests. The real suites need a build first and are NOT
+npm run verify:routing         # Check Worker serves the right bundle per path
+npm run validate:all           # Docs + lint + test (also the husky pre-commit gate)
+# NOTE: The real suites need a build first and are NOT
 # in the gate: test:web-rust (293 logic + 22 e2e) and test:contract:rust (49).
 
 # Single test
-cd frontend      && npm run test -- <file-pattern>
 cd frontend-rust && cargo test --test <suite> <test-name>
 cd backend-rust  && cargo test -p core <test-name>
+cd contract      && npm test
 ```
 
 📖 **[Complete Development Commands](docs/commands/DEVELOPMENT_COMMANDS.md)**
 
 ## Architecture
 
-**Monorepo** using npm workspaces: `frontend/` (React SPA) and `contract/` (Worker contract tests). The Rust crates `backend-rust/` and `frontend-rust/` are cargo, not npm.
+**Monorepo** using npm workspaces: `contract/` (Worker contract tests). The Rust crates `backend-rust/` and `frontend-rust/` are cargo, not npm.
 
-- **Frontend**: **`frontend-rust/`** (Dioxus + Tailwind v4, 22/22 routes) is what deploys — `[assets]` points at its `dist-worker` tree. `frontend/` (React 18 + Vite) is still in the repo and still builds, but nothing serves it.
+- **Frontend**: **`frontend-rust/`** (Dioxus + Tailwind v4, 22/22 routes) is what deploys — `[assets]` points at its `dist-worker` tree. `frontend/` (React 18 + Vite) is archived to `archive/frontend/`.
 - **Backend**: Rust (`workers-rs` + axum) compiled to wasm32, in `backend-rust/crates/worker`. Domain logic that can be tested on the host lives in `backend-rust/crates/core`.
 - **Database**: **Turso / libSQL** over Hrana HTTP (`backend-rust/crates/worker/src/db.rs`). Schema and seed are plain SQL in `backend-rust/sql/`; there is no migration runner.
-- **Archived**: the Node/Express API and its DuckDB database are in `archive/backend/` and are not built, tested, or deployed. See `archive/README.md`.
+- **Archived**: the Node/Express API and its DuckDB database are in `archive/backend/`, and the React SPA is in `archive/frontend/`. Neither is built, tested, or deployed. See `archive/README.md`.
 - **Storage**: Cloudflare R2 for media and DB backups (optional in dev).
 - **Hosting target**: a single Cloudflare Worker (`backend-rust/wrangler.toml`) serves the Rust API and the Rust SPA from one origin at `hesocial.ahexagram.com`. Render is decommissioned.
 - **Auth**: JWT + Google OAuth 2.0.

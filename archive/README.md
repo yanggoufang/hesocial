@@ -34,3 +34,27 @@ anything.
 Don't, unless you are reading history. It expects its own `npm install`, a
 `.env` with the old variable names, and a DuckDB file that no longer matches the
 live schema.
+## frontend/ — the React + Vite SPA
+
+Archived 2026-09-03. It was replaced by the Rust/Dioxus SPA in
+`frontend-rust/` (22/22 routes, Tailwind v4), which now serves from the
+Worker's `[assets]` at `frontend-rust/dist-worker`. The React code still
+built — `npm run build:frontend` with `VITE_API_URL=/api` — until the cutover
+in `backend-rust/wrangler.toml`, but nothing deployed it after `0c9b25b`.
+
+What it still contains, and where the live equivalent is:
+
+| Archived | Live equivalent |
+| --- | --- |
+| `src/App.tsx` — React Router with lazy pages and `RouteGuards.tsx` | `frontend-rust/src/ui.rs` — `Route` enum with `admin-bundle` feature gating |
+| `src/pages/` — 22 React pages | `frontend-rust/src/pages/` — 13 Dioxus page modules covering the same 22 routes |
+| `src/components/` — Navbar, Footer, guards | `frontend-rust/src/shell.rs`, `src/permissions.rs` |
+| `tailwind.config.js` + `src/styles/` | `frontend-rust/tailwind.css` — `@theme` tokens, no JS config |
+| `vite.config.ts` | `frontend-rust/Dioxus.toml` |
+
+### If you need to run it
+
+It still has its own `package.json`. `npm install && npm run dev` will start
+it on :5173 against the live API at `hesocial.ahexagram.com`, but it speaks the
+old API shape and its build is no longer what the Worker serves.
+
