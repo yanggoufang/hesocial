@@ -145,6 +145,8 @@ pub struct AuthUser {
     pub membership_tier: Option<MembershipTier>,
     pub is_verified: bool,
     pub verification_status: Option<VerificationStatus>,
+    pub gender: Option<String>,
+    pub interested_in: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -203,6 +205,15 @@ impl AuthUser {
             }),
             email: value
                 .get("email")
+                .and_then(|v| v.as_str())
+                .map(str::to_string),
+            gender: value
+                .get("gender")
+                .and_then(|v| v.as_str())
+                .map(str::to_string),
+            interested_in: value
+                .get("interestedIn")
+                .or_else(|| value.get("interested_in"))
                 .and_then(|v| v.as_str())
                 .map(str::to_string),
             role: Role::parse(value.get("role").and_then(|v| v.as_str())),

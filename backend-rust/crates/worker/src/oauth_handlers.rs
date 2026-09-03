@@ -30,7 +30,7 @@ const GOOGLE_PICTURE_UPDATE: &str =
 // Same column list and values as the Express passport strategy insert: the
 // financial/profile fields start NULL and the user completes them via
 // /complete-profile. password_hash/password_algo/role take the schema defaults.
-const GOOGLE_INSERT: &str = "INSERT INTO users (id, email, first_name, last_name, age, profession, annual_income, net_worth, membership_tier, privacy_level, is_verified, verification_status, profile_picture, bio, interests, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+const GOOGLE_INSERT: &str = "INSERT INTO users (id, email, first_name, last_name, age, profession, annual_income, net_worth, membership_tier, privacy_level, is_verified, verification_status, profile_picture, bio, interests, gender, interested_in, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 fn env_var(state: &AppState, name: &str) -> Option<String> {
     state
@@ -301,6 +301,8 @@ async fn upsert_google_user(state: &AppState, profile: &GoogleProfile) -> Option
             picture,
             db::NULL,            // bio
             Val::from_str("[]"), // empty interests array
+            db::NULL,            // gender
+            db::NULL,            // interested_in
             Val::from_str(&timestamp),
             Val::from_str(&timestamp),
         ])

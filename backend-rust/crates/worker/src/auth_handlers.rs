@@ -19,13 +19,13 @@ use crate::auth::{
 };
 use crate::db::{self, Val};
 
-const REGISTER_INSERT: &str = "INSERT INTO users (id, email, password_hash, password_algo, first_name, last_name, age, profession, annual_income, net_worth, membership_tier, privacy_level, is_verified, verification_status, bio, interests, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+const REGISTER_INSERT: &str = "INSERT INTO users (id, email, password_hash, password_algo, first_name, last_name, age, profession, annual_income, net_worth, membership_tier, privacy_level, is_verified, verification_status, bio, interests, gender, interested_in, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 const EXISTING_EMAIL_SELECT: &str = "SELECT id FROM users WHERE email = ? AND deleted_at IS NULL";
 
 const REHASH_UPDATE: &str = "UPDATE users SET password_hash = ?, password_algo = ? WHERE id = ?";
 
-const UPDATE_PROFILE: &str = "UPDATE users SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), age = COALESCE(?, age), profession = COALESCE(?, profession), bio = COALESCE(?, bio), interests = COALESCE(?, interests), privacy_level = COALESCE(?, privacy_level), updated_at = ? WHERE id = ?";
+const UPDATE_PROFILE: &str = "UPDATE users SET first_name = COALESCE(?, first_name), last_name = COALESCE(?, last_name), age = COALESCE(?, age), profession = COALESCE(?, profession), bio = COALESCE(?, bio), interests = COALESCE(?, interests), gender = COALESCE(?, gender), interested_in = COALESCE(?, interested_in), privacy_level = COALESCE(?, privacy_level), updated_at = ? WHERE id = ?";
 
 pub(crate) fn now_iso() -> String {
     Date::new_0()
@@ -160,6 +160,8 @@ async fn register_inner(state: AppState, body: Value) -> Response {
         Val::from_str("pending"),
         optional_text(&body, "bio"),
         Val::from_str(&interests_column(&body)),
+        to_js(body.get("gender").unwrap_or(&Value::Null)),
+        to_js(body.get("interestedIn").or_else(|| body.get("interested_in")).unwrap_or(&Value::Null)),
         Val::from_str(&timestamp),
         Val::from_str(&timestamp),
     ]);
@@ -346,6 +348,8 @@ async fn update_profile_inner(state: AppState, user: UserRow, body: Value) -> Re
         to_js(body.get("profession").unwrap_or(&Value::Null)),
         to_js(body.get("bio").unwrap_or(&Value::Null)),
         interests,
+        to_js(body.get("gender").unwrap_or(&Value::Null)),
+        to_js(body.get("interestedIn").or_else(|| body.get("interested_in")).unwrap_or(&Value::Null)),
         to_js(body.get("privacyLevel").unwrap_or(&Value::Null)),
         Val::from_str(&now_iso()),
         Val::from_str(&user.id),

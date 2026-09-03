@@ -64,6 +64,8 @@ CREATE TABLE IF NOT EXISTS users (
     preferred_language VARCHAR(10) DEFAULT 'en',
     timezone VARCHAR(50) DEFAULT 'UTC',
     profile_visibility VARCHAR(20) DEFAULT 'members' CHECK (profile_visibility IN ('public', 'members', 'private')),
+    gender VARCHAR(20) CHECK (gender IN ('female', 'male', 'non_binary', 'prefer_not_to_say')),
+    interested_in VARCHAR(20) CHECK (interested_in IN ('female', 'male', 'everyone', 'prefer_not_to_say')),
     email_notifications INTEGER DEFAULT 1,
     push_notifications INTEGER DEFAULT 1,
     marketing_emails INTEGER DEFAULT 0,

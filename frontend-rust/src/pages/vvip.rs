@@ -39,14 +39,20 @@ pub fn Vvip() -> Element {
             fetch_gen.set(request_id);
             loading.set(true);
             let fetch_gen = fetch_gen.clone();
+            let interested_in = session().user.as_ref().and_then(|u| u.interested_in.clone());
             spawn(async move {
                 let fetched = fetch_vvip_events().await;
                 let bundle = fetch_preview(token.as_deref(), &fetched).await;
                 if fetch_gen.get() != request_id {
                     return;
                 }
+                let filtered = {
+                    use crate::vvip::filter_preview_by_interest;
+                    let attendees = filter_preview_by_interest(bundle.attendees, interested_in.as_deref());
+                    crate::vvip::PreviewBundle { status: bundle.status, attendees }
+                };
                 events.set(fetched);
-                preview.set(bundle);
+                preview.set(filtered);
                 loading.set(false);
             });
         }
@@ -242,11 +248,19 @@ pub fn VvipRecruitmentScreen(
                                     style: "--hs-from: 30px; animation-delay: {index as f32 * 0.1}s",
                                     div { class: "absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-luxury-gold via-luxury-platinum/50 to-transparent" }
                                     div { class: "flex items-start gap-4 mb-4",
-                                        div {
-                                            class: "w-12 h-12 rounded-full bg-gradient-to-br from-luxury-gold/30 to-luxury-gold/10 border border-luxury-gold/30 flex items-center justify-center flex-shrink-0",
-                                            Icon {
-                                                name: IconName::Crown,
-                                                class: "w-6 h-6 text-luxury-gold".to_string(),
+                                        if let Some(pic) = attendee.profile_picture.clone() {
+                                            img {
+                                                src: "{pic}",
+                                                alt: "會員照片",
+                                                class: "w-12 h-12 rounded-full object-cover border border-luxury-gold/30 flex-shrink-0",
+                                            }
+                                        } else {
+                                            div {
+                                                class: "w-12 h-12 rounded-full bg-gradient-to-br from-luxury-gold/30 to-luxury-gold/10 border border-luxury-gold/30 flex items-center justify-center flex-shrink-0",
+                                                Icon {
+                                                    name: IconName::Crown,
+                                                    class: "w-6 h-6 text-luxury-gold".to_string(),
+                                                }
                                             }
                                         }
                                         div { class: "flex-1 min-w-0",

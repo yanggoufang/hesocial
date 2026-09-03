@@ -12,7 +12,7 @@ const BLACK_CARD_ANNUAL_INCOME: f64 = 20_000_000.0;
 const DIAMOND_NET_WORTH: f64 = 30_000_000.0;
 const DIAMOND_ANNUAL_INCOME: f64 = 5_000_000.0;
 
-pub const USER_COLUMNS: &str = "id, email, first_name AS \"firstName\", last_name AS \"lastName\", age, profession, annual_income AS \"annualIncome\", net_worth AS \"netWorth\", membership_tier AS \"membershipTier\", privacy_level AS \"privacyLevel\", is_verified AS \"isVerified\", verification_status AS \"verificationStatus\", role, profile_picture AS \"profilePicture\", bio, interests, created_at AS \"createdAt\", updated_at AS \"updatedAt\"";
+pub const USER_COLUMNS: &str = "id, email, first_name AS \"firstName\", last_name AS \"lastName\", age, profession, annual_income AS \"annualIncome\", net_worth AS \"netWorth\", membership_tier AS \"membershipTier\", privacy_level AS \"privacyLevel\", is_verified AS \"isVerified\", verification_status AS \"verificationStatus\", role, profile_picture AS \"profilePicture\", bio, interests, gender, interested_in AS \"interestedIn\", created_at AS \"createdAt\", updated_at AS \"updatedAt\"";
 
 pub const USER_SELECT_BY_ID: &str = "SELECT {columns} FROM users WHERE id = ?";
 pub const USER_SELECT_BY_ID_ALIVE: &str =
@@ -56,6 +56,9 @@ pub struct UserRow {
     pub profile_picture: Option<String>,
     pub bio: Option<String>,
     pub interests: Option<String>,
+    pub gender: Option<String>,
+    #[serde(rename = "interestedIn")]
+    pub interested_in: Option<String>,
     #[serde(rename = "createdAt")]
     pub created_at: String,
     #[serde(rename = "updatedAt")]

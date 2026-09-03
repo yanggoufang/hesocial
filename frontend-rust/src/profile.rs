@@ -21,6 +21,8 @@ pub struct ProfileUser {
     pub bio: Option<String>,
     pub interests: Vec<String>,
     pub profile_picture: Option<String>,
+    pub gender: Option<String>,
+    pub interested_in: Option<String>,
     pub created_at: Option<String>,
 }
 
@@ -38,6 +40,9 @@ impl ProfileUser {
             bio: json_string(value.get("bio")),
             interests: parse_interests(value.get("interests")),
             profile_picture: json_string(value.get("profilePicture")),
+            gender: json_string(value.get("gender")),
+            interested_in: json_string(value.get("interestedIn"))
+                .or_else(|| json_string(value.get("interested_in"))),
             created_at: json_string(value.get("createdAt")),
         }
     }
@@ -223,6 +228,8 @@ pub struct ProfileEditForm {
     pub privacy_level: i64,
     pub interests: Vec<String>,
     pub new_interest: String,
+    pub gender: Option<String>,
+    pub interested_in: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -243,6 +250,8 @@ pub fn profile_edit_from_user(user: &ProfileUser) -> ProfileEditForm {
         privacy_level: user.privacy_level.unwrap_or(0),
         interests: user.interests.clone(),
         new_interest: String::new(),
+        gender: user.gender.clone(),
+        interested_in: user.interested_in.clone(),
     }
 }
 
@@ -287,6 +296,12 @@ pub fn profile_full_payload(form: &ProfileEditForm) -> Value {
     map.insert("profession".to_string(), json!(form.profession));
     map.insert("bio".to_string(), json!(form.bio));
     insert_interests(&mut map, &form.interests);
+    if let Some(g) = &form.gender {
+        map.insert("gender".to_string(), json!(g));
+    }
+    if let Some(ii) = &form.interested_in {
+        map.insert("interestedIn".to_string(), json!(ii));
+    }
     insert_privacy(&mut map, form.privacy_level);
     Value::Object(map)
 }
@@ -312,6 +327,20 @@ pub fn profile_partial_payload(original: &ProfileUser, form: &ProfileEditForm) -
     }
     if form.interests != original.interests {
         insert_interests(&mut map, &form.interests);
+    }
+    if form.gender != original.gender {
+        if let Some(g) = &form.gender {
+            map.insert("gender".to_string(), json!(g));
+        } else {
+            map.insert("gender".to_string(), Value::Null);
+        }
+    }
+    if form.interested_in != original.interested_in {
+        if let Some(ii) = &form.interested_in {
+            map.insert("interestedIn".to_string(), json!(ii));
+        } else {
+            map.insert("interestedIn".to_string(), Value::Null);
+        }
     }
     if form.privacy_level != original.privacy_level.unwrap_or(0) {
         insert_privacy(&mut map, form.privacy_level);

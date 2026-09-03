@@ -114,6 +114,8 @@ pub struct PreviewAttendee {
     pub profession: Option<String>,
     pub industry: Option<String>,
     pub membership_tier: Option<String>,
+    pub profile_picture: Option<String>,
+    pub gender: Option<String>,
     pub event_id: String,
     pub display_name: Option<String>,
     pub email: Option<String>,
@@ -236,6 +238,9 @@ pub fn preview_attendee(value: &Value, event_id: &str) -> Option<PreviewAttendee
         profession: json_string(value.get("profession")),
         industry: json_string(value.get("company")),
         membership_tier: json_string(value.get("membershipTier")),
+        profile_picture: json_string(value.get("profilePicture"))
+            .or_else(|| json_string(value.get("profile_picture"))),
+        gender: json_string(value.get("gender")),
         event_id: event_id.to_string(),
         display_name: None,
         email: None,
@@ -284,6 +289,26 @@ pub fn preview_bundle(has_token: bool, fetches: &[ParticipantsFetch]) -> Preview
     PreviewBundle {
         status: PreviewStatus::Ready,
         attendees,
+    }
+}
+
+pub fn filter_preview_by_interest(
+    attendees: Vec<PreviewAttendee>,
+    interested_in: Option<&str>,
+) -> Vec<PreviewAttendee> {
+    let Some(pref) = interested_in else {
+        return attendees;
+    };
+    match pref {
+        "female" | "male" => attendees
+            .into_iter()
+            .filter(|a| {
+                let g = a.gender.as_deref().unwrap_or("");
+                g == pref || g.is_empty() || g == "prefer_not_to_say"
+            })
+            .collect(),
+        "everyone" | "prefer_not_to_say" | "" => attendees,
+        _ => attendees,
     }
 }
 
