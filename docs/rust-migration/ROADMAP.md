@@ -92,7 +92,7 @@
 
 | 守衛 | 條件 | 失敗導向 | 頁面 |
 |---|---|---|---|
-| 無 | — | — | `/`、`/login`、`/register`、`/events`、`/events/:id`、`/access-test` |
+| 無 | — | — | `/`、`/login`、`/register`、`/events`、`/events/:id` |
 | `UserRoute` | 已登入 | `/login` | `/profile`、`/profile/registrations`、`/events/:eventId/register`、`/events/:eventId/participants`、`/events/:eventId/privacy-settings` |
 | `VVIPRoute` | 已登入 + Diamond 以上 + 已驗證 | `/events` | `/vvip` |
 | `EventManagementRoute` | `role=admin` | `/login` | `/event-mgmt`、`/event-mgmt/categories`、`/event-mgmt/venues`、`/event-mgmt/media/:eventId` |
@@ -105,7 +105,7 @@
 ### 不移植的部分
 
 - **`/admin/backups`(BackupManagement)** — 鎖定決策 #5 已把 backup/restore/checkpoint/periodic-backup 全部釘成 501,此頁在新後端無功能可用,本就該下線。
-- **`/access-test`(AccessTestPage)** — 開發期權限測試頁,待使用者確認是否保留。
+- **`/access-test`(AccessTestPage)** — 開發期權限測試頁。2026-09-03 使用者決定移除,已從 React 版一併刪除(`frontend/src/pages/AccessTestPage.tsx` 與 `App.tsx` 的 lazy import 及路由),Rust 版本來就沒移植。守衛行為現由 `frontend-rust` 的 e2e 測試涵蓋,不需要一個手動點的頁面。
 - **`DiamondRoute`、`BlackCardRoute`、`SuperAdminRoute`、`VerifiedUserRoute`** — 已定義但無任何路由使用,死程式碼。
 - **`three` / `@three-ts/orbit-controls` / `react-player` / `react-hook-form` / `@hookform/resolvers`** — 宣告於 `package.json` 但 0 個檔案使用。Rust/WASM 生態最難補的 3D、影片播放器、表單庫全是死依賴。
 
@@ -126,7 +126,7 @@
 
 ### 前端移植進度(2026-09-02)
 
-**22 / 22 條路由全部是 Rust**,`ui.rs` 已無任何 stub。`/admin/backups` 依決策 #5 不移植,`/access-test` 待確認去留。
+**22 / 22 條路由全部是 Rust**,`ui.rs` 已無任何 stub。`/admin/backups` 依決策 #5 不移植,`/access-test` 已移除。
 
 移植過程中發現的 React 缺陷,Rust 版都已修掉:
 

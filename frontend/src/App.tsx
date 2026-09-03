@@ -46,9 +46,6 @@ const EventMediaManagement = lazy(() => import('./pages/EventMediaManagement'));
 const EventParticipants = lazy(() => import('./pages/EventParticipants'));
 const EventPrivacySettings = lazy(() => import('./pages/EventPrivacySettings'));
 
-// Development pages
-const AccessTestPage = lazy(() => import('./pages/AccessTestPage'));
-
 function App() {
   return (
     <AuthProvider>
@@ -93,9 +90,6 @@ function App() {
                 <Route path="/admin/users" element={<UserManagementRoute><Suspense fallback={<RouteLoader type="admin" message="載入用戶管理中..." />}><UserManagement /></Suspense></UserManagementRoute>} />
                 <Route path="/admin/sales" element={<AdminRoute><Suspense fallback={<RouteLoader type="admin" message="載入銷售管理中..." />}><SalesManagement /></Suspense></AdminRoute>} />
                 <Route path="/admin/system" element={<AdminRoute><Suspense fallback={<RouteLoader type="admin" message="載入系統健康檢查中..." />}><SystemHealthDashboard /></Suspense></AdminRoute>} />
-
-                {/* Development Route */}
-                <Route path="/access-test" element={<AccessTestPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
