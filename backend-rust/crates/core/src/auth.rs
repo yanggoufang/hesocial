@@ -132,6 +132,8 @@ pub fn user_json(row: &UserRow) -> Value {
             parse_json_column(Value::String(raw.clone()))
         }),
     );
+    user.insert("gender".to_owned(), json!(row.gender));
+    user.insert("interestedIn".to_owned(), json!(row.interested_in));
     user.insert("createdAt".to_owned(), json!(row.created_at));
     user.insert("updatedAt".to_owned(), json!(row.updated_at));
     Value::Object(user)
@@ -205,7 +207,7 @@ mod tests {
         let json = user_json(&seeded_admin());
         assert_eq!(
             serde_json::to_string(&json).expect("user JSON"),
-            r#"{"id":"f47ac10b-58cc-4372-a567-0e02b2c3d479","email":"admin@hesocial.com","firstName":"Admin","lastName":"User","age":40,"profession":"System Administrator","annualIncome":5000000,"netWorth":30000000,"membershipTier":"Black Card","privacyLevel":5,"isVerified":true,"verificationStatus":"approved","role":"super_admin","profilePicture":null,"bio":"Platform super administrator for development and system maintenance.","interests":["system administration"],"createdAt":"2026-08-30T00:00:00.000Z","updatedAt":"2026-08-30T00:00:00.000Z"}"#
+            r#"{"id":"f47ac10b-58cc-4372-a567-0e02b2c3d479","email":"admin@hesocial.com","firstName":"Admin","lastName":"User","age":40,"profession":"System Administrator","annualIncome":5000000,"netWorth":30000000,"membershipTier":"Black Card","privacyLevel":5,"isVerified":true,"verificationStatus":"approved","role":"super_admin","profilePicture":null,"bio":"Platform super administrator for development and system maintenance.","interests":["system administration"],"gender":null,"interestedIn":null,"createdAt":"2026-08-30T00:00:00.000Z","updatedAt":"2026-08-30T00:00:00.000Z"}"#
         );
     }
 
@@ -261,7 +263,7 @@ mod tests {
         let by_id = user_select(USER_SELECT_BY_ID);
         assert_eq!(
             by_id,
-            "SELECT id, email, first_name AS \"firstName\", last_name AS \"lastName\", age, profession, annual_income AS \"annualIncome\", net_worth AS \"netWorth\", membership_tier AS \"membershipTier\", privacy_level AS \"privacyLevel\", is_verified AS \"isVerified\", verification_status AS \"verificationStatus\", role, profile_picture AS \"profilePicture\", bio, interests, created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM users WHERE id = ?"
+            "SELECT id, email, first_name AS \"firstName\", last_name AS \"lastName\", age, profession, annual_income AS \"annualIncome\", net_worth AS \"netWorth\", membership_tier AS \"membershipTier\", privacy_level AS \"privacyLevel\", is_verified AS \"isVerified\", verification_status AS \"verificationStatus\", role, profile_picture AS \"profilePicture\", bio, interests, gender, interested_in AS \"interestedIn\", created_at AS \"createdAt\", updated_at AS \"updatedAt\" FROM users WHERE id = ?"
         );
         assert!(user_select(LOGIN_USER_SELECT).contains("password_hash, password_algo,"));
         assert!(user_select(USER_SELECT_BY_ID_ALIVE).ends_with("AND deleted_at IS NULL"));
